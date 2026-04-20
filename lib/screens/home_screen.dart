@@ -4,8 +4,9 @@ import '../providers/app_provider.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
-// import '../kelas/buat_kelas_screen.dart';
-// import '../kelas/detail_kelas_screen.dart';
+import '../screens/class/class_detail.dart';
+import '../screens/class/create_class.dart';
+
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
