@@ -165,10 +165,12 @@ class _AhpScreenState extends State<AhpScreen> {
             Row(
               children: [
                 _MatriksCell(
-                    child: const SizedBox(), isHeader: true, width: 90),
+                    isHeader: true, width: 90,
+                    child: const SizedBox()),
                 ...List.generate(
                   n,
                   (j) => _MatriksCell(
+                    isHeader: true,
                     child: Text(
                       _kriteria[j].nama,
                       style: const TextStyle(
@@ -177,7 +179,6 @@ class _AhpScreenState extends State<AhpScreen> {
                       textAlign: TextAlign.center,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    isHeader: true,
                   ),
                 ),
               ],
@@ -192,6 +193,8 @@ class _AhpScreenState extends State<AhpScreen> {
                     children: [
                       // Nama kriteria (kolom pertama)
                       _MatriksCell(
+                        isHeader: true,
+                        width: 90,
                         child: Text(
                           _kriteria[i].nama,
                           style: const TextStyle(
@@ -199,26 +202,25 @@ class _AhpScreenState extends State<AhpScreen> {
                               color: AppColors.primary),
                           overflow: TextOverflow.ellipsis,
                         ),
-                        isHeader: true,
-                        width: 90,
                       ),
                       // Nilai
                       ...List.generate(n, (j) {
                         if (i == j) {
                           // Diagonal = 1
                           return _MatriksCell(
+                            isDiagonal: true,
                             child: const Text('1',
                                 style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     color: AppColors.textSecondary),
                                 textAlign: TextAlign.center),
-                            isDiagonal: true,
                           );
                         }
                         if (i > j) {
                           // Bawah diagonal = resiprokal (tampilkan saja)
                           final val = _matriks[i][j];
                           return _MatriksCell(
+                            isReciprocal: true,
                             child: Text(
                               val < 1
                                   ? '1/${(1 / val).round()}'
@@ -228,7 +230,6 @@ class _AhpScreenState extends State<AhpScreen> {
                                   color: AppColors.textSecondary),
                               textAlign: TextAlign.center,
                             ),
-                            isReciprocal: true,
                           );
                         }
                         // Atas diagonal = input

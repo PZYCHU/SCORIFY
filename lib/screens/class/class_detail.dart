@@ -4,10 +4,9 @@ import '../../models/models.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_widgets.dart';
-// import '../murid/tambah_murid_screen.dart';
 import '../ahp/ahp_screen.dart';
-// import '../kalkulasi/hasil_kalkulasi_screen.dart';
-// import 'buat_kelas_screen.dart';
+import '../student/add_student.dart';
+import '../kalkulasi/calculate_result.dart';
 
 class DetailKelasScreen extends StatelessWidget {
   final String kelasId;
@@ -45,9 +44,14 @@ class DetailKelasScreen extends StatelessWidget {
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () {
-              // TODO: Navigate to TambahMuridScreen when ready
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Fitur tambah murid sedang dalam pengembangan')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TambahMuridScreen(
+                    kelasId: kelasId,
+                    kelas: kelas,
+                  ),
+                ),
               );
             },
             backgroundColor: AppColors.primary,
@@ -223,9 +227,11 @@ class DetailKelasScreen extends StatelessWidget {
     }
 
     if (context.mounted) {
-      // TODO: Navigate to HasilKalkulasiScreen when ready
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fitur hasil kalkulasi sedang dalam pengembangan')),
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => HasilKalkulasiScreen(kelasId: kelasId),
+        ),
       );
     }
   }
@@ -314,9 +320,15 @@ class _MuridCard extends StatelessWidget {
               icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
               onSelected: (val) {
                 if (val == 'edit') {
-                  // TODO: Navigate to TambahMuridScreen when ready
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Fitur edit murid sedang dalam pengembangan')),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => TambahMuridScreen(
+                        kelasId: kelas.id,
+                        kelas: kelas,
+                        existingMurid: murid,
+                      ),
+                    ),
                   );
                 } else if (val == 'hapus') {
                   _hapusMurid(context);

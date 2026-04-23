@@ -56,7 +56,9 @@ class KalkulasiService {
     final bobot = List.filled(n, 0.0);
     for (int i = 0; i < n; i++) {
       double sum = 0;
-      for (int j = 0; j < n; j++) sum += normalisasi[i][j];
+      for (int j = 0; j < n; j++) {
+        sum += normalisasi[i][j];
+      }
       bobot[i] = sum / n;
     }
 

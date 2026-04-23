@@ -4,8 +4,8 @@ import '../providers/app_provider.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
-import '../screens/class/class_detail.dart';
-import '../screens/class/create_class.dart';
+import 'class/create_class.dart';
+import 'class/class_detail.dart';
 
 
 class HomeScreen extends StatelessWidget {
@@ -30,9 +30,9 @@ class HomeScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // TODO: Navigate to BuatKelasScreen when ready
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Fitur membuat kelas sedang dalam pengembangan')),
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BuatKelasScreen()),
           );
         },
         backgroundColor: AppColors.primary,
@@ -101,8 +101,17 @@ class HomeScreen extends StatelessWidget {
             Expanded(
               child: ListView.builder(
                 itemCount: provider.kelasList.length,
-                itemBuilder: (ctx, i) =>
-                    _KelasCard(kelas: provider.kelasList[i]),
+                itemBuilder: (ctx, i) => GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DetailKelasScreen(
+                        kelasId: provider.kelasList[i].id,
+                      ),
+                    ),
+                  ),
+                  child: _KelasCard(kelas: provider.kelasList[i]),
+                ),
               ),
             ),
           ],
@@ -119,14 +128,7 @@ class _KelasCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        // TODO: Navigate to DetailKelasScreen when ready
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fitur detail kelas sedang dalam pengembangan')),
-        );
-      },
-      child: Container(
+    return Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -188,8 +190,7 @@ class _KelasCard extends StatelessWidget {
                 color: AppColors.textSecondary, size: 20),
           ],
         ),
-      ),
-    );
+      );
   }
 }
 

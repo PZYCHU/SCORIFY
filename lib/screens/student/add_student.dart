@@ -48,7 +48,9 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
   @override
   void dispose() {
     _namaCtrl.dispose();
-    for (final c in _nilaiCtrl.values) c.dispose();
+    for (final c in _nilaiCtrl.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 

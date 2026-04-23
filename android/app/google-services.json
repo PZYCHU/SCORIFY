@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "742754622047",
+    "project_id": "scorify-f60fc",
+    "storage_bucket": "scorify-f60fc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:742754622047:android:ada6632540bc5d7f5e19ea",
+        "android_client_info": {
+          "package_name": "com.example.scorify"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYhKvxtp4F2r5Rn7oR0QGC-2vrpzsf_0Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
