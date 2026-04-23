@@ -18,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen>
   final AuthService _authService = AuthService();
 
   bool _isLoading = false;
-  // bool _isGoogleLoading = false;
+  bool _isGoogleLoading = false;
   bool _obscurePassword = true;
 
   late AnimationController _animController;
@@ -32,9 +32,10 @@ class _LoginScreenState extends State<LoginScreen>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    _fadeAnim = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOut),
-    );
+    _fadeAnim = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     _slideAnim = Tween<Offset>(
       begin: const Offset(0, 0.12),
       end: Offset.zero,
@@ -71,22 +72,22 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  // Future<void> _signInWithGoogle() async {
-  //   setState(() => _isGoogleLoading = true);
-  //   try {
-  //     await _authService.signInWithGoogle();
-  //     if (mounted) {
-  //       Navigator.pushReplacement(
-  //         context,
-  //         MaterialPageRoute(builder: (_) => const HomeScreen()),
-  //       );
-  //     }
-  //   } catch (e) {
-  //     if (mounted) _showError(e.toString());
-  //   } finally {
-  //     if (mounted) setState(() => _isGoogleLoading = false);
-  //   }
-  // }
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      await _authService.signInWithGoogle();
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) _showError(e.toString());
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
+    }
+  }
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -174,8 +175,10 @@ class _LoginScreenState extends State<LoginScreen>
                                 icon: Icons.alternate_email_rounded,
                                 keyboardType: TextInputType.emailAddress,
                                 validator: (v) {
-                                  if (v == null || v.isEmpty) return 'Email tidak boleh kosong';
-                                  if (!v.contains('@')) return 'Format email tidak valid';
+                                  if (v == null || v.isEmpty)
+                                    return 'Email tidak boleh kosong';
+                                  if (!v.contains('@'))
+                                    return 'Format email tidak valid';
                                   return null;
                                 },
                               ),
@@ -196,11 +199,14 @@ class _LoginScreenState extends State<LoginScreen>
                                     size: 20,
                                   ),
                                   onPressed: () => setState(
-                                      () => _obscurePassword = !_obscurePassword),
+                                    () => _obscurePassword = !_obscurePassword,
+                                  ),
                                 ),
                                 validator: (v) {
-                                  if (v == null || v.isEmpty) return 'Password tidak boleh kosong';
-                                  if (v.length < 6) return 'Password minimal 6 karakter';
+                                  if (v == null || v.isEmpty)
+                                    return 'Password tidak boleh kosong';
+                                  if (v.length < 6)
+                                    return 'Password minimal 6 karakter';
                                   return null;
                                 },
                               ),
@@ -214,7 +220,8 @@ class _LoginScreenState extends State<LoginScreen>
                                   style: TextButton.styleFrom(
                                     padding: EdgeInsets.zero,
                                     minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   child: const Text(
                                     'Forgot Password?',
@@ -233,7 +240,9 @@ class _LoginScreenState extends State<LoginScreen>
                                 width: double.infinity,
                                 height: 52,
                                 child: ElevatedButton(
-                                  onPressed: _isLoading ? null : _signInWithEmail,
+                                  onPressed: _isLoading
+                                      ? null
+                                      : _signInWithEmail,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF1B4F72),
                                     shape: RoundedRectangleBorder(
@@ -343,7 +352,9 @@ class _LoginScreenState extends State<LoginScreen>
                                       onTap: () => Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                            builder: (_) => const RegisterScreen()),
+                                          builder: (_) =>
+                                              const RegisterScreen(),
+                                        ),
                                       ),
                                       child: const Text(
                                         'Register',
@@ -383,19 +394,28 @@ class _LoginScreenState extends State<LoginScreen>
       ),
       builder: (_) => Padding(
         padding: EdgeInsets.only(
-          left: 24, right: 24, top: 24,
+          left: 24,
+          right: 24,
+          top: 24,
           bottom: MediaQuery.of(context).viewInsets.bottom + 24,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Reset Password',
-                style: TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF1B4F72))),
+            const Text(
+              'Reset Password',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1B4F72),
+              ),
+            ),
             const SizedBox(height: 8),
-            Text('Masukkan email yang terdaftar untuk menerima link reset password.',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+            Text(
+              'Masukkan email yang terdaftar untuk menerima link reset password.',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
             const SizedBox(height: 20),
             _buildTextField(
               controller: emailCtrl,
@@ -410,7 +430,9 @@ class _LoginScreenState extends State<LoginScreen>
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1B4F72),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
                 ),
                 onPressed: () async {
                   if (emailCtrl.text.trim().isEmpty) return;
@@ -418,18 +440,27 @@ class _LoginScreenState extends State<LoginScreen>
                   try {
                     await _authService.sendPasswordReset(emailCtrl.text.trim());
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('Link reset password telah dikirim ke email Anda'),
-                        backgroundColor: Color(0xFF2C7873),
-                        behavior: SnackBarBehavior.floating,
-                      ));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Link reset password telah dikirim ke email Anda',
+                          ),
+                          backgroundColor: Color(0xFF2C7873),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     }
                   } catch (e) {
                     if (mounted) _showError(e.toString());
                   }
                 },
-                child: const Text('Kirim Link Reset',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                child: const Text(
+                  'Kirim Link Reset',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           ],

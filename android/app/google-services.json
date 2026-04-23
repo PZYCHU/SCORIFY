@@ -12,7 +12,20 @@
           "package_name": "com.example.scorify"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "742754622047-hsl9um0u42ngit28g7vigs3fi129g31a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.scorify",
+            "certificate_hash": "d39fd0f95846735538b961903fa220ca0460d752"
+          }
+        },
+        {
+          "client_id": "742754622047-dt9iibk4alt3vnabttclc839u28e50eu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAYhKvxtp4F2r5Rn7oR0QGC-2vrpzsf_0Q"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "742754622047-dt9iibk4alt3vnabttclc839u28e50eu.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "742754622047-1kqlfivqm2o9b2g9aul00g3l567ikl3u.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.scorify"
+              }
+            }
+          ]
         }
       }
     }

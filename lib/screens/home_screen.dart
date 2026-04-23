@@ -6,6 +6,8 @@ import '../theme/app_theme.dart';
 import '../widgets/app_widgets.dart';
 import 'class/create_class.dart';
 import 'class/class_detail.dart';
+import '../services/auth_service.dart';
+import '../screens/login_regist/login_screen.dart';
 
 
 class HomeScreen extends StatelessWidget {
@@ -43,7 +45,9 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  
+
+    Widget _buildHeader(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -67,6 +71,20 @@ class HomeScreen extends StatelessWidget {
                 Text('Sistem Penilaian Kinerja Siswa',
                     style: Theme.of(context).textTheme.bodyMedium),
               ],
+            ),
+            const Spacer(), // ← tambah ini
+            IconButton(
+              icon: const Icon(Icons.logout, color: AppColors.primary),
+              onPressed: () async {
+                await AuthService().signOut();
+                // Tambahkan navigasi paksa ke LoginScreen
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
+              },
             ),
           ],
         ),
