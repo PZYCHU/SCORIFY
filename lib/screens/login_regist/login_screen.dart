@@ -271,70 +271,84 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                               const SizedBox(height: 20),
 
-                              // Divider
-                              // Row(
-                              //   children: [
-                              //     Expanded(child: Divider(color: Colors.grey.shade400, thickness: 0.8)),
-                              //     Padding(
-                              //       padding: const EdgeInsets.symmetric(horizontal: 12),
-                              //       child: Text(
-                              //         'atau',
-                              //         style: TextStyle(
-                              //           color: Colors.grey.shade500,
-                              //           fontSize: 13,
-                              //         ),
-                              //       ),
-                              //     ),
-                              //     Expanded(child: Divider(color: Colors.grey.shade400, thickness: 0.8)),
-                              //   ],
-                              // ),
-                              // const SizedBox(height: 20),
+                              //Divider
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Divider(
+                                      color: Colors.grey.shade400,
+                                      thickness: 0.8,
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    child: Text(
+                                      'atau',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade500,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Divider(
+                                      color: Colors.grey.shade400,
+                                      thickness: 0.8,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
 
-                              // Google Sign-In button
-                              // SizedBox(
-                              //   width: double.infinity,
-                              //   height: 52,
-                              //   child: OutlinedButton.icon(
-                              //     onPressed: _isGoogleLoading ? null : _signInWithGoogle,
-                              //     style: OutlinedButton.styleFrom(
-                              //       side: const BorderSide(
-                              //         color: Color(0xFF2C7873),
-                              //         width: 1.5,
-                              //       ),
-                              //       shape: RoundedRectangleBorder(
-                              //         borderRadius: BorderRadius.circular(30),
-                              //       ),
-                              //     ),
-                              //     icon: _isGoogleLoading
-                              //         ? const SizedBox(
-                              //             height: 20,
-                              //             width: 20,
-                              //             child: CircularProgressIndicator(
-                              //               color: Color(0xFF2C7873),
-                              //               strokeWidth: 2.5,
-                              //             ),
-                              //           )
-                              //         : Image.asset(
-                              //             'assets/google_logo.png',
-                              //             height: 22,
-                              //             width: 22,
-                              //             errorBuilder: (_, _, _) => const Icon(
-                              //               Icons.g_mobiledata_rounded,
-                              //               size: 26,
-                              //               color: Color(0xFF2C7873),
-                              //             ),
-                              //           ),
-                              //     label: const Text(
-                              //       'Sign in with Google',
-                              //       style: TextStyle(
-                              //         color: Color(0xFF1B4F72),
-                              //         fontSize: 15,
-                              //         fontWeight: FontWeight.w600,
-                              //       ),
-                              //     ),
-                              //   ),
-                              // ),
-                              // const SizedBox(height: 24),
+                              //Google Sign-In button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 52,
+                                child: OutlinedButton.icon(
+                                  onPressed: _isGoogleLoading
+                                      ? null
+                                      : _signInWithGoogle,
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(
+                                      color: Color(0xFF2C7873),
+                                      width: 1.5,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                  ),
+                                  icon: _isGoogleLoading
+                                      ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            color: Color(0xFF2C7873),
+                                            strokeWidth: 2.5,
+                                          ),
+                                        )
+                                      : Image.asset(
+                                          'assets/google_logo.png',
+                                          height: 22,
+                                          width: 22,
+                                          errorBuilder: (_, _, _) => const Icon(
+                                            Icons.g_mobiledata_rounded,
+                                            size: 26,
+                                            color: Color(0xFF2C7873),
+                                          ),
+                                        ),
+                                  label: const Text(
+                                    'Sign in with Google',
+                                    style: TextStyle(
+                                      color: Color(0xFF1B4F72),
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
 
                               // Register link
                               Center(
