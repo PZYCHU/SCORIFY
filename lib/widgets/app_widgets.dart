@@ -42,11 +42,13 @@ class SectionLabel extends StatelessWidget {
           Text(text, style: Theme.of(context).textTheme.titleMedium),
           if (subtitle != null) ...[
             const SizedBox(width: 6),
-            Text(subtitle!,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: AppColors.danger, fontSize: 11)),
+            Text(
+              subtitle!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.danger,
+                fontSize: 11,
+              ),
+            ),
           ],
         ],
       ),
@@ -54,16 +56,54 @@ class SectionLabel extends StatelessWidget {
   }
 }
 
-// ─── Jenis Kriteria Chip ──────────────────────────────────────────────────────
+// ─── Jenis Chip ───────────────────────────────────────────────────────────────
 
 class JenisChip extends StatelessWidget {
   final JenisKriteria jenis;
-
   const JenisChip(this.jenis, {super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isBenefit = jenis == JenisKriteria.benefit;
+    final (label, bg, fg) = switch (jenis) {
+      JenisKriteria.performa => (
+        'Performa',
+        const Color(0xFFE0F2F1),
+        const Color(0xFF00695C),
+      ),
+      JenisKriteria.hasil => (
+        'Hasil',
+        const Color(0xFFE8EAF6),
+        const Color(0xFF283593),
+      ),
+      JenisKriteria.derived => (
+        'Otomatis',
+        const Color(0xFFFFF3E0),
+        const Color(0xFFE65100),
+      ),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+      ),
+    );
+  }
+}
+
+// ─── Arah Chip ────────────────────────────────────────────────────────────────
+
+class ArahChip extends StatelessWidget {
+  final ArahKriteria arah;
+  const ArahChip(this.arah, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isBenefit = arah == ArahKriteria.benefit;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -71,11 +111,44 @@ class JenisChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        isBenefit ? 'Benefit' : 'Cost',
+        isBenefit ? 'Benefit ↑' : 'Cost ↓',
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
           color: isBenefit ? AppColors.benefitChipText : AppColors.costChipText,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Input Type Chip ──────────────────────────────────────────────────────────
+
+class InputTypeChip extends StatelessWidget {
+  final InputType? inputType;
+  const InputTypeChip(this.inputType, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (inputType == null) return const SizedBox.shrink();
+    final label = switch (inputType!) {
+      InputType.counter => 'Counter',
+      InputType.number => 'Angka',
+      InputType.stopwatch => 'Stopwatch',
+      InputType.toggle => 'Toggle',
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F3F3),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF555555),
         ),
       ),
     );
@@ -105,7 +178,10 @@ class ActionIconBtn extends StatelessWidget {
       child: Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10)),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(10),
+        ),
         child: Icon(icon, color: Colors.white, size: size * 0.45),
       ),
     );
@@ -117,7 +193,7 @@ class ActionIconBtn extends StatelessWidget {
 class KriteriaRow extends StatelessWidget {
   final Kriteria kriteria;
   final VoidCallback onDelete;
-  final VoidCallback onToggleJenis;
+  final VoidCallback? onToggleArah; // null = tidak bisa di-toggle (derived)
   final VoidCallback? onEdit;
   final bool showEdit;
 
@@ -125,13 +201,14 @@ class KriteriaRow extends StatelessWidget {
     super.key,
     required this.kriteria,
     required this.onDelete,
-    required this.onToggleJenis,
+    this.onToggleArah,
     this.onEdit,
     this.showEdit = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDerived = kriteria.jenis == JenisKriteria.derived;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -146,11 +223,22 @@ class KriteriaRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(kriteria.nama,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                JenisChip(kriteria.jenis),
+                Text(
+                  kriteria.nama,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  children: [
+                    JenisChip(kriteria.jenis),
+                    if (kriteria.inputType != null)
+                      InputTypeChip(kriteria.inputType),
+                    ArahChip(kriteria.arah),
+                  ],
+                ),
               ],
             ),
           ),
@@ -161,15 +249,17 @@ class KriteriaRow extends StatelessWidget {
             color: AppColors.danger,
             onTap: onDelete,
           ),
-          const SizedBox(width: 6),
-          // Toggle Benefit/Cost
-          ActionIconBtn(
-            icon: kriteria.jenis == JenisKriteria.benefit
-                ? Icons.trending_up
-                : Icons.trending_down,
-            color: AppColors.accent,
-            onTap: onToggleJenis,
-          ),
+          // Toggle arah — sembunyikan jika derived (selalu cost)
+          if (!isDerived && onToggleArah != null) ...[
+            const SizedBox(width: 6),
+            ActionIconBtn(
+              icon: kriteria.arah == ArahKriteria.benefit
+                  ? Icons.trending_up
+                  : Icons.trending_down,
+              color: AppColors.accent,
+              onTap: onToggleArah!,
+            ),
+          ],
           if (showEdit && onEdit != null) ...[
             const SizedBox(width: 6),
             ActionIconBtn(
@@ -203,18 +293,25 @@ class NilaiInputRow extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(kriteria.nama,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600)),
+            Text(
+              kriteria.nama,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+            ),
             const SizedBox(width: 8),
             JenisChip(kriteria.jenis),
+            const SizedBox(width: 4),
+            ArahChip(kriteria.arah),
           ],
         ),
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+          ],
           decoration: const InputDecoration(hintText: 'Masukkan angka'),
           validator: (v) {
             if (v == null || v.isEmpty) return 'Wajib diisi';
@@ -252,8 +349,12 @@ class BottomSaveButton extends StatelessWidget {
           onPressed: onPressed,
           child: isLoading
               ? const SizedBox(
-                  width: 20, height: 20,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
                 )
               : Text(label),
         ),
@@ -284,13 +385,17 @@ class EmptyState extends StatelessWidget {
         children: [
           Text(icon, style: const TextStyle(fontSize: 48)),
           const SizedBox(height: 16),
-          Text(title,
-              style: Theme.of(context).textTheme.titleMedium,
-              textAlign: TextAlign.center),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 8),
-          Text(subtitle,
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );

@@ -44,12 +44,16 @@ class AppProvider extends ChangeNotifier {
 
   // ─── Kelas CRUD ───────────────────────────────────────────────────────────────
 
-  Future<Kelas> tambahKelas({required String nama, required List<Kriteria> kriteria}) async {
+  Future<Kelas> tambahKelas({
+    required String nama,
+    required List<Kriteria> kriteria,
+  }) async {
     final kelas = Kelas(
       id: _uuid.v4(),
       nama: nama,
       kriteria: kriteria,
       muridList: [],
+      sesiList: [],
       matriksAHP: KalkulasiService.matriksAwal(kriteria.length),
     );
     _kelasList.add(kelas);
@@ -58,7 +62,11 @@ class AppProvider extends ChangeNotifier {
     return kelas;
   }
 
-  Future<void> editKelas(String kelasId, {String? nama, List<Kriteria>? kriteria}) async {
+  Future<void> editKelas(
+    String kelasId, {
+    String? nama,
+    List<Kriteria>? kriteria,
+  }) async {
     final idx = _kelasList.indexWhere((k) => k.id == kelasId);
     if (idx < 0) return;
     final kelas = _kelasList[idx];
@@ -91,9 +99,10 @@ class AppProvider extends ChangeNotifier {
 
   // ─── Murid CRUD ───────────────────────────────────────────────────────────────
 
-  Future<void> tambahMurid(String kelasId, {
+  Future<void> tambahMurid(
+    String kelasId, {
     required String nama,
-    required List<NilaiKriteria> nilaiList,
+    required List<Nilai> nilaiList,
   }) async {
     final idx = _kelasList.indexWhere((k) => k.id == kelasId);
     if (idx < 0) return;
@@ -107,19 +116,27 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> editMurid(String kelasId, String muridId, {
+  Future<void> editMurid(
+    String kelasId,
+    String muridId, {
     String? nama,
-    List<NilaiKriteria>? nilaiList,
+    List<Nilai>? nilaiList,
   }) async {
     final kIdx = _kelasList.indexWhere((k) => k.id == kelasId);
     if (kIdx < 0) return;
     final kelas = _kelasList[kIdx];
     final mIdx = kelas.muridList.indexWhere((m) => m.id == muridId);
     if (mIdx < 0) return;
-    final updatedMurid = kelas.muridList[mIdx].copyWith(nama: nama, nilaiList: nilaiList);
+    final updatedMurid = kelas.muridList[mIdx].copyWith(
+      nama: nama,
+      nilaiList: nilaiList,
+    );
     final newList = List<Murid>.from(kelas.muridList);
     newList[mIdx] = updatedMurid;
-    _kelasList[kIdx] = kelas.copyWith(muridList: newList, sudahKalkulasi: false);
+    _kelasList[kIdx] = kelas.copyWith(
+      muridList: newList,
+      sudahKalkulasi: false,
+    );
     await _saveToPrefs();
     notifyListeners();
   }
@@ -129,19 +146,87 @@ class AppProvider extends ChangeNotifier {
     if (kIdx < 0) return;
     final kelas = _kelasList[kIdx];
     final newList = kelas.muridList.where((m) => m.id != muridId).toList();
-    _kelasList[kIdx] = kelas.copyWith(muridList: newList, sudahKalkulasi: false);
+    _kelasList[kIdx] = kelas.copyWith(
+      muridList: newList,
+      sudahKalkulasi: false,
+    );
     await _saveToPrefs();
     notifyListeners();
   }
+  // ─── Input Nilai Performa (saat KBM) ─────────────────────────────────────────
+  // Tambahkan method ini di AppProvider, setelah method hapusMurid
 
+  Future<void> inputNilaiPerforma({
+    required String kelasId,
+    required String muridId,
+    required String kriteriaId,
+    required double nilai,
+    required DateTime tanggal,
+  }) async {
+    final kIdx = _kelasList.indexWhere((k) => k.id == kelasId);
+    if (kIdx < 0) return;
+    final kelas = _kelasList[kIdx];
+
+    final mIdx = kelas.muridList.indexWhere((m) => m.id == muridId);
+    if (mIdx < 0) return;
+    final murid = kelas.muridList[mIdx];
+
+    // Cari nilai yang sudah ada untuk kriteria ini di tanggal yang sama
+    // (biar tidak dobel entry untuk satu hari)
+    final todayStr = '${tanggal.year}-${tanggal.month}-${tanggal.day}';
+    final existingIdx = murid.nilaiList.indexWhere((n) {
+      final nStr = '${n.tanggal.year}-${n.tanggal.month}-${n.tanggal.day}';
+      return n.kriteriaId == kriteriaId && nStr == todayStr;
+    });
+
+    List<Nilai> updatedNilaiList = List.from(murid.nilaiList);
+
+    if (existingIdx >= 0) {
+      // Update nilai yang sudah ada hari ini
+      updatedNilaiList[existingIdx] = Nilai(
+        id: updatedNilaiList[existingIdx].id,
+        siswaId: muridId,
+        kriteriaId: kriteriaId,
+        nilai: nilai,
+        attempt: 1,
+        tanggal: tanggal,
+      );
+    } else {
+      // Tambah entry baru
+      updatedNilaiList.add(Nilai(
+        id: '${muridId}_${kriteriaId}_$todayStr',
+        siswaId: muridId,
+        kriteriaId: kriteriaId,
+        nilai: nilai,
+        attempt: 1,
+        tanggal: tanggal,
+      ));
+    }
+
+    final updatedMurid = murid.copyWith(nilaiList: updatedNilaiList);
+    final newMuridList = List<Murid>.from(kelas.muridList);
+    newMuridList[mIdx] = updatedMurid;
+
+    _kelasList[kIdx] = kelas.copyWith(
+      muridList: newMuridList,
+      sudahKalkulasi: false,
+    );
+
+    await _saveToPrefs();
+    notifyListeners();
+  }
   // ─── AHP ─────────────────────────────────────────────────────────────────────
 
-  Future<HasilAHP?> simpanMatriksAHP(String kelasId, List<List<double>> matriks) async {
+  Future<HasilAHP?> simpanMatriksAHP(
+    String kelasId,
+    List<List<double>> matriks,
+  ) async {
     final idx = _kelasList.indexWhere((k) => k.id == kelasId);
     if (idx < 0) return null;
 
     final hasil = KalkulasiService.hitungAHP(matriks);
-    if (!hasil.konsisten) return hasil; // kembalikan hasil tapi jangan simpan bobot
+    if (!hasil.konsisten)
+      return hasil; // kembalikan hasil tapi jangan simpan bobot
 
     // Update bobot di kriteria
     final kelas = _kelasList[idx];

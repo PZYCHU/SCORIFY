@@ -3,11 +3,11 @@ import 'dart:math';
 
 /// Hasil kalkulasi AHP
 class HasilAHP {
-  final List<double> bobot;       // bobot per kriteria (sum = 1)
+  final List<double> bobot;
   final double lambdaMax;
-  final double ci;                // Consistency Index
-  final double cr;                // Consistency Ratio
-  final bool konsisten;           // CR <= 0.10
+  final double ci;
+  final double cr;
+  final bool konsisten;
 
   const HasilAHP({
     required this.bobot,
@@ -20,24 +20,32 @@ class HasilAHP {
 
 /// Hasil kalkulasi SAW
 class HasilSAW {
-  final List<Murid> muridTerurut; // diurutkan dari skor tertinggi
-  final Map<String, double> skorMap; // muridId -> skor
+  final List<Murid> muridTerurut;
+  final Map<String, double> skorMap;
 
   const HasilSAW({required this.muridTerurut, required this.skorMap});
 }
 
 class KalkulasiService {
-  // Random Index Saaty (n = 1..10)
-  static const List<double> _ri = [0, 0, 0.58, 0.90, 1.12, 1.24, 1.32, 1.41, 1.45, 1.49];
+  static const List<double> _ri = [
+    0,
+    0,
+    0.58,
+    0.90,
+    1.12,
+    1.24,
+    1.32,
+    1.41,
+    1.45,
+    1.49,
+  ];
 
-  // ─── AHP ────────────────────────────────────────────────────────────────────
+  // ─── AHP ──────────────────────────────────────────────────────────────────
 
-  /// Hitung bobot + CR dari matriks perbandingan berpasangan [n x n]
   static HasilAHP hitungAHP(List<List<double>> matriks) {
     final n = matriks.length;
     assert(n >= 2, 'Minimal 2 kriteria');
 
-    // 1. Jumlah tiap kolom
     final sumKolom = List.filled(n, 0.0);
     for (int j = 0; j < n; j++) {
       for (int i = 0; i < n; i++) {
@@ -45,7 +53,6 @@ class KalkulasiService {
       }
     }
 
-    // 2. Normalisasi & hitung bobot (rata-rata baris)
     final normalisasi = List.generate(n, (_) => List.filled(n, 0.0));
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
@@ -62,13 +69,11 @@ class KalkulasiService {
       bobot[i] = sum / n;
     }
 
-    // 3. λmax
     double lambdaMax = 0;
     for (int j = 0; j < n; j++) {
       lambdaMax += sumKolom[j] * bobot[j];
     }
 
-    // 4. CI & CR
     final ci = (lambdaMax - n) / (n - 1);
     final riVal = n <= _ri.length ? _ri[n - 1] : 1.49;
     final cr = riVal == 0 ? 0.0 : ci / riVal;
@@ -82,32 +87,36 @@ class KalkulasiService {
     );
   }
 
-  /// Buat matriks awal (semua 1.0 = sama penting)
   static List<List<double>> matriksAwal(int n) {
     return List.generate(n, (i) => List.generate(n, (j) => 1.0));
   }
 
-  /// Set nilai matriks secara resiprokal: M[i][j] = val, M[j][i] = 1/val
-  static void setNilaiMatriks(List<List<double>> matriks, int i, int j, double val) {
+  static void setNilaiMatriks(
+    List<List<double>> matriks,
+    int i,
+    int j,
+    double val,
+  ) {
     matriks[i][j] = val;
     matriks[j][i] = 1 / val;
   }
 
-  // ─── SAW ────────────────────────────────────────────────────────────────────
+  // ─── SAW ──────────────────────────────────────────────────────────────────
 
-  /// Hitung skor SAW untuk semua murid berdasarkan kriteria + bobot
   static HasilSAW hitungSAW(List<Murid> muridList, List<Kriteria> kriteria) {
     if (muridList.isEmpty || kriteria.isEmpty) {
       return HasilSAW(muridTerurut: muridList, skorMap: {});
     }
 
-    // 1. Kumpulkan nilai per kriteria
+    // 1. Hitung nilai ringkasan per murid per kriteria
     final nilaiPerKriteria = <String, List<double>>{};
     for (final k in kriteria) {
-      nilaiPerKriteria[k.id] = muridList.map((m) => m.getNilai(k.id)).toList();
+      nilaiPerKriteria[k.id] = muridList
+          .map((m) => _nilaiRingkasan(m, k))
+          .toList();
     }
 
-    // 2. Hitung min/max per kriteria untuk normalisasi
+    // 2. Min/max per kriteria
     final maxNilai = <String, double>{};
     final minNilai = <String, double>{};
     for (final k in kriteria) {
@@ -116,19 +125,20 @@ class KalkulasiService {
       minNilai[k.id] = vals.reduce(min);
     }
 
-    // 3. Normalisasi & hitung skor
+    // 3. Normalisasi SAW & hitung skor
     final skorMap = <String, double>{};
     for (int idx = 0; idx < muridList.length; idx++) {
       final murid = muridList[idx];
       double skor = 0;
 
       for (final k in kriteria) {
-        final xij = murid.getNilai(k.id);
+        final xij = nilaiPerKriteria[k.id]![idx];
         final maxV = maxNilai[k.id]!;
         final minV = minNilai[k.id]!;
 
         double rij;
-        if (k.jenis == JenisKriteria.benefit) {
+        if (k.arah == ArahKriteria.benefit) {
+          // benefit: xij / max
           rij = maxV == 0 ? 0 : xij / maxV;
         } else {
           // cost: min / xij
@@ -145,12 +155,44 @@ class KalkulasiService {
     final muridDenganSkor = muridList
         .map((m) => m.copyWith(skorFinal: skorMap[m.id]))
         .toList();
-    muridDenganSkor.sort((a, b) => (b.skorFinal ?? 0).compareTo(a.skorFinal ?? 0));
+    muridDenganSkor.sort(
+      (a, b) => (b.skorFinal ?? 0).compareTo(a.skorFinal ?? 0),
+    );
 
     return HasilSAW(muridTerurut: muridDenganSkor, skorMap: skorMap);
   }
 
-  // ─── Skala AHP ───────────────────────────────────────────────────────────────
+  /// Hitung nilai ringkasan satu murid untuk satu kriteria:
+  /// - performa & derived: rata-rata semua nilai
+  /// - hasil (per sesi): rata-rata nilai terbaik per sesi
+  static double _nilaiRingkasan(Murid murid, Kriteria k) {
+    final semuaNilai = murid.getNilaiByKriteria(k.id);
+    if (semuaNilai.isEmpty) return 0;
+
+    if (k.jenis == JenisKriteria.hasil && k.perSesi) {
+      // Ambil attempt tertinggi per sesi, lalu rata-rata antar sesi
+      final Map<String, double> bestPerSesi = {};
+      for (final n in semuaNilai) {
+        final key = n.sesiId ?? 'no_sesi';
+        if (!bestPerSesi.containsKey(key) || n.nilai > bestPerSesi[key]!) {
+          bestPerSesi[key] = n.nilai;
+        }
+      }
+      if (bestPerSesi.isEmpty) return 0;
+      return bestPerSesi.values.reduce((a, b) => a + b) / bestPerSesi.length;
+    }
+
+    // performa: rata-rata langsung
+    // derived: rata-rata jumlah attempt > 1 per sesi (frekuensi ngulang)
+    if (k.jenis == JenisKriteria.derived) {
+      return murid.getFrekuensiNgulang(k.id).toDouble();
+    }
+
+    final total = semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
+    return total / semuaNilai.length;
+  }
+
+  // ─── Skala AHP ────────────────────────────────────────────────────────────
 
   static const Map<int, String> labelSkala = {
     1: 'Sama penting',
@@ -166,7 +208,6 @@ class KalkulasiService {
 
   static String getLabel(double val) {
     if (val < 1) {
-      // resiprokal
       final inv = 1 / val;
       return labelSkala[inv.round()] ?? val.toStringAsFixed(2);
     }

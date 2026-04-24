@@ -17,7 +17,7 @@ class HasilKalkulasiScreen extends StatelessWidget {
         final kelas = provider.getKelas(kelasId);
         if (kelas == null) return const Scaffold(body: SizedBox());
 
-        final muridSorted = kelas.muridList; // sudah sorted dari provider
+        final muridSorted = kelas.muridList;
 
         return Scaffold(
           body: SafeArea(
@@ -82,8 +82,7 @@ class HasilKalkulasiScreen extends StatelessWidget {
               children: kelas.kriteria.map((k) {
                 return Container(
                   margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
@@ -104,33 +103,58 @@ class HasilKalkulasiScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRanking(
-      BuildContext context, Kelas kelas, List<Murid> muridList) {
+  Widget _buildRanking(BuildContext context, Kelas kelas, List<Murid> muridList) {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
       itemCount: muridList.length,
       itemBuilder: (ctx, i) {
         final murid = muridList[i];
-        final rank = i + 1;
-        return _RankingCard(murid: murid, kelas: kelas, rank: rank);
+        return _RankingCard(murid: murid, kelas: kelas, rank: i + 1);
       },
     );
   }
 }
+
+// ─── Ranking Card ─────────────────────────────────────────────────────────────
 
 class _RankingCard extends StatelessWidget {
   final Murid murid;
   final Kelas kelas;
   final int rank;
 
-  const _RankingCard(
-      {required this.murid, required this.kelas, required this.rank});
+  const _RankingCard({required this.murid, required this.kelas, required this.rank});
 
   Color get _rankColor {
     if (rank == 1) return const Color(0xFFF9A825);
     if (rank == 2) return const Color(0xFF78909C);
     if (rank == 3) return const Color(0xFF8D6E63);
     return AppColors.primary.withOpacity(0.5);
+  }
+
+  /// Ambil nilai ringkasan per kriteria untuk ditampilkan:
+  /// - performa & derived: rata-rata semua nilai
+  /// - hasil: rata-rata nilai terbaik (attempt tertinggi) per sesi
+  double _nilaiRingkasan(Kriteria k) {
+    final semuaNilai = murid.getNilaiByKriteria(k.id);
+    if (semuaNilai.isEmpty) return 0;
+
+    if (k.jenis == JenisKriteria.hasil && k.perSesi) {
+      // Grup per sesi, ambil attempt tertinggi per sesi
+      final Map<String, double> bestPerSesi = {};
+      for (final n in semuaNilai) {
+        final sesiKey = n.sesiId ?? 'no_sesi';
+        if (!bestPerSesi.containsKey(sesiKey) ||
+            n.nilai > bestPerSesi[sesiKey]!) {
+          bestPerSesi[sesiKey] = n.nilai;
+        }
+      }
+      if (bestPerSesi.isEmpty) return 0;
+      return bestPerSesi.values.reduce((a, b) => a + b) / bestPerSesi.length;
+    }
+
+    // performa & derived: rata-rata langsung
+    final total = semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
+    return total / semuaNilai.length;
   }
 
   @override
@@ -189,6 +213,7 @@ class _RankingCard extends StatelessWidget {
                         spacing: 6,
                         runSpacing: 4,
                         children: kelas.kriteria.map((k) {
+                          final val = _nilaiRingkasan(k);
                           return Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 7, vertical: 2),
@@ -199,7 +224,7 @@ class _RankingCard extends StatelessWidget {
                                   color: AppColors.border, width: 0.5),
                             ),
                             child: Text(
-                              '${k.nama}: ${murid.getNilai(k.id).toStringAsFixed(0)}',
+                              '${k.nama}: ${val.toStringAsFixed(0)}',
                               style: const TextStyle(
                                   fontSize: 10,
                                   color: AppColors.textSecondary),
@@ -211,7 +236,7 @@ class _RankingCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Skor
+                // Skor final
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 14, vertical: 10),
@@ -237,19 +262,19 @@ class _RankingCard extends StatelessWidget {
               ],
             ),
           ),
-
           // Progress bar skor
           if (murid.skorFinal != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-              child: _SkorProgressBar(
-                  skor: murid.skorFinal!, color: _rankColor),
+              child: _SkorProgressBar(skor: murid.skorFinal!, color: _rankColor),
             ),
         ],
       ),
     );
   }
 }
+
+// ─── Skor Progress Bar ────────────────────────────────────────────────────────
 
 class _SkorProgressBar extends StatelessWidget {
   final double skor;
@@ -259,19 +284,14 @@ class _SkorProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: skor / 100,
-            minHeight: 6,
-            backgroundColor: AppColors.background,
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-          ),
-        ),
-      ],
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: LinearProgressIndicator(
+        value: (skor / 100).clamp(0.0, 1.0),
+        minHeight: 6,
+        backgroundColor: AppColors.background,
+        valueColor: AlwaysStoppedAnimation<Color>(color),
+      ),
     );
   }
 }
