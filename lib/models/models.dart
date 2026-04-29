@@ -189,11 +189,23 @@ class Murid {
     return filtered.first;
   }
 
-  /// Hitung frekuensi ngulang untuk kriteria derived
-  int getFrekuensiNgulang(String kriteriaId) {
-    return nilaiList
-        .where((n) => n.kriteriaId == kriteriaId && n.attempt > 1)
-        .length;
+  /// Hitung frekuensi ngulang (lintas semua kriteria hasil).
+  /// Derived criteria tidak punya nilaiList sendiri — retake tersimpan
+  /// di bawah kriteriaId hasil dengan attempt > 1.
+  /// Return: jumlah sesi unik di mana siswa pernah ngulang.
+  int getFrekuensiNgulang() {
+    // Grup nilai per (kriteriaId, sesiId)
+    final Map<String, int> maxAttemptPerSesi = {};
+    for (final n in nilaiList) {
+      if (n.sesiId == null) continue; // skip nilai performa
+      final key = '${n.kriteriaId}_${n.sesiId}';
+      if (!maxAttemptPerSesi.containsKey(key) ||
+          n.attempt > maxAttemptPerSesi[key]!) {
+        maxAttemptPerSesi[key] = n.attempt;
+      }
+    }
+    // Hitung sesi yang punya attempt > 1
+    return maxAttemptPerSesi.values.where((a) => a > 1).length;
   }
 
   Murid copyWith({
@@ -286,30 +298,42 @@ class Kelas {
     'muridList': muridList.map((m) => m.toJson()).toList(),
     'sesiList': sesiList.map((s) => s.toJson()).toList(),
     'sudahKalkulasi': sudahKalkulasi,
-    'matriksAHP': matriksAHP,
+    'matriks_ahp': matriksAHP.expand((row) => row).toList(),
+    'matriks_n': matriksAHP.isNotEmpty ? matriksAHP.length : 0,
   };
 
-  factory Kelas.fromJson(Map<String, dynamic> json) => Kelas(
-    id: json['id'],
-    nama: json['nama'],
-    kriteria: (json['kriteria'] as List)
-        .map((k) => Kriteria.fromJson(k))
-        .toList(),
-    muridList: (json['muridList'] as List)
-        .map((m) => Murid.fromJson(m))
-        .toList(),
-    sesiList: json['sesiList'] != null
-        ? (json['sesiList'] as List)
-            .map((s) => Sesi.fromJson(s))
-            .toList()
-        : [],
-    sudahKalkulasi: json['sudahKalkulasi'] ?? false,
-    matriksAHP: json['matriksAHP'] != null
-        ? (json['matriksAHP'] as List)
-            .map((row) => (row as List)
-                .map((v) => (v as num).toDouble())
-                .toList())
-            .toList()
-        : [],
-  );
+  factory Kelas.fromJson(Map<String, dynamic> json) {
+    // Reconstruct matriksAHP from 1D array if it exists
+    final flat = List<double>.from(
+      (json['matriks_ahp'] as List? ?? []).map((e) => (e as num).toDouble())
+    );
+    final n = json['matriks_n'] as int? ?? 0;
+    List<List<double>> matriks = [];
+    if (n > 0 && flat.length == n * n) {
+      for (int i = 0; i < n; i++) {
+        matriks.add(flat.sublist(i * n, (i + 1) * n));
+      }
+    } else if (json['matriksAHP'] != null) {
+      // Fallback for older local data (2D array)
+      matriks = (json['matriksAHP'] as List)
+          .map((row) => (row as List).map((v) => (v as num).toDouble()).toList())
+          .toList();
+    }
+
+    return Kelas(
+      id: json['id'],
+      nama: json['nama'],
+      kriteria: (json['kriteria'] as List? ?? [])
+          .map((k) => Kriteria.fromJson(k))
+          .toList(),
+      muridList: (json['muridList'] as List? ?? [])
+          .map((m) => Murid.fromJson(m))
+          .toList(),
+      sesiList: (json['sesiList'] as List? ?? [])
+          .map((s) => Sesi.fromJson(s))
+          .toList(),
+      sudahKalkulasi: json['sudahKalkulasi'] ?? false,
+      matriksAHP: matriks,
+    );
+  }
 }

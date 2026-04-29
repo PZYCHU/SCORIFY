@@ -135,11 +135,16 @@ class _RankingCard extends StatelessWidget {
   /// - performa & derived: rata-rata semua nilai
   /// - hasil: rata-rata nilai terbaik (attempt tertinggi) per sesi
   double _nilaiRingkasan(Kriteria k) {
+    // Derived: hitung frekuensi ngulang, bukan rata-rata nilaiList
+    if (k.jenis == JenisKriteria.derived) {
+      return murid.getFrekuensiNgulang().toDouble();
+    }
+
     final semuaNilai = murid.getNilaiByKriteria(k.id);
     if (semuaNilai.isEmpty) return 0;
 
     if (k.jenis == JenisKriteria.hasil && k.perSesi) {
-      // Grup per sesi, ambil attempt tertinggi per sesi
+      // Grup per sesi, ambil nilai terbaik per sesi
       final Map<String, double> bestPerSesi = {};
       for (final n in semuaNilai) {
         final sesiKey = n.sesiId ?? 'no_sesi';
@@ -152,9 +157,14 @@ class _RankingCard extends StatelessWidget {
       return bestPerSesi.values.reduce((a, b) => a + b) / bestPerSesi.length;
     }
 
-    // performa & derived: rata-rata langsung
-    final total = semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
-    return total / semuaNilai.length;
+    // Counter: SUM semua pertemuan (konsisten dengan kalkulasi SAW)
+    if (k.jenis == JenisKriteria.performa &&
+        k.inputType == InputType.counter) {
+      return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
+    }
+
+    // Stopwatch, toggle, number: rata-rata semua pertemuan
+    return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai) / semuaNilai.length;
   }
 
   @override

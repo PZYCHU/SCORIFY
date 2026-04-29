@@ -32,6 +32,7 @@ class InputNilaiSheet extends StatefulWidget {
 class _InputNilaiSheetState extends State<InputNilaiSheet> {
   // Nilai sementara di memory per kriteria (kriteriaId -> nilai)
   late Map<String, double> _nilaiMap;
+  late AppProvider _provider;
 
   // Debounce timer per kriteria
   final Map<String, Timer> _debounceTimers = {};
@@ -44,15 +45,39 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
   @override
   void initState() {
     super.initState();
-    // Init nilai dari data murid yang sudah ada
     _nilaiMap = {};
+    _provider = context.read<AppProvider>();
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month}-${today.day}';
+
     for (final k in _kriteriaPerforma) {
       final existing = widget.murid.getNilaiByKriteria(k.id);
-      if (existing.isNotEmpty) {
-        _nilaiMap[k.id] =
-            existing.fold(0.0, (sum, n) => sum + n.nilai) / existing.length;
+      if (existing.isEmpty) {
+        _nilaiMap[k.id] = 0;
+        continue;
+      }
+
+      // Cari nilai hari ini
+      final nilaiHariIni = existing.where((n) {
+        final nStr = '${n.tanggal.year}-${n.tanggal.month}-${n.tanggal.day}';
+        return nStr == todayStr;
+      }).toList();
+
+      if (k.inputType == InputType.counter) {
+        // Counter: tampilkan nilai hari ini saja (bukan akumulasi semua hari)
+        // Akumulasi antar hari dilakukan di SAW, bukan di UI
+        _nilaiMap[k.id] = nilaiHariIni.isNotEmpty
+            ? nilaiHariIni.first.nilai
+            : 0;
       } else {
-        _nilaiMap[k.id] = k.inputType == InputType.toggle ? 0 : 0;
+        // Toggle, stopwatch, number: tampilkan nilai hari ini jika ada,
+        // kalau tidak tampilkan nilai terakhir yang tersimpan
+        if (nilaiHariIni.isNotEmpty) {
+          _nilaiMap[k.id] = nilaiHariIni.first.nilai;
+        } else {
+          existing.sort((a, b) => b.tanggal.compareTo(a.tanggal));
+          _nilaiMap[k.id] = existing.first.nilai;
+        }
       }
     }
   }
@@ -73,8 +98,7 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
   }
 
   Future<void> _simpanNilai(String kriteriaId, double nilai) async {
-    final provider = context.read<AppProvider>();
-    await provider.inputNilaiPerforma(
+    await _provider.inputNilaiPerforma(
       kelasId: widget.kelas.id,
       muridId: widget.murid.id,
       kriteriaId: kriteriaId,
@@ -226,7 +250,12 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
         return _StopwatchWidget(
           kriteriaId: k.id,
           detikTersimpan: nilai.toInt(),
-          onStop: (detik) => _updateNilai(k.id, detik.toDouble()),
+          onStop: (detik) {
+            // Simpan LANGSUNG saat stop — tanpa debounce
+            // Tidak pakai setState karena onStop juga dipanggil dari dispose()
+            _nilaiMap[k.id] = detik.toDouble();
+            _simpanNilai(k.id, detik.toDouble());
+          },
         );
 
       case InputType.number:
@@ -406,7 +435,15 @@ class _StopwatchWidgetState extends State<_StopwatchWidget> {
 
   @override
   void dispose() {
-    _timer?.cancel();
+    if (_running) {
+      // Auto-stop & auto-save jika sheet ditutup saat stopwatch masih jalan
+      _sw.stop();
+      _timer?.cancel();
+      final totalDetik = widget.detikTersimpan + _sw.elapsed.inSeconds;
+      widget.onStop(totalDetik); // aman: onStop tidak pakai setState
+    } else {
+      _timer?.cancel();
+    }
     super.dispose();
   }
 
@@ -456,7 +493,6 @@ class _StopwatchWidgetState extends State<_StopwatchWidget> {
             fontSize: 40,
             fontWeight: FontWeight.w700,
             color: _running ? AppColors.accent : AppColors.primary,
-            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
         const SizedBox(height: 14),

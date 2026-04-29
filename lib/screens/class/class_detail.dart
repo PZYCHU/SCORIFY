@@ -6,7 +6,10 @@ import '../../theme/app_theme.dart';
 import '../../widgets/app_widgets.dart';
 import '../ahp/ahp_screen.dart';
 import '../student/add_student.dart';
+import '../student/import_siswa_screen.dart';
+import '../class/create_class.dart';
 import '../class/input_nilai_screen.dart';
+import '../class/input_nilai_hasil_screen.dart';
 import '../kalkulasi/calculate_result.dart';
 
 class DetailKelasScreen extends StatelessWidget {
@@ -44,18 +47,42 @@ class DetailKelasScreen extends StatelessWidget {
               ],
             ),
           ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      TambahMuridScreen(kelasId: kelasId, kelas: kelas),
+          floatingActionButton: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Import via CSV
+              FloatingActionButton.small(
+                heroTag: 'csv',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ImportSiswaScreen(
+                      kelasId: kelasId,
+                      kelas: kelas,
+                    ),
+                  ),
                 ),
-              );
-            },
-            backgroundColor: AppColors.primary,
-            child: const Icon(Icons.person_add, color: Colors.white),
+                backgroundColor: AppColors.accent,
+                tooltip: 'Import CSV',
+                child: const Icon(Icons.upload_file_outlined,
+                    color: Colors.white, size: 20),
+              ),
+              const SizedBox(height: 8),
+              // Tambah satu siswa
+              FloatingActionButton(
+                heroTag: 'add',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        TambahMuridScreen(kelasId: kelasId, kelas: kelas),
+                  ),
+                ),
+                backgroundColor: AppColors.primary,
+                tooltip: 'Tambah Siswa',
+                child: const Icon(Icons.person_add, color: Colors.white),
+              ),
+            ],
           ),
         );
       },
@@ -88,11 +115,11 @@ class DetailKelasScreen extends StatelessWidget {
                 icon: const Icon(Icons.more_vert, color: Colors.white),
                 onSelected: (val) async {
                   if (val == 'edit') {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Fitur edit kelas sedang dalam pengembangan',
-                        ),
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            BuatKelasScreen(existingKelas: kelas),
                       ),
                     );
                   } else if (val == 'hapus') {
@@ -172,50 +199,100 @@ class DetailKelasScreen extends StatelessWidget {
     AppProvider provider,
   ) {
     final bobotBelumDiisi = kelas.kriteria.any((k) => k.bobot == 0.0);
+    final adaKriteriaHasil =
+        kelas.kriteria.any((k) => k.jenis == JenisKriteria.hasil);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface,
-        border: const Border(
+        border: Border(
           top: BorderSide(color: AppColors.border, width: 0.5),
         ),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: kelas.muridList.isEmpty
-                  ? null
-                  : () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => AhpScreen(kelasId: kelasId),
+          // Baris 1: AHP + Nilai Tugas
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: kelas.muridList.isEmpty
+                      ? null
+                      : () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AhpScreen(kelasId: kelasId),
+                            ),
+                          ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  icon: const Icon(Icons.balance, size: 16),
+                  label: Text(
+                    bobotBelumDiisi ? 'Isi Bobot AHP' : 'Edit AHP',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                ),
+              ),
+              if (adaKriteriaHasil) ...[  
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: kelas.muridList.isEmpty
+                        ? null
+                        : () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => InputNilaiHasilScreen(
+                                    kelasId: kelasId),
+                              ),
+                            ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accent,
+                      side: const BorderSide(color: AppColors.accent),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary),
+                    icon: const Icon(Icons.assignment_outlined, size: 16),
+                    label: const Text(
+                      'Nilai Tugas',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Baris 2: Kalkulasi (full width)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: (kelas.muridList.isEmpty || bobotBelumDiisi)
+                  ? null
+                  : () => _jalankanKalkulasi(context, provider, kelas),
+              style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
               ),
-              icon: const Icon(Icons.balance, size: 18),
-              label: Text(
-                bobotBelumDiisi ? 'Isi Bobot AHP' : 'Edit Bobot AHP',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: (kelas.muridList.isEmpty || bobotBelumDiisi)
-                  ? null
-                  : () => _jalankanKalkulasi(context, provider, kelas),
               icon: const Icon(Icons.calculate_outlined, size: 18),
-              label: const Text('Kalkulasi'),
+              label: const Text(
+                'Hitung Nilai Akhir',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ],
@@ -228,6 +305,88 @@ class DetailKelasScreen extends StatelessWidget {
     AppProvider provider,
     Kelas kelas,
   ) async {
+    // ─ Readiness check: semua nilai hasil harus ada ─
+    final missing = provider.cekKesiapanKalkulasi(kelasId);
+    if (missing.isNotEmpty && context.mounted) {
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded,
+                  color: AppColors.danger, size: 22),
+              SizedBox(width: 8),
+              Text('Data Belum Lengkap',
+                  style: TextStyle(fontSize: 16)),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Nilai hasil belum dimasukkan untuk:',
+                  style: TextStyle(
+                      fontSize: 13, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 10),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 240),
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: missing.entries.map((e) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.costChip,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                e.key, // nama murid
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                e.value.map((k) => '• $k').join('\n'),
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.costChipText),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Mengerti'),
+            ),
+          ],
+        ),
+      );
+      return; // batalkan kalkulasi
+    }
+
+    // ─ Semua data lengkap — jalankan kalkulasi ─
+    if (!context.mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -238,9 +397,14 @@ class DetailKelasScreen extends StatelessWidget {
     if (context.mounted) Navigator.of(context).pop();
 
     if (hasil == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal: pastikan bobot AHP sudah diisi')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal: pastikan bobot AHP sudah diisi'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
       return;
     }
 

@@ -215,6 +215,98 @@ class AppProvider extends ChangeNotifier {
     await _saveToPrefs();
     notifyListeners();
   }
+  // ─── Sesi CRUD ───────────────────────────────────────────────────────────
+
+  Future<Sesi> tambahSesi(
+    String kelasId,
+    String kriteriaId,
+    String nama,
+  ) async {
+    final idx = _kelasList.indexWhere((k) => k.id == kelasId);
+    if (idx < 0) throw Exception('Kelas tidak ditemukan');
+
+    final kelas = _kelasList[idx];
+    final existing = kelas.getSesiByKriteria(kriteriaId);
+
+    final sesi = Sesi(
+      id: _uuid.v4(),
+      kriteriaId: kriteriaId,
+      nama: nama,
+      urutan: existing.length + 1,
+      tanggal: DateTime.now(),
+    );
+
+    _kelasList[idx] = kelas.copyWith(
+      sesiList: [...kelas.sesiList, sesi],
+      sudahKalkulasi: false,
+    );
+    await _saveToPrefs();
+    notifyListeners();
+    return sesi;
+  }
+
+  Future<void> hapusSesi(String kelasId, String sesiId) async {
+    final idx = _kelasList.indexWhere((k) => k.id == kelasId);
+    if (idx < 0) return;
+    final kelas = _kelasList[idx];
+    _kelasList[idx] = kelas.copyWith(
+      sesiList: kelas.sesiList.where((s) => s.id != sesiId).toList(),
+      sudahKalkulasi: false,
+    );
+    await _saveToPrefs();
+    notifyListeners();
+  }
+
+  // ─── Input Nilai Hasil (per sesi) ────────────────────────────────────────
+
+  /// Input nilai tugas/tes per murid per sesi.
+  /// Jika murid sudah punya nilai untuk sesi ini → attempt naik (retake).
+  /// Jika belum → attempt = 1.
+  Future<void> inputNilaiHasil({
+    required String kelasId,
+    required String muridId,
+    required String kriteriaId,
+    required String sesiId,
+    required double nilai,
+  }) async {
+    final kIdx = _kelasList.indexWhere((k) => k.id == kelasId);
+    if (kIdx < 0) return;
+    final kelas = _kelasList[kIdx];
+
+    final mIdx = kelas.muridList.indexWhere((m) => m.id == muridId);
+    if (mIdx < 0) return;
+    final murid = kelas.muridList[mIdx];
+
+    // Cari nilai sebelumnya untuk sesi ini
+    final existing = murid.nilaiList
+        .where((n) => n.kriteriaId == kriteriaId && n.sesiId == sesiId)
+        .toList();
+
+    final attempt = existing.isEmpty ? 1 : existing.length + 1;
+
+    final newNilai = Nilai(
+      id: '${muridId}_${kriteriaId}_${sesiId}_$attempt',
+      siswaId: muridId,
+      kriteriaId: kriteriaId,
+      sesiId: sesiId,
+      nilai: nilai,
+      attempt: attempt,
+      tanggal: DateTime.now(),
+    );
+
+    final updatedNilaiList = [...murid.nilaiList, newNilai];
+    final updatedMurid = murid.copyWith(nilaiList: updatedNilaiList);
+    final newMuridList = List<Murid>.from(kelas.muridList);
+    newMuridList[mIdx] = updatedMurid;
+
+    _kelasList[kIdx] = kelas.copyWith(
+      muridList: newMuridList,
+      sudahKalkulasi: false,
+    );
+    await _saveToPrefs();
+    notifyListeners();
+  }
+
   // ─── AHP ─────────────────────────────────────────────────────────────────────
 
   Future<HasilAHP?> simpanMatriksAHP(
@@ -225,8 +317,9 @@ class AppProvider extends ChangeNotifier {
     if (idx < 0) return null;
 
     final hasil = KalkulasiService.hitungAHP(matriks);
-    if (!hasil.konsisten)
+    if (!hasil.konsisten) {
       return hasil; // kembalikan hasil tapi jangan simpan bobot
+    }
 
     // Update bobot di kriteria
     final kelas = _kelasList[idx];
@@ -245,6 +338,35 @@ class AppProvider extends ChangeNotifier {
   }
 
   // ─── Kalkulasi SAW ───────────────────────────────────────────────────────────
+
+  /// Cek apakah data cukup untuk kalkulasi.
+  /// Returns: {namaMurid: [namaKriteria yang belum ada nilainya]}
+  /// Map kosong = siap kalkulasi.
+  Map<String, List<String>> cekKesiapanKalkulasi(String kelasId) {
+    final kelas = getKelas(kelasId);
+    if (kelas == null) return {};
+
+    // Hanya kriteria 'hasil' yang SUDAH ADA SESINYA yang wajib diisi.
+    // Kriteria hasil tanpa sesi (misal UTS/UAS belum terjadi) dilewati.
+    final kriteriaWajib = kelas.kriteria
+        .where((k) => k.jenis == JenisKriteria.hasil)
+        .where((k) => kelas.sesiList.any((s) => s.kriteriaId == k.id))
+        .toList();
+
+    // Tidak ada kriteria hasil yang aktif → langsung bisa kalkulasi
+    if (kriteriaWajib.isEmpty) return {};
+
+    final missing = <String, List<String>>{};
+    for (final murid in kelas.muridList) {
+      final belumAda = <String>[];
+      for (final k in kriteriaWajib) {
+        final punya = murid.getNilaiByKriteria(k.id).isNotEmpty;
+        if (!punya) belumAda.add(k.nama);
+      }
+      if (belumAda.isNotEmpty) missing[murid.nama] = belumAda;
+    }
+    return missing;
+  }
 
   Future<HasilSAW?> jalankanKalkulasi(String kelasId) async {
     final idx = _kelasList.indexWhere((k) => k.id == kelasId);

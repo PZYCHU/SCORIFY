@@ -137,12 +137,14 @@ class KalkulasiService {
         final minV = minNilai[k.id]!;
 
         double rij;
-        if (k.arah == ArahKriteria.benefit) {
-          // benefit: xij / max
+        if (maxV == minV) {
+          // Semua murid punya nilai sama → tidak ada pembeda, semua dapat 1
+          rij = 1.0;
+        } else if (k.arah == ArahKriteria.benefit) {
           rij = maxV == 0 ? 0 : xij / maxV;
         } else {
-          // cost: min / xij
-          rij = xij == 0 ? 0 : minV / xij;
+          // cost: semakin kecil semakin baik
+          rij = xij == 0 ? 1.0 : minV / xij;
         }
 
         skor += k.bobot * rij;
@@ -166,11 +168,16 @@ class KalkulasiService {
   /// - performa & derived: rata-rata semua nilai
   /// - hasil (per sesi): rata-rata nilai terbaik per sesi
   static double _nilaiRingkasan(Murid murid, Kriteria k) {
+    // Derived dihitung dari frekuensi ngulang, bukan dari nilaiList langsung
+    if (k.jenis == JenisKriteria.derived) {
+      return murid.getFrekuensiNgulang().toDouble();
+    }
+
     final semuaNilai = murid.getNilaiByKriteria(k.id);
     if (semuaNilai.isEmpty) return 0;
 
     if (k.jenis == JenisKriteria.hasil && k.perSesi) {
-      // Ambil attempt tertinggi per sesi, lalu rata-rata antar sesi
+      // Ambil nilai terbaik (attempt tertinggi) per sesi, lalu rata-rata antar sesi
       final Map<String, double> bestPerSesi = {};
       for (final n in semuaNilai) {
         final key = n.sesiId ?? 'no_sesi';
@@ -182,14 +189,16 @@ class KalkulasiService {
       return bestPerSesi.values.reduce((a, b) => a + b) / bestPerSesi.length;
     }
 
-    // performa: rata-rata langsung
-    // derived: rata-rata jumlah attempt > 1 per sesi (frekuensi ngulang)
-    if (k.jenis == JenisKriteria.derived) {
-      return murid.getFrekuensiNgulang(k.id).toDouble();
+    // Counter (performa): SUM semua pertemuan
+    // Setiap entry di nilaiList = nilai di satu hari/pertemuan
+    // Makin banyak total, makin aktif siswanya
+    if (k.jenis == JenisKriteria.performa &&
+        k.inputType == InputType.counter) {
+      return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
     }
 
-    final total = semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
-    return total / semuaNilai.length;
+    // Stopwatch, toggle, number (performa/hasil non-sesi): rata-rata semua pertemuan
+    return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai) / semuaNilai.length;
   }
 
   // ─── Skala AHP ────────────────────────────────────────────────────────────
