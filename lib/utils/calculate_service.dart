@@ -197,7 +197,7 @@ class KalkulasiService {
       return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
     }
 
-    // Stopwatch, toggle, number (performa/hasil non-sesi): rata-rata semua pertemuan
+    // Toggle, number (performa/hasil non-sesi): rata-rata semua pertemuan
     return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai) / semuaNilai.length;
   }
 

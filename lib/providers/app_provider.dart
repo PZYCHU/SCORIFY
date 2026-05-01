@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/models.dart';
 import '../utils/calculate_service.dart';
 
@@ -12,7 +13,11 @@ class AppProvider extends ChangeNotifier {
   List<Kelas> _kelasList = [];
   bool _loading = false;
 
-  List<Kelas> get kelasList => _kelasList;
+  List<Kelas> get kelasList {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return [];
+    return _kelasList.where((k) => k.userId == uid).toList();
+  }
   bool get loading => _loading;
 
   AppProvider() {
@@ -30,6 +35,19 @@ class AppProvider extends ChangeNotifier {
       if (raw != null) {
         final list = jsonDecode(raw) as List;
         _kelasList = list.map((k) => Kelas.fromJson(k)).toList();
+
+        // Migrate legacy data (jika ada kelas tanpa userId, jadikan milik current user)
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        bool migrated = false;
+        if (uid != null) {
+          for (int i = 0; i < _kelasList.length; i++) {
+            if (_kelasList[i].userId.isEmpty) {
+              _kelasList[i] = _kelasList[i].copyWith(userId: uid);
+              migrated = true;
+            }
+          }
+          if (migrated) _saveToPrefs();
+        }
       }
     } catch (_) {}
     _loading = false;
@@ -48,8 +66,10 @@ class AppProvider extends ChangeNotifier {
     required String nama,
     required List<Kriteria> kriteria,
   }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     final kelas = Kelas(
       id: _uuid.v4(),
+      userId: uid,
       nama: nama,
       kriteria: kriteria,
       muridList: [],
@@ -91,7 +111,7 @@ class AppProvider extends ChangeNotifier {
 
   Kelas? getKelas(String kelasId) {
     try {
-      return _kelasList.firstWhere((k) => k.id == kelasId);
+      return kelasList.firstWhere((k) => k.id == kelasId);
     } catch (_) {
       return null;
     }

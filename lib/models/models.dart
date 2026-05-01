@@ -1,7 +1,7 @@
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 enum JenisKriteria {
-  performa, // diinput saat KBM (counter, toggle, stopwatch)
+  performa, // diinput saat KBM (counter, toggle)
   hasil,    // diinput setelah koreksi, punya sesi (nilai tugas, UTS, UAS)
   derived,  // otomatis dihitung sistem (frekuensi ngulang = count attempt > 1)
 }
@@ -9,7 +9,6 @@ enum JenisKriteria {
 enum InputType {
   counter,   // tombol +, cocok untuk keaktifan
   number,    // input angka manual, cocok untuk nilai tugas
-  stopwatch, // durasi pengerjaan
   toggle,    // ya/tidak, cocok untuk sikap
 }
 
@@ -244,6 +243,7 @@ class Murid {
 
 class Kelas {
   final String id;
+  final String userId;
   String nama;
   List<Kriteria> kriteria;
   List<Murid> muridList;
@@ -253,6 +253,7 @@ class Kelas {
 
   Kelas({
     required this.id,
+    required this.userId,
     required this.nama,
     required this.kriteria,
     required this.muridList,
@@ -273,6 +274,7 @@ class Kelas {
   }
 
   Kelas copyWith({
+    String? userId,
     String? nama,
     List<Kriteria>? kriteria,
     List<Murid>? muridList,
@@ -282,6 +284,7 @@ class Kelas {
   }) {
     return Kelas(
       id: id,
+      userId: userId ?? this.userId,
       nama: nama ?? this.nama,
       kriteria: kriteria ?? this.kriteria,
       muridList: muridList ?? this.muridList,
@@ -293,6 +296,7 @@ class Kelas {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'userId': userId,
     'nama': nama,
     'kriteria': kriteria.map((k) => k.toJson()).toList(),
     'muridList': muridList.map((m) => m.toJson()).toList(),
@@ -303,7 +307,7 @@ class Kelas {
   };
 
   factory Kelas.fromJson(Map<String, dynamic> json) {
-    // Reconstruct matriksAHP from 1D array if it exists
+    // Reconstruct matriksAHP from 1D array
     final flat = List<double>.from(
       (json['matriks_ahp'] as List? ?? []).map((e) => (e as num).toDouble())
     );
@@ -322,6 +326,7 @@ class Kelas {
 
     return Kelas(
       id: json['id'],
+      userId: json['userId'] ?? '',
       nama: json['nama'],
       kriteria: (json['kriteria'] as List? ?? [])
           .map((k) => Kriteria.fromJson(k))

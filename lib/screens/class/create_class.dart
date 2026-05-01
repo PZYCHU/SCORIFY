@@ -317,7 +317,6 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
   List<InputType> get _availableInputTypes => switch (_jenis) {
     JenisKriteria.performa => [
       InputType.counter,
-      InputType.stopwatch,
       InputType.toggle,
       InputType.number,
     ],
@@ -479,9 +478,8 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
   }
 
   String _inputLabel(InputType t) => switch (t) {
-    InputType.counter => 'Counter',
+    InputType.counter => 'Akumulasi Poin',
     InputType.number => 'Angka',
-    InputType.stopwatch => 'Stopwatch',
     InputType.toggle => 'Toggle',
   };
 }

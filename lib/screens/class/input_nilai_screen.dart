@@ -70,7 +70,7 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
             ? nilaiHariIni.first.nilai
             : 0;
       } else {
-        // Toggle, stopwatch, number: tampilkan nilai hari ini jika ada,
+        // Toggle, number: tampilkan nilai hari ini jika ada,
         // kalau tidak tampilkan nilai terakhir yang tersimpan
         if (nilaiHariIni.isNotEmpty) {
           _nilaiMap[k.id] = nilaiHariIni.first.nilai;
@@ -235,27 +235,14 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
 
     switch (k.inputType) {
       case InputType.counter:
-        return _CounterWidget(
-          nilai: nilai.toInt(),
-          onChanged: (v) => _updateNilai(k.id, v.toDouble()),
+        return _AccumulatorWidget(
+          onAddPoin: (poinBaru) => _updateNilai(k.id, nilai + poinBaru),
         );
 
       case InputType.toggle:
         return _ToggleWidget(
           nilai: nilai,
           onChanged: (v) => _updateNilai(k.id, v),
-        );
-
-      case InputType.stopwatch:
-        return _StopwatchWidget(
-          kriteriaId: k.id,
-          detikTersimpan: nilai.toInt(),
-          onStop: (detik) {
-            // Simpan LANGSUNG saat stop — tanpa debounce
-            // Tidak pakai setState karena onStop juga dipanggil dari dispose()
-            _nilaiMap[k.id] = detik.toDouble();
-            _simpanNilai(k.id, detik.toDouble());
-          },
         );
 
       case InputType.number:
@@ -273,7 +260,6 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
     final icon = switch (t) {
       InputType.counter => Icons.add_circle_outline,
       InputType.toggle => Icons.toggle_on_outlined,
-      InputType.stopwatch => Icons.timer_outlined,
       InputType.number => Icons.edit_outlined,
       null => Icons.auto_awesome_outlined,
     };
@@ -299,50 +285,103 @@ class _AutoSaveIndicator extends StatelessWidget {
   }
 }
 
-// ─── Counter Widget ───────────────────────────────────────────────────────────
+// ─── Accumulator Widget ─────────────────────────────────────────────────────────
 
-class _CounterWidget extends StatelessWidget {
-  final int nilai;
-  final ValueChanged<int> onChanged;
+class _AccumulatorWidget extends StatefulWidget {
+  final ValueChanged<double> onAddPoin;
 
-  const _CounterWidget({required this.nilai, required this.onChanged});
+  const _AccumulatorWidget({required this.onAddPoin});
+
+  @override
+  State<_AccumulatorWidget> createState() => _AccumulatorWidgetState();
+}
+
+class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
+  final _poinCtrl = TextEditingController();
+  bool _showSuccess = false;
+  Timer? _successTimer;
+
+  @override
+  void dispose() {
+    _poinCtrl.dispose();
+    _successTimer?.cancel();
+    super.dispose();
+  }
+
+  void _kirimPoin() {
+    final input = _poinCtrl.text.trim();
+    if (input.isEmpty) return;
+
+    final poin = double.tryParse(input);
+    if (poin != null) {
+      widget.onAddPoin(poin);
+      _poinCtrl.clear();
+
+      setState(() => _showSuccess = true);
+      _successTimer?.cancel();
+      _successTimer = Timer(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _showSuccess = false);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Tombol −
-        _CircleBtn(
-          icon: Icons.remove,
-          color: nilai > 0 ? AppColors.danger : AppColors.border,
-          onTap: nilai > 0 ? () => onChanged(nilai - 1) : null,
-        ),
-
-        // Nilai
-        Column(
+        Row(
           children: [
-            Text(
-              '$nilai',
-              style: const TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
+            Expanded(
+              child: TextField(
+                controller: _poinCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  hintText: '+ Tambah Poin (mis. 80)',
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.accent, width: 2),
+                  ),
+                ),
               ),
             ),
-            Text(
-              'kali',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            const SizedBox(width: 12),
+            ElevatedButton(
+              onPressed: _kirimPoin,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Send', style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
-
-        // Tombol +
-        _CircleBtn(
-          icon: Icons.add,
-          color: AppColors.accent,
-          onTap: () => onChanged(nilai + 1),
-        ),
+        if (_showSuccess) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.green, size: 16),
+              const SizedBox(width: 4),
+              const Text(
+                'Poin tersimpan ke akumulasi!',
+                style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -398,137 +437,6 @@ class _ToggleWidget extends StatelessWidget {
             ),
           ),
         ),
-      ],
-    );
-  }
-}
-
-// ─── Stopwatch Widget ─────────────────────────────────────────────────────────
-
-class _StopwatchWidget extends StatefulWidget {
-  final String kriteriaId;
-  final int detikTersimpan;
-  final ValueChanged<int> onStop;
-
-  const _StopwatchWidget({
-    required this.kriteriaId,
-    required this.detikTersimpan,
-    required this.onStop,
-  });
-
-  @override
-  State<_StopwatchWidget> createState() => _StopwatchWidgetState();
-}
-
-class _StopwatchWidgetState extends State<_StopwatchWidget> {
-  late Stopwatch _sw;
-  Timer? _timer;
-  bool _running = false;
-  late int _totalDetik;
-
-  @override
-  void initState() {
-    super.initState();
-    _sw = Stopwatch();
-    _totalDetik = widget.detikTersimpan;
-  }
-
-  @override
-  void dispose() {
-    if (_running) {
-      // Auto-stop & auto-save jika sheet ditutup saat stopwatch masih jalan
-      _sw.stop();
-      _timer?.cancel();
-      final totalDetik = widget.detikTersimpan + _sw.elapsed.inSeconds;
-      widget.onStop(totalDetik); // aman: onStop tidak pakai setState
-    } else {
-      _timer?.cancel();
-    }
-    super.dispose();
-  }
-
-  void _mulai() {
-    _sw.start();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      setState(
-        () => _totalDetik = widget.detikTersimpan + _sw.elapsed.inSeconds,
-      );
-    });
-    setState(() => _running = true);
-  }
-
-  void _stop() {
-    _sw.stop();
-    _timer?.cancel();
-    setState(() {
-      _running = false;
-      _totalDetik = widget.detikTersimpan + _sw.elapsed.inSeconds;
-    });
-    widget.onStop(_totalDetik);
-  }
-
-  void _reset() {
-    _sw.reset();
-    _timer?.cancel();
-    setState(() {
-      _running = false;
-      _totalDetik = 0;
-    });
-    widget.onStop(0);
-  }
-
-  String _format(int detik) {
-    final m = detik ~/ 60;
-    final s = detik % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          _format(_totalDetik),
-          style: TextStyle(
-            fontSize: 40,
-            fontWeight: FontWeight.w700,
-            color: _running ? AppColors.accent : AppColors.primary,
-          ),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (!_running) ...[
-              _CircleBtn(
-                icon: Icons.refresh,
-                color: AppColors.textSecondary,
-                onTap: _totalDetik > 0 ? _reset : null,
-              ),
-              const SizedBox(width: 20),
-              _CircleBtn(
-                icon: Icons.play_arrow,
-                color: AppColors.accent,
-                size: 56,
-                onTap: _mulai,
-              ),
-            ] else ...[
-              _CircleBtn(
-                icon: Icons.stop,
-                color: AppColors.danger,
-                size: 56,
-                onTap: _stop,
-              ),
-            ],
-          ],
-        ),
-        if (_totalDetik > 0 && !_running) ...[
-          const SizedBox(height: 8),
-          Text(
-            'Tersimpan: ${_format(_totalDetik)}',
-            style: TextStyle(fontSize: 12, color: AppColors.accent),
-          ),
-        ],
       ],
     );
   }
@@ -590,13 +498,11 @@ class _CircleBtn extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback? onTap;
-  final double size;
 
   const _CircleBtn({
     required this.icon,
     required this.color,
     this.onTap,
-    this.size = 44,
   });
 
   @override
@@ -604,13 +510,13 @@ class _CircleBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: size,
-        height: size,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
           color: onTap != null ? color : color.withOpacity(0.3),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Colors.white, size: size * 0.45),
+        child: Icon(icon, color: Colors.white, size: 44 * 0.45),
       ),
     );
   }

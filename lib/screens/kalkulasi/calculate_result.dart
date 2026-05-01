@@ -163,7 +163,7 @@ class _RankingCard extends StatelessWidget {
       return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
     }
 
-    // Stopwatch, toggle, number: rata-rata semua pertemuan
+    // Toggle, number: rata-rata semua pertemuan
     return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai) / semuaNilai.length;
   }
 

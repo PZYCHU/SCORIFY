@@ -132,9 +132,8 @@ class InputTypeChip extends StatelessWidget {
   Widget build(BuildContext context) {
     if (inputType == null) return const SizedBox.shrink();
     final label = switch (inputType!) {
-      InputType.counter => 'Counter',
+      InputType.counter => 'Akumulasi Poin',
       InputType.number => 'Angka',
-      InputType.stopwatch => 'Stopwatch',
       InputType.toggle => 'Toggle',
     };
     return Container(
