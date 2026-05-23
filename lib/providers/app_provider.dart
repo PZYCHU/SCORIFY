@@ -1,66 +1,63 @@
-import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:uuid/uuid.dart';
 import '../models/models.dart';
+import '../services/firestore_service.dart';
 import '../utils/calculate_service.dart';
 
 const _uuid = Uuid();
-const _prefsKey = 'kelas_data';
 
 class AppProvider extends ChangeNotifier {
+  final FirestoreService _firestore = FirestoreService();
+
   List<Kelas> _kelasList = [];
   bool _loading = false;
+  StreamSubscription<List<Kelas>>? _kelajsub;
 
-  List<Kelas> get kelasList {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return [];
-    return _kelasList.where((k) => k.userId == uid).toList();
-  }
+  List<Kelas> get kelasList => _kelasList;
   bool get loading => _loading;
 
-  AppProvider() {
-    _loadFromPrefs();
-  }
+  // ─── Auth listener ────────────────────────────────────────────────────────
 
-  // ─── Persistence ─────────────────────────────────────────────────────────────
+  /// Dipanggil dari [main.dart] setiap kali auth state berubah.
+  /// - [uid] != null → subscribe stream Firestore untuk user tersebut.
+  /// - [uid] == null → batalkan subscription & kosongkan data.
+  void listenToUser(String? uid) {
+    _kelajsub?.cancel();
+    _kelajsub = null;
 
-  Future<void> _loadFromPrefs() async {
+    if (uid == null) {
+      _kelasList = [];
+      _loading = false;
+      notifyListeners();
+      return;
+    }
+
     _loading = true;
     notifyListeners();
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_prefsKey);
-      if (raw != null) {
-        final list = jsonDecode(raw) as List;
-        _kelasList = list.map((k) => Kelas.fromJson(k)).toList();
 
-        // Migrate legacy data (jika ada kelas tanpa userId, jadikan milik current user)
-        final uid = FirebaseAuth.instance.currentUser?.uid;
-        bool migrated = false;
-        if (uid != null) {
-          for (int i = 0; i < _kelasList.length; i++) {
-            if (_kelasList[i].userId.isEmpty) {
-              _kelasList[i] = _kelasList[i].copyWith(userId: uid);
-              migrated = true;
-            }
-          }
-          if (migrated) _saveToPrefs();
-        }
-      }
-    } catch (_) {}
-    _loading = false;
-    notifyListeners();
+    _kelajsub = _firestore.streamKelas(uid).listen(
+      (list) {
+        _kelasList = list;
+        _loading = false;
+        notifyListeners();
+      },
+      onError: (e) {
+        if (kDebugMode) debugPrint('🔥 Firestore stream error: $e');
+        _loading = false;
+        notifyListeners();
+      },
+    );
   }
 
-  Future<void> _saveToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final encoded = jsonEncode(_kelasList.map((k) => k.toJson()).toList());
-    await prefs.setString(_prefsKey, encoded);
+  @override
+  void dispose() {
+    _kelajsub?.cancel();
+    super.dispose();
   }
 
-  // ─── Kelas CRUD ───────────────────────────────────────────────────────────────
+  // ─── Kelas CRUD ───────────────────────────────────────────────────────────
 
   Future<Kelas> tambahKelas({
     required String nama,
@@ -76,9 +73,7 @@ class AppProvider extends ChangeNotifier {
       sesiList: [],
       matriksAHP: KalkulasiService.matriksAwal(kriteria.length),
     );
-    _kelasList.add(kelas);
-    await _saveToPrefs();
-    notifyListeners();
+    await _firestore.upsertKelas(kelas);
     return kelas;
   }
 
@@ -93,31 +88,28 @@ class AppProvider extends ChangeNotifier {
     final newKelas = kelas.copyWith(
       nama: nama,
       kriteria: kriteria,
-      sudahKalkulasi: false, // reset kalkulasi jika kriteria berubah
+      sudahKalkulasi: false,
       matriksAHP: kriteria != null
           ? KalkulasiService.matriksAwal(kriteria.length)
           : null,
     );
-    _kelasList[idx] = newKelas;
-    await _saveToPrefs();
-    notifyListeners();
+    await _firestore.upsertKelas(newKelas);
+    // Stream Firestore akan update _kelasList otomatis
   }
 
   Future<void> hapusKelas(String kelasId) async {
-    _kelasList.removeWhere((k) => k.id == kelasId);
-    await _saveToPrefs();
-    notifyListeners();
+    await _firestore.hapusKelas(kelasId);
   }
 
   Kelas? getKelas(String kelasId) {
     try {
-      return kelasList.firstWhere((k) => k.id == kelasId);
+      return _kelasList.firstWhere((k) => k.id == kelasId);
     } catch (_) {
       return null;
     }
   }
 
-  // ─── Murid CRUD ───────────────────────────────────────────────────────────────
+  // ─── Murid CRUD ───────────────────────────────────────────────────────────
 
   Future<void> tambahMurid(
     String kelasId, {
@@ -127,13 +119,11 @@ class AppProvider extends ChangeNotifier {
     final idx = _kelasList.indexWhere((k) => k.id == kelasId);
     if (idx < 0) return;
     final murid = Murid(id: _uuid.v4(), nama: nama, nilaiList: nilaiList);
-    final updated = _kelasList[idx].copyWith(
-      muridList: [..._kelasList[idx].muridList, murid],
-      sudahKalkulasi: false,
-    );
-    _kelasList[idx] = updated;
-    await _saveToPrefs();
-    notifyListeners();
+    await _firestore.upsertMurid(kelasId, murid);
+
+    // Update sudahKalkulasi = false di kelas
+    final updated = _kelasList[idx].copyWith(sudahKalkulasi: false);
+    await _firestore.upsertKelas(updated);
   }
 
   Future<void> editMurid(
@@ -147,34 +137,28 @@ class AppProvider extends ChangeNotifier {
     final kelas = _kelasList[kIdx];
     final mIdx = kelas.muridList.indexWhere((m) => m.id == muridId);
     if (mIdx < 0) return;
+
     final updatedMurid = kelas.muridList[mIdx].copyWith(
       nama: nama,
       nilaiList: nilaiList,
     );
-    final newList = List<Murid>.from(kelas.muridList);
-    newList[mIdx] = updatedMurid;
-    _kelasList[kIdx] = kelas.copyWith(
-      muridList: newList,
-      sudahKalkulasi: false,
-    );
-    await _saveToPrefs();
-    notifyListeners();
+    await _firestore.upsertMurid(kelasId, updatedMurid);
+
+    final updatedKelas = kelas.copyWith(sudahKalkulasi: false);
+    await _firestore.upsertKelas(updatedKelas);
   }
 
   Future<void> hapusMurid(String kelasId, String muridId) async {
     final kIdx = _kelasList.indexWhere((k) => k.id == kelasId);
     if (kIdx < 0) return;
-    final kelas = _kelasList[kIdx];
-    final newList = kelas.muridList.where((m) => m.id != muridId).toList();
-    _kelasList[kIdx] = kelas.copyWith(
-      muridList: newList,
-      sudahKalkulasi: false,
-    );
-    await _saveToPrefs();
-    notifyListeners();
+
+    await _firestore.hapusMurid(kelasId, muridId);
+
+    final updatedKelas = _kelasList[kIdx].copyWith(sudahKalkulasi: false);
+    await _firestore.upsertKelas(updatedKelas);
   }
-  // ─── Input Nilai Performa (saat KBM) ─────────────────────────────────────────
-  // Tambahkan method ini di AppProvider, setelah method hapusMurid
+
+  // ─── Input Nilai Performa (saat KBM) ────────────────────────────────────
 
   Future<void> inputNilaiPerforma({
     required String kelasId,
@@ -191,8 +175,6 @@ class AppProvider extends ChangeNotifier {
     if (mIdx < 0) return;
     final murid = kelas.muridList[mIdx];
 
-    // Cari nilai yang sudah ada untuk kriteria ini di tanggal yang sama
-    // (biar tidak dobel entry untuk satu hari)
     final todayStr = '${tanggal.year}-${tanggal.month}-${tanggal.day}';
     final existingIdx = murid.nilaiList.indexWhere((n) {
       final nStr = '${n.tanggal.year}-${n.tanggal.month}-${n.tanggal.day}';
@@ -202,7 +184,6 @@ class AppProvider extends ChangeNotifier {
     List<Nilai> updatedNilaiList = List.from(murid.nilaiList);
 
     if (existingIdx >= 0) {
-      // Update nilai yang sudah ada hari ini
       updatedNilaiList[existingIdx] = Nilai(
         id: updatedNilaiList[existingIdx].id,
         siswaId: muridId,
@@ -212,7 +193,6 @@ class AppProvider extends ChangeNotifier {
         tanggal: tanggal,
       );
     } else {
-      // Tambah entry baru
       updatedNilaiList.add(Nilai(
         id: '${muridId}_${kriteriaId}_$todayStr',
         siswaId: muridId,
@@ -224,17 +204,9 @@ class AppProvider extends ChangeNotifier {
     }
 
     final updatedMurid = murid.copyWith(nilaiList: updatedNilaiList);
-    final newMuridList = List<Murid>.from(kelas.muridList);
-    newMuridList[mIdx] = updatedMurid;
-
-    _kelasList[kIdx] = kelas.copyWith(
-      muridList: newMuridList,
-      sudahKalkulasi: false,
-    );
-
-    await _saveToPrefs();
-    notifyListeners();
+    await _firestore.upsertMurid(kelasId, updatedMurid);
   }
+
   // ─── Sesi CRUD ───────────────────────────────────────────────────────────
 
   Future<Sesi> tambahSesi(
@@ -256,12 +228,11 @@ class AppProvider extends ChangeNotifier {
       tanggal: DateTime.now(),
     );
 
-    _kelasList[idx] = kelas.copyWith(
+    final updated = kelas.copyWith(
       sesiList: [...kelas.sesiList, sesi],
       sudahKalkulasi: false,
     );
-    await _saveToPrefs();
-    notifyListeners();
+    await _firestore.upsertKelas(updated);
     return sesi;
   }
 
@@ -269,19 +240,15 @@ class AppProvider extends ChangeNotifier {
     final idx = _kelasList.indexWhere((k) => k.id == kelasId);
     if (idx < 0) return;
     final kelas = _kelasList[idx];
-    _kelasList[idx] = kelas.copyWith(
+    final updated = kelas.copyWith(
       sesiList: kelas.sesiList.where((s) => s.id != sesiId).toList(),
       sudahKalkulasi: false,
     );
-    await _saveToPrefs();
-    notifyListeners();
+    await _firestore.upsertKelas(updated);
   }
 
   // ─── Input Nilai Hasil (per sesi) ────────────────────────────────────────
 
-  /// Input nilai tugas/tes per murid per sesi.
-  /// Jika murid sudah punya nilai untuk sesi ini → attempt naik (retake).
-  /// Jika belum → attempt = 1.
   Future<void> inputNilaiHasil({
     required String kelasId,
     required String muridId,
@@ -297,7 +264,6 @@ class AppProvider extends ChangeNotifier {
     if (mIdx < 0) return;
     final murid = kelas.muridList[mIdx];
 
-    // Cari nilai sebelumnya untuk sesi ini
     final existing = murid.nilaiList
         .where((n) => n.kriteriaId == kriteriaId && n.sesiId == sesiId)
         .toList();
@@ -314,20 +280,16 @@ class AppProvider extends ChangeNotifier {
       tanggal: DateTime.now(),
     );
 
-    final updatedNilaiList = [...murid.nilaiList, newNilai];
-    final updatedMurid = murid.copyWith(nilaiList: updatedNilaiList);
-    final newMuridList = List<Murid>.from(kelas.muridList);
-    newMuridList[mIdx] = updatedMurid;
-
-    _kelasList[kIdx] = kelas.copyWith(
-      muridList: newMuridList,
-      sudahKalkulasi: false,
+    final updatedMurid = murid.copyWith(
+      nilaiList: [...murid.nilaiList, newNilai],
     );
-    await _saveToPrefs();
-    notifyListeners();
+    await _firestore.upsertMurid(kelasId, updatedMurid);
+
+    final updatedKelas = kelas.copyWith(sudahKalkulasi: false);
+    await _firestore.upsertKelas(updatedKelas);
   }
 
-  // ─── AHP ─────────────────────────────────────────────────────────────────────
+  // ─── AHP ────────────────────────────────────────────────────────────────
 
   Future<HasilAHP?> simpanMatriksAHP(
     String kelasId,
@@ -337,43 +299,33 @@ class AppProvider extends ChangeNotifier {
     if (idx < 0) return null;
 
     final hasil = KalkulasiService.hitungAHP(matriks);
-    if (!hasil.konsisten) {
-      return hasil; // kembalikan hasil tapi jangan simpan bobot
-    }
+    if (!hasil.konsisten) return hasil;
 
-    // Update bobot di kriteria
     final kelas = _kelasList[idx];
     final updatedKriteria = kelas.kriteria.asMap().entries.map((e) {
       return e.value.copyWith(bobot: hasil.bobot[e.key]);
     }).toList();
 
-    _kelasList[idx] = kelas.copyWith(
+    final updated = kelas.copyWith(
       kriteria: updatedKriteria,
       matriksAHP: matriks,
       sudahKalkulasi: false,
     );
-    await _saveToPrefs();
-    notifyListeners();
+    await _firestore.upsertKelas(updated);
     return hasil;
   }
 
-  // ─── Kalkulasi SAW ───────────────────────────────────────────────────────────
+  // ─── Kalkulasi SAW ───────────────────────────────────────────────────────
 
-  /// Cek apakah data cukup untuk kalkulasi.
-  /// Returns: {namaMurid: [namaKriteria yang belum ada nilainya]}
-  /// Map kosong = siap kalkulasi.
   Map<String, List<String>> cekKesiapanKalkulasi(String kelasId) {
     final kelas = getKelas(kelasId);
     if (kelas == null) return {};
 
-    // Hanya kriteria 'hasil' yang SUDAH ADA SESINYA yang wajib diisi.
-    // Kriteria hasil tanpa sesi (misal UTS/UAS belum terjadi) dilewati.
     final kriteriaWajib = kelas.kriteria
         .where((k) => k.jenis == JenisKriteria.hasil)
         .where((k) => kelas.sesiList.any((s) => s.kriteriaId == k.id))
         .toList();
 
-    // Tidak ada kriteria hasil yang aktif → langsung bisa kalkulasi
     if (kriteriaWajib.isEmpty) return {};
 
     final missing = <String, List<String>>{};
@@ -393,19 +345,33 @@ class AppProvider extends ChangeNotifier {
     if (idx < 0) return null;
     final kelas = _kelasList[idx];
 
-    // Pastikan semua bobot sudah diisi
     final bobotBelumDiisi = kelas.kriteria.any((k) => k.bobot == 0.0);
     if (bobotBelumDiisi) return null;
 
     final hasil = KalkulasiService.hitungSAW(kelas.muridList, kelas.kriteria);
 
-    // Update murid dengan skor
-    _kelasList[idx] = kelas.copyWith(
+    // Simpan skor final ke setiap murid di Firestore
+    await _firestore.batchUpsertMurid(kelasId, hasil.muridTerurut);
+
+    // Update flag sudahKalkulasi di kelas
+    final updated = kelas.copyWith(
       muridList: hasil.muridTerurut,
       sudahKalkulasi: true,
     );
-    await _saveToPrefs();
-    notifyListeners();
+    await _firestore.upsertKelas(updated);
+
     return hasil;
+  }
+
+  // ─── Import CSV (batch tambah murid) ─────────────────────────────────────
+
+  Future<void> importMuridBatch(String kelasId, List<Murid> muridList) async {
+    final idx = _kelasList.indexWhere((k) => k.id == kelasId);
+    if (idx < 0) return;
+
+    await _firestore.batchUpsertMurid(kelasId, muridList);
+
+    final updated = _kelasList[idx].copyWith(sudahKalkulasi: false);
+    await _firestore.upsertKelas(updated);
   }
 }

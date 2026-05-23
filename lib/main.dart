@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'providers/app_provider.dart';
@@ -43,25 +44,53 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthCheck extends StatelessWidget {
+class AuthCheck extends StatefulWidget {
   const AuthCheck({super.key});
 
   @override
+  State<AuthCheck> createState() => _AuthCheckState();
+}
+
+class _AuthCheckState extends State<AuthCheck> {
+  final AuthService _authService = AuthService();
+  User? _user;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Dengarkan perubahan auth state — hanya panggil listenToUser jika uid berubah
+    _authService.authStateChanges.listen((user) {
+      if (!mounted) return;
+
+      final oldUid = _user?.uid;
+      final newUid = user?.uid;
+
+      setState(() {
+        _user = user;
+        _initialized = true;
+      });
+
+      // Hanya update Firestore subscription jika uid benar-benar berubah
+      if (oldUid != newUid) {
+        context.read<AppProvider>().listenToUser(newUid);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final authService = AuthService();
-    return StreamBuilder(
-      stream: authService.authStateChanges,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        if (snapshot.hasData && snapshot.data != null) {
-          return const HomeScreen();
-        }
-        return const LoginScreen();
-      },
-    );
+    // Tampilkan loading sampai auth state pertama kali diterima
+    if (!_initialized) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_user != null) {
+      return const HomeScreen();
+    }
+    return const LoginScreen();
   }
 }
+

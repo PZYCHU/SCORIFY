@@ -106,9 +106,17 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
         .where((n) => !_existingNames.contains(n.toLowerCase().trim()))
         .toList();
 
-    for (final nama in toImport) {
-      await provider.tambahMurid(widget.kelasId, nama: nama, nilaiList: []);
-    }
+    // Buat objek Murid untuk setiap nama baru
+    final newMuridList = toImport
+        .map((nama) => Murid(
+              id: '${DateTime.now().millisecondsSinceEpoch}_${toImport.indexOf(nama)}',
+              nama: nama,
+              nilaiList: [],
+            ))
+        .toList();
+
+    // Batch write ke Firestore (1 operasi, bukan N operasi)
+    await provider.importMuridBatch(widget.kelasId, newMuridList);
 
     setState(() => _saving = false);
     if (mounted) {

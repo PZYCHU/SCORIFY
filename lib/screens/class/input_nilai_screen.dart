@@ -34,7 +34,10 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
   late Map<String, double> _nilaiMap;
   late AppProvider _provider;
 
-  // Debounce timer per kriteria
+  bool _isSaving = false;
+  bool _isDirty = false; // ada perubahan yang belum disimpan
+
+  // Debounce timer per kriteria (untuk background auto-save)
   final Map<String, Timer> _debounceTimers = {};
 
   // Kriteria performa saja (bukan hasil & bukan derived)
@@ -84,20 +87,35 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
 
   @override
   void dispose() {
-    for (final t in _debounceTimers.values) t.cancel();
+    // Flush semua pending debounce (fire-and-forget sebagai fallback)
+    for (final timer in _debounceTimers.values) {
+      timer.cancel();
+    }
+    // Jika masih ada perubahan belum tersimpan, coba simpan sekarang
+    if (_isDirty) {
+      for (final entry in _nilaiMap.entries) {
+        _provider.inputNilaiPerforma(
+          kelasId: widget.kelas.id,
+          muridId: widget.murid.id,
+          kriteriaId: entry.key,
+          nilai: entry.value,
+          tanggal: DateTime.now(),
+        );
+      }
+    }
     super.dispose();
   }
 
-  // Auto-save dengan debounce 800ms
+  // Auto-save background (debounce) — hanya backup, bukan andalan utama
   void _autoSave(String kriteriaId, double nilai) {
     _debounceTimers[kriteriaId]?.cancel();
     _debounceTimers[kriteriaId] = Timer(
-      const Duration(milliseconds: 800),
-      () => _simpanNilai(kriteriaId, nilai),
+      const Duration(milliseconds: 1200),
+      () => _simpanSatuKriteria(kriteriaId, nilai),
     );
   }
 
-  Future<void> _simpanNilai(String kriteriaId, double nilai) async {
+  Future<void> _simpanSatuKriteria(String kriteriaId, double nilai) async {
     await _provider.inputNilaiPerforma(
       kelasId: widget.kelas.id,
       muridId: widget.murid.id,
@@ -107,8 +125,33 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
     );
   }
 
+  /// Simpan SEMUA kriteria sekaligus dan tutup sheet.
+  Future<void> _simpanSemua() async {
+    // Cancel semua debounce — kita simpan sekarang secara eksplisit
+    for (final t in _debounceTimers.values) t.cancel();
+    _debounceTimers.clear();
+
+    setState(() => _isSaving = true);
+    try {
+      for (final entry in _nilaiMap.entries) {
+        await _simpanSatuKriteria(entry.key, entry.value);
+      }
+      setState(() {
+        _isDirty = false;
+        _isSaving = false;
+      });
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
   void _updateNilai(String kriteriaId, double nilai) {
-    setState(() => _nilaiMap[kriteriaId] = nilai);
+    setState(() {
+      _nilaiMap[kriteriaId] = nilai;
+      _isDirty = true;
+    });
+    // Background auto-save sebagai fallback
     _autoSave(kriteriaId, nilai);
   }
 
@@ -165,8 +208,8 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
                       ],
                     ),
                   ),
-                  // Indikator auto-save
-                  _AutoSaveIndicator(),
+                  // Status indikator
+                  _SaveStatusIndicator(isDirty: _isDirty, isSaving: _isSaving),
                 ],
               ),
             ),
@@ -185,11 +228,64 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
                     )
                   : ListView(
                       controller: controller,
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                       children: _kriteriaPerforma
                           .map((k) => _buildKriteriaItem(k))
                           .toList(),
                     ),
+            ),
+
+            // ── Tombol Simpan Semua ──────────────────────────────────────────
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: (_isSaving || _kriteriaPerforma.isEmpty)
+                        ? null
+                        : _simpanSemua,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isDirty
+                          ? AppColors.accent
+                          : AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: _isDirty ? 4 : 0,
+                    ),
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Icon(
+                            _isDirty
+                                ? Icons.save_outlined
+                                : Icons.check_circle_outline,
+                            size: 18,
+                          ),
+                    label: Text(
+                      _isSaving
+                          ? 'Menyimpan...'
+                          : _isDirty
+                              ? 'Simpan Semua Nilai'
+                              : 'Selesai',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -242,6 +338,8 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
       case InputType.toggle:
         return _ToggleWidget(
           nilai: nilai,
+          labelOn: k.toggleLabelOn ?? 'Ya',
+          labelOff: k.toggleLabelOff ?? 'Tidak',
           onChanged: (v) => _updateNilai(k.id, v),
         );
 
@@ -267,17 +365,53 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
   }
 }
 
-// ─── Auto Save Indicator ──────────────────────────────────────────────────────
+// ─── Save Status Indicator ────────────────────────────────────────────────────
 
-class _AutoSaveIndicator extends StatelessWidget {
+class _SaveStatusIndicator extends StatelessWidget {
+  final bool isDirty;
+  final bool isSaving;
+
+  const _SaveStatusIndicator({required this.isDirty, required this.isSaving});
+
   @override
   Widget build(BuildContext context) {
+    if (isSaving) {
+      return Row(
+        children: [
+          SizedBox(
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(
+              strokeWidth: 1.5,
+              color: AppColors.accent,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            'Menyimpan...',
+            style: TextStyle(fontSize: 11, color: AppColors.accent),
+          ),
+        ],
+      );
+    }
+    if (isDirty) {
+      return Row(
+        children: [
+          const Icon(Icons.circle, size: 8, color: Colors.orange),
+          const SizedBox(width: 5),
+          Text(
+            'Belum disimpan',
+            style: TextStyle(fontSize: 11, color: Colors.orange[700]),
+          ),
+        ],
+      );
+    }
     return Row(
       children: [
         Icon(Icons.cloud_done_outlined, size: 14, color: AppColors.accent),
         const SizedBox(width: 4),
         Text(
-          'Auto-save',
+          'Tersimpan',
           style: TextStyle(fontSize: 11, color: AppColors.accent),
         ),
       ],
@@ -391,9 +525,16 @@ class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
 
 class _ToggleWidget extends StatelessWidget {
   final double nilai;
+  final String labelOn;
+  final String labelOff;
   final ValueChanged<double> onChanged;
 
-  const _ToggleWidget({required this.nilai, required this.onChanged});
+  const _ToggleWidget({
+    required this.nilai,
+    required this.labelOn,
+    required this.labelOff,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -426,7 +567,7 @@ class _ToggleWidget extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    isOn ? 'Baik' : 'Kurang',
+                    isOn ? labelOn : labelOff,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       color: isOn ? AppColors.accent : AppColors.textSecondary,

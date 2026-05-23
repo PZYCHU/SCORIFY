@@ -309,6 +309,8 @@ class AddCriterionDialog extends StatefulWidget {
 class _AddCriterionDialogState extends State<AddCriterionDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _labelOnCtrl = TextEditingController();
+  final _labelOffCtrl = TextEditingController();
 
   JenisKriteria _jenis = JenisKriteria.performa;
   InputType? _inputType = InputType.counter;
@@ -333,12 +335,16 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
       _jenis = c.jenis;
       _inputType = c.inputType;
       _arah = c.arah;
+      _labelOnCtrl.text = c.toggleLabelOn ?? '';
+      _labelOffCtrl.text = c.toggleLabelOff ?? '';
     }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _labelOnCtrl.dispose();
+    _labelOffCtrl.dispose();
     super.dispose();
   }
 
@@ -357,6 +363,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    final isToggle = _inputType == InputType.toggle;
     widget.onAdd(
       Kriteria(
         id: widget.criterion?.id ?? _uuid.v4(),
@@ -366,6 +373,12 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
         arah: _arah,
         bobot: widget.criterion?.bobot ?? 0.0,
         perSesi: _jenis == JenisKriteria.hasil,
+        toggleLabelOn: isToggle && _labelOnCtrl.text.trim().isNotEmpty
+            ? _labelOnCtrl.text.trim()
+            : null,
+        toggleLabelOff: isToggle && _labelOffCtrl.text.trim().isNotEmpty
+            ? _labelOffCtrl.text.trim()
+            : null,
       ),
     );
     Navigator.of(context).pop();
@@ -433,6 +446,79 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                 ),
                 const SizedBox(height: 20),
 
+                // Label toggle (hanya muncul jika pilih Toggle)
+                if (_inputType == InputType.toggle) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.teal.withOpacity(0.25)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.toggle_on_outlined, size: 15, color: Colors.teal),
+                            SizedBox(width: 6),
+                            Text(
+                              'Label Toggle (opsional)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.teal,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Beri nama kondisi ON dan OFF agar lebih jelas saat input nilai.',
+                          style: TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _labelOnCtrl,
+                                decoration: InputDecoration(
+                                  labelText: 'Label ON',
+                                  hintText: 'cth: Hadir',
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _labelOffCtrl,
+                                decoration: InputDecoration(
+                                  labelText: 'Label OFF',
+                                  hintText: 'cth: Tidak Hadir',
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
                 // Arah
                 const Text(
                   'Arah',
@@ -449,9 +535,13 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _arah == ArahKriteria.benefit
-                      ? 'Semakin besar nilainya, semakin baik'
-                      : 'Semakin kecil nilainya, semakin baik',
+                  _inputType == InputType.toggle
+                      ? (_arah == ArahKriteria.benefit
+                          ? 'Kondisi ON (${_labelOnCtrl.text.isEmpty ? "Ya" : _labelOnCtrl.text}) = lebih baik'
+                          : 'Kondisi ON (${_labelOnCtrl.text.isEmpty ? "Ya" : _labelOnCtrl.text}) = lebih buruk')
+                      : (_arah == ArahKriteria.benefit
+                          ? 'Semakin besar nilainya, semakin baik'
+                          : 'Semakin kecil nilainya, semakin baik'),
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ] else ...[

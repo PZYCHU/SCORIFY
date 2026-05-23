@@ -28,6 +28,11 @@ class Kriteria {
   double bobot; // hasil AHP, 0.0 sebelum dihitung
   bool perSesi; // true jika butuh sesi (hanya jenis: hasil)
 
+  /// Label custom untuk toggle (hanya relevan jika inputType == toggle).
+  /// Contoh: toggleLabelOn = 'Hadir', toggleLabelOff = 'Tidak Hadir'
+  String? toggleLabelOn;
+  String? toggleLabelOff;
+
   Kriteria({
     required this.id,
     required this.nama,
@@ -36,6 +41,8 @@ class Kriteria {
     this.arah = ArahKriteria.benefit,
     this.bobot = 0.0,
     this.perSesi = false,
+    this.toggleLabelOn,
+    this.toggleLabelOff,
   });
 
   Kriteria copyWith({
@@ -45,6 +52,8 @@ class Kriteria {
     ArahKriteria? arah,
     double? bobot,
     bool? perSesi,
+    String? toggleLabelOn,
+    String? toggleLabelOff,
   }) {
     return Kriteria(
       id: id,
@@ -54,6 +63,8 @@ class Kriteria {
       arah: arah ?? this.arah,
       bobot: bobot ?? this.bobot,
       perSesi: perSesi ?? this.perSesi,
+      toggleLabelOn: toggleLabelOn ?? this.toggleLabelOn,
+      toggleLabelOff: toggleLabelOff ?? this.toggleLabelOff,
     );
   }
 
@@ -65,6 +76,8 @@ class Kriteria {
     'arah': arah.name,
     'bobot': bobot,
     'perSesi': perSesi,
+    'toggleLabelOn': toggleLabelOn,
+    'toggleLabelOff': toggleLabelOff,
   };
 
   factory Kriteria.fromJson(Map<String, dynamic> json) => Kriteria(
@@ -79,6 +92,8 @@ class Kriteria {
     ),
     bobot: (json['bobot'] as num).toDouble(),
     perSesi: json['perSesi'] ?? false,
+    toggleLabelOn: json['toggleLabelOn'] as String?,
+    toggleLabelOff: json['toggleLabelOff'] as String?,
   );
 }
 
