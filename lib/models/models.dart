@@ -205,22 +205,21 @@ class Murid {
   /// Jika targetKriteriaIds disediakan, hanya hitung pengulangan pada kriteria hasil tersebut.
   /// Return: jumlah sesi unik di mana siswa pernah ngulang.
   int getFrekuensiNgulang([List<String>? targetKriteriaIds]) {
-    // Grup nilai per (kriteriaId, sesiId)
+    // Grup nilai per (kriteriaId, sesiId / id)
     final Map<String, int> maxAttemptPerSesi = {};
     for (final n in nilaiList) {
-      if (n.sesiId == null) continue; // skip nilai performa
       if (targetKriteriaIds != null &&
           targetKriteriaIds.isNotEmpty &&
           !targetKriteriaIds.contains(n.kriteriaId)) {
         continue;
       }
-      final key = '${n.kriteriaId}_${n.sesiId}';
+      final key = '${n.kriteriaId}_${n.sesiId ?? n.id}';
       if (!maxAttemptPerSesi.containsKey(key) ||
           n.attempt > maxAttemptPerSesi[key]!) {
         maxAttemptPerSesi[key] = n.attempt;
       }
     }
-    // Hitung sesi yang punya attempt > 1
+    // Hitung sesi/evaluasi yang punya attempt > 1
     return maxAttemptPerSesi.values.where((a) => a > 1).length;
   }
 

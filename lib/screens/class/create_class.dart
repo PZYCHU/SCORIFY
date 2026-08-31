@@ -366,11 +366,14 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
           _nameController.text = 'Frekuensi Remedial';
         }
         if (_targetKriteriaIds.isEmpty) {
-          final hasilList = widget.existingCriteria
-              .where((k) => k.jenis == JenisKriteria.hasil && k.id != widget.criterion?.id)
+          final kandidatList = widget.existingCriteria
+              .where((k) =>
+                  (k.inputType == InputType.number || k.jenis == JenisKriteria.hasil) &&
+                  k.jenis != JenisKriteria.derived &&
+                  k.id != widget.criterion?.id)
               .map((k) => k.id)
               .toList();
-          _targetKriteriaIds = hasilList;
+          _targetKriteriaIds = kandidatList;
         }
       }
     });
@@ -379,13 +382,16 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     if (_jenis == JenisKriteria.derived) {
-      final availableHasil = widget.existingCriteria
-          .where((k) => k.jenis == JenisKriteria.hasil && k.id != widget.criterion?.id)
+      final availableKandidat = widget.existingCriteria
+          .where((k) =>
+              (k.inputType == InputType.number || k.jenis == JenisKriteria.hasil) &&
+              k.jenis != JenisKriteria.derived &&
+              k.id != widget.criterion?.id)
           .toList();
-      if (availableHasil.isNotEmpty && _targetKriteriaIds.isEmpty) {
+      if (availableKandidat.isNotEmpty && _targetKriteriaIds.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Pilih minimal satu kriteria tugas/ujian untuk dihitung remedinya'),
+            content: Text('Pilih minimal satu kriteria nilai untuk dihitung remedinya'),
             backgroundColor: Colors.red,
           ),
         );
@@ -411,8 +417,11 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
   @override
   Widget build(BuildContext context) {
     final isDerived = _jenis == JenisKriteria.derived;
-    final hasilList = widget.existingCriteria
-        .where((k) => k.jenis == JenisKriteria.hasil && k.id != widget.criterion?.id)
+    final kandidatList = widget.existingCriteria
+        .where((k) =>
+            (k.inputType == InputType.number || k.jenis == JenisKriteria.hasil) &&
+            k.jenis != JenisKriteria.derived &&
+            k.id != widget.criterion?.id)
         .toList();
 
     return AlertDialog(
@@ -460,15 +469,15 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
               // Checklist kriteria sumber jika derived
               if (isDerived) ...[
                 const Text(
-                  'Hitung remedi dari kriteria:',
+                  'Hitung remedi dari kriteria nilai:',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 6),
-                if (hasilList.isEmpty)
+                if (kandidatList.isEmpty)
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.12),
+                      color: Colors.amber.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.amber.shade300),
                     ),
@@ -479,7 +488,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Belum ada kriteria jenis Hasil (Tugas/Ujian). Kriteria ini akan memantau tugas/ujian yang ditambahkan nanti.',
+                            'Belum ada kriteria bertipe Nilai Angka (Tugas/Ujian). Kriteria ini akan memantau nilai yang ditambahkan nanti.',
                             style: TextStyle(fontSize: 12, color: Colors.black87),
                           ),
                         ),
@@ -490,7 +499,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 6,
-                    children: hasilList.map((k) {
+                    children: kandidatList.map((k) {
                       final isSelected = _targetKriteriaIds.contains(k.id);
                       return FilterChip(
                         label: Text(k.nama),
