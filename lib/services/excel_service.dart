@@ -63,7 +63,7 @@ class ExcelService {
       for (final row in sheet.rows) {
         if (row.isEmpty) continue;
 
-        final cellA = row.length > 0 ? (row[0]?.value?.toString().trim() ?? '') : '';
+        final cellA = row.isNotEmpty ? (row[0]?.value?.toString().trim() ?? '') : '';
         final cellB = row.length > 1 ? (row[1]?.value?.toString().trim() ?? '') : '';
 
         // Skip baris header
@@ -103,17 +103,20 @@ class ExcelService {
 
   // ─── Export ────────────────────────────────────────────────────────────────
 
-  /// Membuat file Excel berisi daftar siswa (NIS + Nama) lalu menyimpannya
-  /// ke direktori Downloads / Documents dan mengembalikan path-nya.
+  /// Membuat file Excel multi-sheet:
+  /// 1. 'Rekap & Ranking' -> Daftar siswa, nilai per kriteria, skor SAW, & ranking.
+  /// 2. 'Riwayat Remedial' -> Detail histori attempt remedial per sesi ujian.
   static Future<String?> exportSiswa(Kelas kelas) async {
     try {
       final excel = Excel.createExcel();
-      // Hapus sheet default 'Sheet1' (jika ada) dan buat sheet baru
-      final sheetName = 'Daftar Siswa';
-      excel.rename('Sheet1', sheetName);
-      final sheet = excel[sheetName];
 
-      // ─ Header ─
+      // ────────────────────────────────────────────────────────────────────────
+      // SHEET 1: Rekap & Ranking Nilai
+      // ────────────────────────────────────────────────────────────────────────
+      final sheet1Name = 'Rekap & Ranking';
+      excel.rename('Sheet1', sheet1Name);
+      final sheet1 = excel[sheet1Name];
+
       final headerStyle = CellStyle(
         bold: true,
         backgroundColorHex: ExcelColor.fromHexString('#1B4B5A'),
@@ -121,20 +124,34 @@ class ExcelService {
         horizontalAlign: HorizontalAlign.Center,
       );
 
-      sheet.cell(CellIndex.indexByString('A1'))
-        ..value = TextCellValue('NIS')
-        ..cellStyle = headerStyle;
-      sheet.cell(CellIndex.indexByString('B1'))
-        ..value = TextCellValue('Nama Siswa')
-        ..cellStyle = headerStyle;
+      // Header kolom Sheet 1
+      final headers = [
+        'No',
+        'NIS',
+        'Nama Siswa',
+        ...kelas.kriteria.map((k) => k.nama),
+        'Skor Akhir (SAW)',
+        'Ranking',
+      ];
 
-      // Lebar kolom
-      sheet.setColumnWidth(0, 18);
-      sheet.setColumnWidth(1, 30);
+      for (int c = 0; c < headers.length; c++) {
+        sheet1.cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: 0))
+          ..value = TextCellValue(headers[c])
+          ..cellStyle = headerStyle;
+      }
 
-      // ─ Data siswa ─
+      // Lebar kolom Sheet 1
+      sheet1.setColumnWidth(0, 8);   // No
+      sheet1.setColumnWidth(1, 16);  // NIS
+      sheet1.setColumnWidth(2, 28);  // Nama Siswa
+      for (int c = 0; c < kelas.kriteria.length; c++) {
+        sheet1.setColumnWidth(3 + c, 20); // Kolom kriteria
+      }
+      sheet1.setColumnWidth(3 + kelas.kriteria.length, 18);     // Skor SAW
+      sheet1.setColumnWidth(3 + kelas.kriteria.length + 1, 12); // Ranking
+
+      // Urutkan siswa: jika sudah kalkulasi urut skorFinal desc, jika belum by nama
       final sortedMurid = List<Murid>.from(kelas.muridList);
-      // Urutkan: jika sudah kalkulasi pakai skorFinal desc, else by nama
       if (kelas.sudahKalkulasi) {
         sortedMurid.sort((a, b) =>
             (b.skorFinal ?? 0).compareTo(a.skorFinal ?? 0));
@@ -142,11 +159,11 @@ class ExcelService {
         sortedMurid.sort((a, b) => a.nama.compareTo(b.nama));
       }
 
+      // Data Baris Sheet 1
       for (int i = 0; i < sortedMurid.length; i++) {
         final m = sortedMurid[i];
-        final rowIdx = i + 1; // 0-based, baris data mulai index 1 (setelah header di 0)
+        final rowIdx = i + 1;
 
-        // Alternating row color
         final rowBg = i.isEven
             ? ExcelColor.fromHexString('#F5F7F3')
             : ExcelColor.fromHexString('#FFFFFF');
@@ -154,13 +171,183 @@ class ExcelService {
           backgroundColorHex: rowBg,
           horizontalAlign: HorizontalAlign.Left,
         );
+        final centerStyle = CellStyle(
+          backgroundColorHex: rowBg,
+          horizontalAlign: HorizontalAlign.Center,
+        );
 
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIdx))
-          ..value = TextCellValue(m.nis ?? '')
-          ..cellStyle = dataStyle;
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIdx))
+        // No
+        sheet1.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIdx))
+          ..value = IntCellValue(i + 1)
+          ..cellStyle = centerStyle;
+
+        // NIS
+        sheet1.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIdx))
+          ..value = TextCellValue(m.nis ?? '-')
+          ..cellStyle = centerStyle;
+
+        // Nama
+        sheet1.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIdx))
           ..value = TextCellValue(m.nama)
           ..cellStyle = dataStyle;
+
+        // Nilai per kriteria
+        for (int kIdx = 0; kIdx < kelas.kriteria.length; kIdx++) {
+          final k = kelas.kriteria[kIdx];
+          final val = _hitungNilaiRingkasan(m, k);
+          final valStr = k.jenis == JenisKriteria.derived
+              ? '${val.toInt()}x'
+              : (val == val.roundToDouble()
+                  ? val.toInt().toString()
+                  : val.toStringAsFixed(1));
+
+          sheet1.cell(CellIndex.indexByColumnRow(columnIndex: 3 + kIdx, rowIndex: rowIdx))
+            ..value = TextCellValue(valStr)
+            ..cellStyle = centerStyle;
+        }
+
+        // Skor Akhir SAW
+        final skorStr = m.skorFinal != null ? m.skorFinal!.toStringAsFixed(4) : '-';
+        sheet1.cell(CellIndex.indexByColumnRow(
+          columnIndex: 3 + kelas.kriteria.length,
+          rowIndex: rowIdx,
+        ))
+          ..value = TextCellValue(skorStr)
+          ..cellStyle = centerStyle;
+
+        // Ranking
+        final rankStr = kelas.sudahKalkulasi ? '#${i + 1}' : '-';
+        sheet1.cell(CellIndex.indexByColumnRow(
+          columnIndex: 3 + kelas.kriteria.length + 1,
+          rowIndex: rowIdx,
+        ))
+          ..value = TextCellValue(rankStr)
+          ..cellStyle = centerStyle;
+      }
+
+      // ────────────────────────────────────────────────────────────────────────
+      // SHEET 2: Riwayat Remedial (Audit Log)
+      // ────────────────────────────────────────────────────────────────────────
+      final sheet2Name = 'Riwayat Remedial';
+      final sheet2 = excel[sheet2Name];
+
+      final header2Style = CellStyle(
+        bold: true,
+        backgroundColorHex: ExcelColor.fromHexString('#8C4A27'),
+        fontColorHex: ExcelColor.fromHexString('#FFFFFF'),
+        horizontalAlign: HorizontalAlign.Center,
+      );
+
+      final headers2 = [
+        'No',
+        'NIS',
+        'Nama Siswa',
+        'Kriteria Penilaian',
+        'Sesi / Ujian',
+        'Attempt',
+        'Nilai',
+        'Tanggal Input',
+        'Keterangan',
+      ];
+
+      for (int c = 0; c < headers2.length; c++) {
+        sheet2.cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: 0))
+          ..value = TextCellValue(headers2[c])
+          ..cellStyle = header2Style;
+      }
+
+      sheet2.setColumnWidth(0, 8);   // No
+      sheet2.setColumnWidth(1, 16);  // NIS
+      sheet2.setColumnWidth(2, 28);  // Nama Siswa
+      sheet2.setColumnWidth(3, 22);  // Kriteria
+      sheet2.setColumnWidth(4, 22);  // Sesi
+      sheet2.setColumnWidth(5, 14);  // Attempt
+      sheet2.setColumnWidth(6, 12);  // Nilai
+      sheet2.setColumnWidth(7, 18);  // Tanggal
+      sheet2.setColumnWidth(8, 20);  // Keterangan
+
+      // Kumpulkan data attempt remedial siswa
+      int rRow = 1;
+      for (final m in sortedMurid) {
+        // Cari sesi yang memiliki attempt > 1
+        for (final k in kelas.kriteria) {
+          if (k.jenis != JenisKriteria.hasil) continue;
+          final sesiList = kelas.getSesiByKriteria(k.id);
+
+          for (final s in sesiList) {
+            final nilaiSesiList = m.nilaiList
+                .where((n) => n.kriteriaId == k.id && n.sesiId == s.id)
+                .toList();
+
+            // Jika ada nilai di sesi ini dan pernah attempt > 1 (ada perbaikan)
+            if (nilaiSesiList.length > 1) {
+              nilaiSesiList.sort((a, b) => a.attempt.compareTo(b.attempt));
+              final maxAttempt = nilaiSesiList.last.attempt;
+
+              for (final n in nilaiSesiList) {
+                final isLast = n.attempt == maxAttempt;
+                final rBg = rRow.isEven
+                    ? ExcelColor.fromHexString('#FFF8F5')
+                    : ExcelColor.fromHexString('#FFFFFF');
+                final rStyle = CellStyle(
+                  backgroundColorHex: rBg,
+                  horizontalAlign: HorizontalAlign.Left,
+                );
+                final rCenter = CellStyle(
+                  backgroundColorHex: rBg,
+                  horizontalAlign: HorizontalAlign.Center,
+                );
+
+                final tglStr =
+                    '${n.tanggal.day.toString().padLeft(2, '0')}/${n.tanggal.month.toString().padLeft(2, '0')}/${n.tanggal.year}';
+                final ketStr = isLast
+                    ? 'Nilai Akhir (Tuntas)'
+                    : 'Attempt ${n.attempt} (Remedial)';
+
+                sheet2.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rRow))
+                  ..value = IntCellValue(rRow)
+                  ..cellStyle = rCenter;
+                sheet2.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rRow))
+                  ..value = TextCellValue(m.nis ?? '-')
+                  ..cellStyle = rCenter;
+                sheet2.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rRow))
+                  ..value = TextCellValue(m.nama)
+                  ..cellStyle = rStyle;
+                sheet2.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rRow))
+                  ..value = TextCellValue(k.nama)
+                  ..cellStyle = rStyle;
+                sheet2.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rRow))
+                  ..value = TextCellValue(s.nama)
+                  ..cellStyle = rStyle;
+                sheet2.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rRow))
+                  ..value = TextCellValue('Attempt ${n.attempt}')
+                  ..cellStyle = rCenter;
+                sheet2.cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rRow))
+                  ..value = DoubleCellValue(n.nilai)
+                  ..cellStyle = rCenter;
+                sheet2.cell(CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: rRow))
+                  ..value = TextCellValue(tglStr)
+                  ..cellStyle = rCenter;
+                sheet2.cell(CellIndex.indexByColumnRow(columnIndex: 8, rowIndex: rRow))
+                  ..value = TextCellValue(ketStr)
+                  ..cellStyle = rStyle;
+
+                rRow++;
+              }
+            }
+          }
+        }
+      }
+
+      // Jika belum ada remedial sama sekali
+      if (rRow == 1) {
+        final infoStyle = CellStyle(
+          italic: true,
+          fontColorHex: ExcelColor.fromHexString('#718096'),
+        );
+        sheet2.cell(CellIndex.indexByString('A2'))
+          ..value = TextCellValue('Belum ada siswa yang melakukan remedial pada kelas ini.')
+          ..cellStyle = infoStyle;
       }
 
       // ─ Simpan file ─
@@ -169,7 +356,7 @@ class ExcelService {
 
       final dir = await _getExportDir();
       final safeName = kelas.nama.replaceAll(RegExp(r'[^\w\s-]'), '_');
-      final fileName = 'Siswa_${safeName}_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+      final fileName = 'Laporan_Nilai_${safeName}_${DateTime.now().millisecondsSinceEpoch}.xlsx';
       final filePath = '${dir.path}/$fileName';
 
       final file = File(filePath);
@@ -180,6 +367,37 @@ class ExcelService {
       debugPrint('ExcelService.exportSiswa error: $e');
       return null;
     }
+  }
+
+  /// Helper kalkulasi nilai ringkasan per kriteria untuk diekspor
+  static double _hitungNilaiRingkasan(Murid murid, Kriteria k) {
+    if (k.jenis == JenisKriteria.derived) {
+      return murid.getFrekuensiNgulang(k.targetKriteriaIds).toDouble();
+    }
+
+    final semuaNilai = murid.getNilaiByKriteria(k.id);
+    if (semuaNilai.isEmpty) return 0;
+
+    if (k.jenis == JenisKriteria.hasil && k.perSesi) {
+      // Ambil nilai terbaik (attempt tertinggi) per sesi, lalu rata-rata antar sesi
+      final Map<String, double> bestPerSesi = {};
+      for (final n in semuaNilai) {
+        final key = n.sesiId ?? 'no_sesi';
+        if (!bestPerSesi.containsKey(key) || n.nilai > bestPerSesi[key]!) {
+          bestPerSesi[key] = n.nilai;
+        }
+      }
+      if (bestPerSesi.isEmpty) return 0;
+      final total = bestPerSesi.values.fold(0.0, (sum, val) => sum + val);
+      return total / bestPerSesi.length;
+    }
+
+    if (k.jenis == JenisKriteria.performa && k.inputType == InputType.counter) {
+      return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
+    }
+
+    final total = semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
+    return total / semuaNilai.length;
   }
 
   /// Mendapatkan direktori tujuan export yang paling tepat per platform.
