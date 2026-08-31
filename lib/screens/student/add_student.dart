@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../providers/app_provider.dart';
@@ -23,6 +24,7 @@ class TambahMuridScreen extends StatefulWidget {
 
 class _TambahMuridScreenState extends State<TambahMuridScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nisCtrl  = TextEditingController();
   final _namaCtrl = TextEditingController();
   bool _saving = false;
 
@@ -32,12 +34,14 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
   void initState() {
     super.initState();
     if (isEdit) {
+      _nisCtrl.text  = widget.existingMurid!.nis ?? '';
       _namaCtrl.text = widget.existingMurid!.nama;
     }
   }
 
   @override
   void dispose() {
+    _nisCtrl.dispose();
     _namaCtrl.dispose();
     super.dispose();
   }
@@ -47,18 +51,22 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
     setState(() => _saving = true);
 
     final provider = context.read<AppProvider>();
+    final nis = _nisCtrl.text.trim().isEmpty ? null : _nisCtrl.text.trim();
+
     try {
       if (isEdit) {
         await provider.editMurid(
           widget.kelasId,
           widget.existingMurid!.id,
           nama: _namaCtrl.text.trim(),
+          nis: nis,
         );
       } else {
         await provider.tambahMurid(
           widget.kelasId,
           nama: _namaCtrl.text.trim(),
-          nilaiList: [], // nilai diinput saat KBM, bukan di sini
+          nis: nis,
+          nilaiList: [],
         );
       }
       if (mounted) Navigator.of(context).pop();
@@ -90,9 +98,29 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ── NIS ──────────────────────────────────────────────────
+                const SectionLabel('NIS (Nomor Induk Siswa) :'),
+                TextFormField(
+                  controller: _nisCtrl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: InputDecoration(
+                    hintText: 'Masukkan NIS (opsional)',
+                    suffixIcon: Icon(
+                      Icons.badge_outlined,
+                      color: AppColors.textHint,
+                      size: 18,
+                    ),
+                  ),
+                  // NIS tidak wajib diisi
+                ),
+                const SizedBox(height: 20),
+
+                // ── Nama ─────────────────────────────────────────────────
                 const SectionLabel('Nama Murid :'),
                 TextFormField(
                   controller: _namaCtrl,
+                  textCapitalization: TextCapitalization.words,
                   decoration: InputDecoration(
                     hintText: 'Masukkan nama murid',
                     suffixIcon: Icon(
@@ -106,7 +134,7 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Info: nilai diinput saat KBM
+                // ── Info ─────────────────────────────────────────────────
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
@@ -116,7 +144,7 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.info_outline,
                         size: 18,
                         color: AppColors.textSecondary,
@@ -125,8 +153,7 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
                       Expanded(
                         child: Text(
                           'Nilai akan diinput saat KBM berlangsung atau setelah koreksi tugas.',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: AppColors.textSecondary,
                                 fontSize: 13,
                               ),

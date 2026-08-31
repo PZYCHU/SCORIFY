@@ -15,6 +15,7 @@ class _CriteriaScreenState extends State<CriteriaScreen> {
     showDialog(
       context: context,
       builder: (context) => AddCriterionDialog(
+        existingCriteria: _criteria,
         onAdd: (criterion) {
           setState(() {
             _criteria.add(criterion);
@@ -29,6 +30,7 @@ class _CriteriaScreenState extends State<CriteriaScreen> {
       context: context,
       builder: (context) => AddCriterionDialog(
         criterion: criterion,
+        existingCriteria: _criteria,
         onAdd: (updatedCriterion) {
           setState(() {
             final index = _criteria.indexWhere((c) => c.id == criterion.id);
@@ -69,13 +71,12 @@ class _CriteriaScreenState extends State<CriteriaScreen> {
   String _jenisLabel(JenisKriteria jenis) => switch (jenis) {
     JenisKriteria.performa => 'Performa',
     JenisKriteria.hasil => 'Hasil',
-    JenisKriteria.derived => 'Otomatis',
+    JenisKriteria.derived => 'Perhitungan Remedi',
   };
 
   String _inputTypeLabel(InputType? t) => switch (t) {
-    InputType.counter => 'Akumulasi Poin',
-    InputType.number => 'Angka',
-    InputType.toggle => 'Toggle',
+    InputType.counter => 'Poin Tambahan (+)',
+    InputType.number => 'Nilai Angka (0–100)',
     null => '—',
   };
 
@@ -199,9 +200,15 @@ class _Chip extends StatelessWidget {
 
 class AddCriterionDialog extends StatefulWidget {
   final Kriteria? criterion;
+  final List<Kriteria> existingCriteria;
   final Function(Kriteria) onAdd;
 
-  const AddCriterionDialog({super.key, this.criterion, required this.onAdd});
+  const AddCriterionDialog({
+    super.key,
+    this.criterion,
+    this.existingCriteria = const [],
+    required this.onAdd,
+  });
 
   @override
   State<AddCriterionDialog> createState() => _AddCriterionDialogState();
@@ -214,12 +221,12 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
   JenisKriteria _jenis = JenisKriteria.performa;
   InputType? _inputType = InputType.counter;
   ArahKriteria _arah = ArahKriteria.benefit;
+  List<String> _targetKriteriaIds = [];
 
   // Input type yang tersedia per jenis
   List<InputType> get _availableInputTypes => switch (_jenis) {
     JenisKriteria.performa => [
       InputType.counter,
-      InputType.toggle,
       InputType.number,
     ],
     JenisKriteria.hasil => [InputType.number],
@@ -235,6 +242,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
       _jenis = c.jenis;
       _inputType = c.inputType;
       _arah = c.arah;
+      _targetKriteriaIds = List.from(c.targetKriteriaIds);
     }
   }
 
@@ -255,12 +263,39 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
         JenisKriteria.derived => null,
       };
       // Derived selalu cost
-      if (val == JenisKriteria.derived) _arah = ArahKriteria.cost;
+      if (val == JenisKriteria.derived) {
+        _arah = ArahKriteria.cost;
+        if (_nameController.text.trim().isEmpty) {
+          _nameController.text = 'Frekuensi Remedial';
+        }
+        if (_targetKriteriaIds.isEmpty) {
+          final hasilList = widget.existingCriteria
+              .where((k) => k.jenis == JenisKriteria.hasil && k.id != widget.criterion?.id)
+              .map((k) => k.id)
+              .toList();
+          _targetKriteriaIds = hasilList;
+        }
+      }
     });
   }
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    if (_jenis == JenisKriteria.derived) {
+      final availableHasil = widget.existingCriteria
+          .where((k) => k.jenis == JenisKriteria.hasil && k.id != widget.criterion?.id)
+          .toList();
+      if (availableHasil.isNotEmpty && _targetKriteriaIds.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pilih minimal satu kriteria tugas/ujian untuk dihitung remedinya'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
     final criterion = Kriteria(
       id:
           widget.criterion?.id ??
@@ -271,6 +306,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
       arah: _arah,
       bobot: widget.criterion?.bobot ?? 0.0,
       perSesi: _jenis == JenisKriteria.hasil,
+      targetKriteriaIds: _jenis == JenisKriteria.derived ? _targetKriteriaIds : const [],
     );
     widget.onAdd(criterion);
     Navigator.of(context).pop();
@@ -279,6 +315,9 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
   @override
   Widget build(BuildContext context) {
     final isDerived = _jenis == JenisKriteria.derived;
+    final hasilList = widget.existingCriteria
+        .where((k) => k.jenis == JenisKriteria.hasil && k.id != widget.criterion?.id)
+        .toList();
 
     return AlertDialog(
       title: Text(
@@ -313,7 +352,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                 options: const [
                   (JenisKriteria.performa, 'Performa'),
                   (JenisKriteria.hasil, 'Hasil'),
-                  (JenisKriteria.derived, 'Otomatis'),
+                  (JenisKriteria.derived, 'Perhitungan Remedi'),
                 ],
                 selected: _jenis,
                 onChanged: _onJenisChanged,
@@ -321,6 +360,66 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
               const SizedBox(height: 6),
               _JenisHint(jenis: _jenis),
               const SizedBox(height: 20),
+
+              // Checklist kriteria sumber jika derived
+              if (isDerived) ...[
+                const Text(
+                  'Hitung remedi dari kriteria:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                if (hasilList.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.shade300),
+                    ),
+                    child: const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: Colors.amber),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Belum ada kriteria jenis Hasil (Tugas/Ujian). Kriteria ini akan memantau tugas/ujian yang ditambahkan nanti.',
+                            style: TextStyle(fontSize: 12, color: Colors.black87),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: hasilList.map((k) {
+                      final isSelected = _targetKriteriaIds.contains(k.id);
+                      return FilterChip(
+                        label: Text(k.nama),
+                        selected: isSelected,
+                        selectedColor: Colors.orange.shade100,
+                        checkmarkColor: Colors.deepOrange,
+                        labelStyle: TextStyle(
+                          fontSize: 12,
+                          color: isSelected ? Colors.deepOrange.shade900 : Colors.black87,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _targetKriteriaIds.add(k.id);
+                            } else {
+                              _targetKriteriaIds.remove(k.id);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                const SizedBox(height: 20),
+              ],
 
               // Input Type — sembunyikan jika derived
               if (!isDerived) ...[
@@ -363,7 +462,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                 ),
               ] else ...[
                 Text(
-                  'Arah: Cost (otomatis — semakin sering ngulang, semakin buruk)',
+                  'Arah: Cost ↓ (otomatis — semakin banyak remedi, semakin berkurang skornya)',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
@@ -385,9 +484,8 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
   }
 
   String _inputTypeShortLabel(InputType t) => switch (t) {
-    InputType.counter => 'Akumulasi Poin',
-    InputType.number => 'Angka',
-    InputType.toggle => 'Toggle',
+    InputType.counter => '➕ Poin Tambahan (+)',
+    InputType.number => '📝 Nilai Angka (0–100)',
   };
 }
 
@@ -401,7 +499,7 @@ class _JenisHint extends StatelessWidget {
   Widget build(BuildContext context) {
     final (text, color) = switch (jenis) {
       JenisKriteria.performa => (
-        'Dinilai langsung saat KBM berlangsung',
+        'Dinilai langsung saat KBM berlangsung (keaktifan, sikap)',
         Colors.teal,
       ),
       JenisKriteria.hasil => (
@@ -409,7 +507,7 @@ class _JenisHint extends StatelessWidget {
         Colors.indigo,
       ),
       JenisKriteria.derived => (
-        'Dihitung otomatis dari jumlah pengulangan nilai',
+        'Dihitung otomatis dari frekuensi remedial siswa pada tugas/ujian pilihan',
         Colors.orange,
       ),
     };

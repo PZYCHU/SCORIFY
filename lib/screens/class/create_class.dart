@@ -54,6 +54,7 @@ class _BuatKelasScreenState extends State<BuatKelasScreen> {
     showDialog(
       context: context,
       builder: (context) => AddCriterionDialog(
+        existingCriteria: _kriteriaList,
         onAdd: (kriteria) {
           setState(() => _kriteriaList.add(kriteria));
         },
@@ -67,6 +68,7 @@ class _BuatKelasScreenState extends State<BuatKelasScreen> {
       context: context,
       builder: (context) => AddCriterionDialog(
         criterion: _kriteriaList[idx],
+        existingCriteria: _kriteriaList,
         onAdd: (updated) {
           setState(() => _kriteriaList[idx] = updated);
         },
@@ -298,9 +300,15 @@ class _KriteriaCounter extends StatelessWidget {
 
 class AddCriterionDialog extends StatefulWidget {
   final Kriteria? criterion;
+  final List<Kriteria> existingCriteria;
   final Function(Kriteria) onAdd;
 
-  const AddCriterionDialog({super.key, this.criterion, required this.onAdd});
+  const AddCriterionDialog({
+    super.key,
+    this.criterion,
+    this.existingCriteria = const [],
+    required this.onAdd,
+  });
 
   @override
   State<AddCriterionDialog> createState() => _AddCriterionDialogState();
@@ -309,17 +317,15 @@ class AddCriterionDialog extends StatefulWidget {
 class _AddCriterionDialogState extends State<AddCriterionDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _labelOnCtrl = TextEditingController();
-  final _labelOffCtrl = TextEditingController();
 
   JenisKriteria _jenis = JenisKriteria.performa;
   InputType? _inputType = InputType.counter;
   ArahKriteria _arah = ArahKriteria.benefit;
+  List<String> _targetKriteriaIds = [];
 
   List<InputType> get _availableInputTypes => switch (_jenis) {
     JenisKriteria.performa => [
       InputType.counter,
-      InputType.toggle,
       InputType.number,
     ],
     JenisKriteria.hasil => [InputType.number],
@@ -335,16 +341,13 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
       _jenis = c.jenis;
       _inputType = c.inputType;
       _arah = c.arah;
-      _labelOnCtrl.text = c.toggleLabelOn ?? '';
-      _labelOffCtrl.text = c.toggleLabelOff ?? '';
+      _targetKriteriaIds = List.from(c.targetKriteriaIds);
     }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _labelOnCtrl.dispose();
-    _labelOffCtrl.dispose();
     super.dispose();
   }
 
@@ -357,13 +360,39 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
         JenisKriteria.hasil => InputType.number,
         JenisKriteria.derived => null,
       };
-      if (val == JenisKriteria.derived) _arah = ArahKriteria.cost;
+      if (val == JenisKriteria.derived) {
+        _arah = ArahKriteria.cost;
+        if (_nameController.text.trim().isEmpty) {
+          _nameController.text = 'Frekuensi Remedial';
+        }
+        if (_targetKriteriaIds.isEmpty) {
+          final hasilList = widget.existingCriteria
+              .where((k) => k.jenis == JenisKriteria.hasil && k.id != widget.criterion?.id)
+              .map((k) => k.id)
+              .toList();
+          _targetKriteriaIds = hasilList;
+        }
+      }
     });
   }
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    final isToggle = _inputType == InputType.toggle;
+    if (_jenis == JenisKriteria.derived) {
+      final availableHasil = widget.existingCriteria
+          .where((k) => k.jenis == JenisKriteria.hasil && k.id != widget.criterion?.id)
+          .toList();
+      if (availableHasil.isNotEmpty && _targetKriteriaIds.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pilih minimal satu kriteria tugas/ujian untuk dihitung remedinya'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
     widget.onAdd(
       Kriteria(
         id: widget.criterion?.id ?? _uuid.v4(),
@@ -373,12 +402,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
         arah: _arah,
         bobot: widget.criterion?.bobot ?? 0.0,
         perSesi: _jenis == JenisKriteria.hasil,
-        toggleLabelOn: isToggle && _labelOnCtrl.text.trim().isNotEmpty
-            ? _labelOnCtrl.text.trim()
-            : null,
-        toggleLabelOff: isToggle && _labelOffCtrl.text.trim().isNotEmpty
-            ? _labelOffCtrl.text.trim()
-            : null,
+        targetKriteriaIds: _jenis == JenisKriteria.derived ? _targetKriteriaIds : const [],
       ),
     );
     Navigator.of(context).pop();
@@ -387,6 +411,9 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
   @override
   Widget build(BuildContext context) {
     final isDerived = _jenis == JenisKriteria.derived;
+    final hasilList = widget.existingCriteria
+        .where((k) => k.jenis == JenisKriteria.hasil && k.id != widget.criterion?.id)
+        .toList();
 
     return AlertDialog(
       title: Text(
@@ -421,7 +448,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                 options: const [
                   (JenisKriteria.performa, 'Performa'),
                   (JenisKriteria.hasil, 'Hasil'),
-                  (JenisKriteria.derived, 'Otomatis'),
+                  (JenisKriteria.derived, 'Perhitungan Remedi'),
                 ],
                 selected: _jenis,
                 onChanged: _onJenisChanged,
@@ -429,6 +456,66 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
               const SizedBox(height: 6),
               _JenisHint(jenis: _jenis),
               const SizedBox(height: 20),
+
+              // Checklist kriteria sumber jika derived
+              if (isDerived) ...[
+                const Text(
+                  'Hitung remedi dari kriteria:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                if (hasilList.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.shade300),
+                    ),
+                    child: const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: Colors.amber),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Belum ada kriteria jenis Hasil (Tugas/Ujian). Kriteria ini akan memantau tugas/ujian yang ditambahkan nanti.',
+                            style: TextStyle(fontSize: 12, color: Colors.black87),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: hasilList.map((k) {
+                      final isSelected = _targetKriteriaIds.contains(k.id);
+                      return FilterChip(
+                        label: Text(k.nama),
+                        selected: isSelected,
+                        selectedColor: Colors.orange.shade100,
+                        checkmarkColor: Colors.deepOrange,
+                        labelStyle: TextStyle(
+                          fontSize: 12,
+                          color: isSelected ? Colors.deepOrange.shade900 : Colors.black87,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _targetKriteriaIds.add(k.id);
+                            } else {
+                              _targetKriteriaIds.remove(k.id);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                const SizedBox(height: 20),
+              ],
 
               // Input Type
               if (!isDerived) ...[
@@ -446,79 +533,6 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                 ),
                 const SizedBox(height: 20),
 
-                // Label toggle (hanya muncul jika pilih Toggle)
-                if (_inputType == InputType.toggle) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.teal.withOpacity(0.06),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.teal.withOpacity(0.25)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.toggle_on_outlined, size: 15, color: Colors.teal),
-                            SizedBox(width: 6),
-                            Text(
-                              'Label Toggle (opsional)',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.teal,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Beri nama kondisi ON dan OFF agar lebih jelas saat input nilai.',
-                          style: TextStyle(fontSize: 11, color: Colors.grey),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _labelOnCtrl,
-                                decoration: InputDecoration(
-                                  labelText: 'Label ON',
-                                  hintText: 'cth: Hadir',
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _labelOffCtrl,
-                                decoration: InputDecoration(
-                                  labelText: 'Label OFF',
-                                  hintText: 'cth: Tidak Hadir',
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-
                 // Arah
                 const Text(
                   'Arah',
@@ -535,18 +549,14 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _inputType == InputType.toggle
-                      ? (_arah == ArahKriteria.benefit
-                          ? 'Kondisi ON (${_labelOnCtrl.text.isEmpty ? "Ya" : _labelOnCtrl.text}) = lebih baik'
-                          : 'Kondisi ON (${_labelOnCtrl.text.isEmpty ? "Ya" : _labelOnCtrl.text}) = lebih buruk')
-                      : (_arah == ArahKriteria.benefit
-                          ? 'Semakin besar nilainya, semakin baik'
-                          : 'Semakin kecil nilainya, semakin baik'),
+                  _arah == ArahKriteria.benefit
+                      ? 'Semakin besar nilainya, semakin baik'
+                      : 'Semakin kecil nilainya, semakin baik',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ] else ...[
                 Text(
-                  'Arah: Cost — dihitung otomatis dari frekuensi pengulangan',
+                  'Arah: Cost ↓ (otomatis — semakin banyak remedi, semakin berkurang skornya)',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
@@ -568,9 +578,8 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
   }
 
   String _inputLabel(InputType t) => switch (t) {
-    InputType.counter => 'Akumulasi Poin',
-    InputType.number => 'Angka',
-    InputType.toggle => 'Toggle',
+    InputType.counter => '➕ Poin Tambahan (+)',
+    InputType.number => '📝 Nilai Angka (0–100)',
   };
 }
 
@@ -584,7 +593,7 @@ class _JenisHint extends StatelessWidget {
   Widget build(BuildContext context) {
     final (text, color) = switch (jenis) {
       JenisKriteria.performa => (
-        'Dinilai langsung saat KBM berlangsung',
+        'Dinilai langsung saat KBM berlangsung (keaktifan, sikap)',
         Colors.teal,
       ),
       JenisKriteria.hasil => (
@@ -592,7 +601,7 @@ class _JenisHint extends StatelessWidget {
         Colors.indigo,
       ),
       JenisKriteria.derived => (
-        'Dihitung otomatis dari jumlah pengulangan nilai',
+        'Dihitung otomatis dari frekuensi remedial siswa pada tugas/ujian pilihan',
         Colors.orange,
       ),
     };

@@ -1,16 +1,14 @@
-import 'dart:io';
-import 'package:csv/csv.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../providers/app_provider.dart';
+import '../../services/excel_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_widgets.dart';
 
-/// Layar import siswa dari file CSV/Excel.
-/// Format CSV yang diterima: satu kolom nama per baris.
-/// Baris pertama boleh header (otomatis diabaikan jika bukan nama valid).
+/// Layar import siswa dari file Excel (.xlsx / .xls).
+/// Format: Kolom A = NIS, Kolom B = Nama Siswa.
+/// Baris pertama (header) otomatis dilewati.
 class ImportSiswaScreen extends StatefulWidget {
   final String kelasId;
   final Kelas kelas;
@@ -26,7 +24,7 @@ class ImportSiswaScreen extends StatefulWidget {
 }
 
 class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
-  List<String> _namaPreview = [];
+  List<({String nis, String nama})> _preview = [];
   List<String> _namaDuplikat = [];
   bool _loading = false;
   bool _saving = false;
@@ -41,52 +39,37 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
     setState(() {
       _loading = true;
       _errorMsg = null;
-      _namaPreview = [];
+      _preview = [];
       _namaDuplikat = [];
     });
 
     try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['csv', 'txt'],
-      );
+      final (:result, :fileName) = await ExcelService.pickAndParse();
 
-      if (result == null || result.files.isEmpty) {
+      if (fileName == null) {
+        // User batal
         setState(() => _loading = false);
         return;
       }
 
-      final file = File(result.files.single.path!);
-      _fileName = result.files.single.name;
-      final content = await file.readAsString();
+      _fileName = fileName;
 
-      // Parse CSV
-      final rows = const CsvToListConverter(eol: '\n').convert(content);
-
-      final names = <String>[];
-      for (final row in rows) {
-        if (row.isEmpty) continue;
-        final nama = row.first.toString().trim();
-        if (nama.isEmpty) continue;
-
-        // Skip baris header jika mengandung kata 'nama', 'no', 'siswa'
-        final lower = nama.toLowerCase();
-        if (lower == 'nama' ||
-            lower == 'nama siswa' ||
-            lower == 'no' ||
-            lower == 'nama murid')
-          continue;
-
-        names.add(nama);
+      if (result.hasError) {
+        setState(() => _errorMsg = result.error);
+        return;
       }
 
-      // Cek duplikat dengan existing
-      final duplikat = names
-          .where((n) => _existingNames.contains(n.toLowerCase().trim()))
+      // Filter baris yang namanya tidak kosong
+      final rows = result.rows.where((r) => r.nama.isNotEmpty).toList();
+
+      // Cek duplikat
+      final duplikat = rows
+          .where((r) => _existingNames.contains(r.nama.toLowerCase().trim()))
+          .map((r) => r.nama)
           .toList();
 
       setState(() {
-        _namaPreview = names;
+        _preview = rows;
         _namaDuplikat = duplikat;
       });
     } catch (e) {
@@ -96,26 +79,51 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
     }
   }
 
+  Future<void> _downloadTemplate() async {
+    setState(() => _loading = true);
+    try {
+      final path = await ExcelService.downloadTemplate();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              path != null
+                  ? 'Template disimpan ke:\n$path'
+                  : 'Gagal membuat template',
+            ),
+            backgroundColor:
+                path != null ? AppColors.accent : AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _import() async {
-    if (_namaPreview.isEmpty) return;
+    if (_preview.isEmpty) return;
     setState(() => _saving = true);
 
     final provider = context.read<AppProvider>();
+
     // Hanya import nama yang belum ada
-    final toImport = _namaPreview
-        .where((n) => !_existingNames.contains(n.toLowerCase().trim()))
+    final toImport = _preview
+        .where((r) => !_existingNames.contains(r.nama.toLowerCase().trim()))
         .toList();
 
-    // Buat objek Murid untuk setiap nama baru
-    final newMuridList = toImport
-        .map((nama) => Murid(
-              id: '${DateTime.now().millisecondsSinceEpoch}_${toImport.indexOf(nama)}',
-              nama: nama,
-              nilaiList: [],
-            ))
-        .toList();
+    final newMuridList = toImport.asMap().entries.map((e) {
+      final r = e.value;
+      return Murid(
+        id: '${DateTime.now().millisecondsSinceEpoch}_${e.key}',
+        nama: r.nama,
+        nis: r.nis.isEmpty ? null : r.nis,
+        nilaiList: [],
+      );
+    }).toList();
 
-    // Batch write ke Firestore (1 operasi, bukan N operasi)
     await provider.importMuridBatch(widget.kelasId, newMuridList);
 
     setState(() => _saving = false);
@@ -132,15 +140,15 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final toImportCount = _namaPreview
-        .where((n) => !_existingNames.contains(n.toLowerCase().trim()))
+    final toImportCount = _preview
+        .where((r) => !_existingNames.contains(r.nama.toLowerCase().trim()))
         .length;
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            // Header
+            // ── Header ────────────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
               decoration: const BoxDecoration(
@@ -158,10 +166,11 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Import Siswa via CSV',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleLarge?.copyWith(color: Colors.white),
+                          'Import Siswa via Excel',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(color: Colors.white),
                         ),
                         Text(
                           widget.kelas.nama,
@@ -183,7 +192,7 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Panduan format
+                    // ── Panduan format ─────────────────────────────────────
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
@@ -199,13 +208,13 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
                           const Row(
                             children: [
                               Icon(
-                                Icons.description_outlined,
+                                Icons.table_view_outlined,
                                 size: 16,
                                 color: AppColors.primary,
                               ),
                               SizedBox(width: 8),
                               Text(
-                                'Format File CSV',
+                                'Format File Excel (.xlsx)',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.primary,
@@ -216,26 +225,49 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            'Satu nama siswa per baris. Baris header '
-                            '(Nama, No, dll) otomatis dilewati.',
+                            'Kolom A = NIS  •  Kolom B = Nama Siswa\n'
+                            'Baris pertama (header) otomatis dilewati.',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
+                          const SizedBox(height: 10),
+                          // Mini tabel contoh
+                          Table(
+                            border: TableBorder.all(
+                              color: AppColors.border,
+                              width: 0.5,
+                              borderRadius: BorderRadius.circular(6),
                             ),
-                            child: const Text(
-                              'Nama Siswa\nAndi Pratama\nBudi Santoso\nCitra Dewi',
+                            columnWidths: const {
+                              0: FlexColumnWidth(1),
+                              1: FlexColumnWidth(2),
+                            },
+                            children: [
+                              _tableRow('NIS', 'Nama Siswa', isHeader: true),
+                              _tableRow('12345', 'Andi Pratama'),
+                              _tableRow('12346', 'Budi Santoso'),
+                              _tableRow('12347', 'Citra Dewi'),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          // Tombol download template
+                          TextButton.icon(
+                            onPressed: _loading ? null : _downloadTemplate,
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              foregroundColor: AppColors.primary,
+                            ),
+                            icon: const Icon(
+                              Icons.download_outlined,
+                              size: 16,
+                            ),
+                            label: const Text(
+                              'Download Template Excel',
                               style: TextStyle(
-                                fontFamily: 'monospace',
                                 fontSize: 12,
-                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -244,7 +276,7 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Tombol pilih file
+                    // ── Tombol pilih file ──────────────────────────────────
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
@@ -267,13 +299,16 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
                               )
                             : const Icon(Icons.upload_file_outlined),
                         label: Text(
-                          _fileName != null ? _fileName! : 'Pilih File CSV',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          _fileName != null
+                              ? _fileName!
+                              : 'Pilih File Excel (.xlsx)',
+                          style:
+                              const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),
 
-                    // Error
+                    // ── Error ──────────────────────────────────────────────
                     if (_errorMsg != null) ...[
                       const SizedBox(height: 12),
                       Container(
@@ -304,20 +339,20 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
                       ),
                     ],
 
-                    // Preview hasil parse
-                    if (_namaPreview.isNotEmpty) ...[
+                    // ── Preview hasil parse ────────────────────────────────
+                    if (_preview.isNotEmpty) ...[
                       const SizedBox(height: 20),
                       Row(
                         children: [
                           Text(
-                            'Preview — ${_namaPreview.length} nama ditemukan',
+                            'Preview — ${_preview.length} siswa ditemukan',
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
                             ),
                           ),
                           const Spacer(),
-                          if (toImportCount < _namaPreview.length)
+                          if (toImportCount < _preview.length)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -350,13 +385,15 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
                         child: ListView.separated(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _namaPreview.length,
-                          separatorBuilder: (_, __) =>
-                              const Divider(height: 1, color: AppColors.border),
+                          itemCount: _preview.length,
+                          separatorBuilder: (_, __) => const Divider(
+                            height: 1,
+                            color: AppColors.border,
+                          ),
                           itemBuilder: (ctx, i) {
-                            final nama = _namaPreview[i];
+                            final row = _preview[i];
                             final isDuplikat = _existingNames.contains(
-                              nama.toLowerCase().trim(),
+                              row.nama.toLowerCase().trim(),
                             );
                             return Padding(
                               padding: const EdgeInsets.symmetric(
@@ -375,9 +412,34 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
                                         : AppColors.accent,
                                   ),
                                   const SizedBox(width: 10),
+                                  // NIS chip (jika ada)
+                                  if (row.nis.isNotEmpty) ...[
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.background,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: AppColors.border,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        row.nis,
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontFamily: 'monospace',
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
                                   Expanded(
                                     child: Text(
-                                      nama,
+                                      row.nama,
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: isDuplikat
@@ -411,8 +473,8 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
               ),
             ),
 
-            // Bottom import button
-            if (_namaPreview.isNotEmpty)
+            // ── Bottom import button ───────────────────────────────────────
+            if (_preview.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: SizedBox(
@@ -450,6 +512,32 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  TableRow _tableRow(String col1, String col2, {bool isHeader = false}) {
+    final style = TextStyle(
+      fontSize: 11,
+      fontFamily: 'monospace',
+      fontWeight: isHeader ? FontWeight.w700 : FontWeight.normal,
+      color: isHeader ? AppColors.primary : AppColors.textPrimary,
+    );
+    return TableRow(
+      decoration: isHeader
+          ? BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+            )
+          : null,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          child: Text(col1, style: style),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          child: Text(col2, style: style),
+        ),
+      ],
     );
   }
 }

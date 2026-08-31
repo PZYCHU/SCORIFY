@@ -17,7 +17,8 @@ class HasilKalkulasiScreen extends StatelessWidget {
         final kelas = provider.getKelas(kelasId);
         if (kelas == null) return const Scaffold(body: SizedBox());
 
-        final muridSorted = kelas.muridList;
+        final muridSorted = List<Murid>.from(kelas.muridList)
+          ..sort((a, b) => (b.skorFinal ?? 0).compareTo(a.skorFinal ?? 0));
 
         return Scaffold(
           body: SafeArea(
@@ -137,7 +138,7 @@ class _RankingCard extends StatelessWidget {
   double _nilaiRingkasan(Kriteria k) {
     // Derived: hitung frekuensi ngulang, bukan rata-rata nilaiList
     if (k.jenis == JenisKriteria.derived) {
-      return murid.getFrekuensiNgulang().toDouble();
+      return murid.getFrekuensiNgulang(k.targetKriteriaIds).toDouble();
     }
 
     final semuaNilai = murid.getNilaiByKriteria(k.id);

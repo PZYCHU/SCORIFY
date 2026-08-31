@@ -335,14 +335,6 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
           onAddPoin: (poinBaru) => _updateNilai(k.id, nilai + poinBaru),
         );
 
-      case InputType.toggle:
-        return _ToggleWidget(
-          nilai: nilai,
-          labelOn: k.toggleLabelOn ?? 'Ya',
-          labelOff: k.toggleLabelOff ?? 'Tidak',
-          onChanged: (v) => _updateNilai(k.id, v),
-        );
-
       case InputType.number:
         return _NumberWidget(
           nilai: nilai,
@@ -357,7 +349,6 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
   Widget _inputTypeIcon(InputType? t) {
     final icon = switch (t) {
       InputType.counter => Icons.add_circle_outline,
-      InputType.toggle => Icons.toggle_on_outlined,
       InputType.number => Icons.edit_outlined,
       null => Icons.auto_awesome_outlined,
     };
@@ -521,67 +512,6 @@ class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
   }
 }
 
-// ─── Toggle Widget ────────────────────────────────────────────────────────────
-
-class _ToggleWidget extends StatelessWidget {
-  final double nilai;
-  final String labelOn;
-  final String labelOff;
-  final ValueChanged<double> onChanged;
-
-  const _ToggleWidget({
-    required this.nilai,
-    required this.labelOn,
-    required this.labelOff,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isOn = nilai >= 1;
-    return Row(
-      children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: () => onChanged(isOn ? 0 : 1),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(
-                color: isOn
-                    ? AppColors.accent.withOpacity(0.15)
-                    : AppColors.background,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isOn ? AppColors.accent : AppColors.border,
-                  width: isOn ? 1.5 : 1,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    isOn ? Icons.check_circle : Icons.cancel_outlined,
-                    color: isOn ? AppColors.accent : AppColors.textSecondary,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isOn ? labelOn : labelOff,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: isOn ? AppColors.accent : AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 // ─── Number Widget ────────────────────────────────────────────────────────────
 
@@ -633,32 +563,4 @@ class _NumberWidgetState extends State<_NumberWidget> {
   }
 }
 
-// ─── Circle Button ────────────────────────────────────────────────────────────
 
-class _CircleBtn extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final VoidCallback? onTap;
-
-  const _CircleBtn({
-    required this.icon,
-    required this.color,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: onTap != null ? color : color.withOpacity(0.3),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: Colors.white, size: 44 * 0.45),
-      ),
-    );
-  }
-}

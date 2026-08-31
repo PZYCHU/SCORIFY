@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../providers/app_provider.dart';
+import '../../services/excel_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_widgets.dart';
 import '../ahp/ahp_screen.dart';
@@ -50,9 +51,20 @@ class DetailKelasScreen extends StatelessWidget {
           floatingActionButton: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Import via CSV
+              // Export ke Excel
+              if (kelas.muridList.isNotEmpty)
+                FloatingActionButton.small(
+                  heroTag: 'export',
+                  onPressed: () => _exportExcel(context, kelas),
+                  backgroundColor: const Color(0xFF217346), // warna Excel hijau
+                  tooltip: 'Export Excel',
+                  child: const Icon(Icons.table_chart_outlined,
+                      color: Colors.white, size: 20),
+                ),
+              if (kelas.muridList.isNotEmpty) const SizedBox(height: 8),
+              // Import via Excel
               FloatingActionButton.small(
-                heroTag: 'csv',
+                heroTag: 'import',
                 onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -63,7 +75,7 @@ class DetailKelasScreen extends StatelessWidget {
                   ),
                 ),
                 backgroundColor: AppColors.accent,
-                tooltip: 'Import CSV',
+                tooltip: 'Import Excel',
                 child: const Icon(Icons.upload_file_outlined,
                     color: Colors.white, size: 20),
               ),
@@ -176,11 +188,18 @@ class DetailKelasScreen extends StatelessWidget {
   }
 
   Widget _buildMuridList(BuildContext context, Kelas kelas) {
+    final list = List<Murid>.from(kelas.muridList);
+    if (kelas.sudahKalkulasi) {
+      list.sort((a, b) => (b.skorFinal ?? 0).compareTo(a.skorFinal ?? 0));
+    } else {
+      list.sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-      itemCount: kelas.muridList.length,
+      itemCount: list.length,
       itemBuilder: (ctx, i) {
-        final murid = kelas.muridList[i];
+        final murid = list[i];
         return _MuridCard(
           murid: murid,
           kelas: kelas,
@@ -417,6 +436,49 @@ class DetailKelasScreen extends StatelessWidget {
       );
     }
   }
+
+  Future<void> _exportExcel(BuildContext context, Kelas kelas) async {
+    // Tampilkan loading
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Membuat file Excel...'),
+          ],
+        ),
+        duration: Duration(seconds: 10),
+        backgroundColor: Color(0xFF217346),
+      ),
+    );
+
+    final path = await ExcelService.exportSiswa(kelas);
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          path != null
+              ? 'File Excel disimpan:\n$path'
+              : 'Gagal mengekspor data siswa',
+        ),
+        backgroundColor:
+            path != null ? const Color(0xFF217346) : AppColors.danger,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  }
 }
 
 // ─── Murid Card ───────────────────────────────────────────────────────────────
@@ -485,11 +547,29 @@ class _MuridCard extends StatelessWidget {
                         const SizedBox(width: 8),
                       ],
                       Expanded(
-                        child: Text(
-                          murid.nama,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleMedium?.copyWith(fontSize: 15),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // NIS (jika ada)
+                            if (murid.nis != null && murid.nis!.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: Text(
+                                  'NIS ${murid.nis}',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontFamily: 'monospace',
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            Text(
+                              murid.nama,
+                              style: Theme.of(
+                                context,
+                              ).textTheme.titleMedium?.copyWith(fontSize: 15),
+                            ),
+                          ],
                         ),
                       ),
                     ],

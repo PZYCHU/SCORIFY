@@ -1,6 +1,25 @@
 import '../models/models.dart';
 import 'dart:math';
 
+/// Saran perbaikan nilai untuk perbandingan yang inkonsisten
+class SaranInkonsistensi {
+  final int i;
+  final int j;
+  final double nilaiSaatIni;
+  final int nilaiSaran;
+  final double deviasi;
+  final double crSetelahGanti;
+
+  const SaranInkonsistensi({
+    required this.i,
+    required this.j,
+    required this.nilaiSaatIni,
+    required this.nilaiSaran,
+    required this.deviasi,
+    required this.crSetelahGanti,
+  });
+}
+
 /// Hasil kalkulasi AHP
 class HasilAHP {
   final List<double> bobot;
@@ -8,6 +27,7 @@ class HasilAHP {
   final double ci;
   final double cr;
   final bool konsisten;
+  final List<SaranInkonsistensi> saranList;
 
   const HasilAHP({
     required this.bobot,
@@ -15,6 +35,7 @@ class HasilAHP {
     required this.ci,
     required this.cr,
     required this.konsisten,
+    this.saranList = const [],
   });
 }
 
@@ -43,6 +64,24 @@ class KalkulasiService {
   // ─── AHP ──────────────────────────────────────────────────────────────────
 
   static HasilAHP hitungAHP(List<List<double>> matriks) {
+    final base = _hitungAHPInternal(matriks);
+    if (base.konsisten) {
+      return base;
+    }
+
+    // Jika inkonsisten, cari saran perbaikan sel
+    final saran = cariSaranInkonsistensi(matriks, base.bobot);
+    return HasilAHP(
+      bobot: base.bobot,
+      lambdaMax: base.lambdaMax,
+      ci: base.ci,
+      cr: base.cr,
+      konsisten: base.konsisten,
+      saranList: saran,
+    );
+  }
+
+  static HasilAHP _hitungAHPInternal(List<List<double>> matriks) {
     final n = matriks.length;
     assert(n >= 2, 'Minimal 2 kriteria');
 
@@ -85,6 +124,52 @@ class KalkulasiService {
       cr: cr,
       konsisten: cr <= 0.10,
     );
+  }
+
+  static List<SaranInkonsistensi> cariSaranInkonsistensi(
+    List<List<double>> matriks,
+    List<double> bobot,
+  ) {
+    final n = matriks.length;
+    final List<SaranInkonsistensi> hasil = [];
+
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        final wI = bobot[i];
+        final wJ = bobot[j];
+        if (wJ <= 0) continue;
+
+        final rasioIdeal = wI / wJ;
+        final saatySaran = rasioIdeal >= 1
+            ? rasioIdeal.round().clamp(1, 9)
+            : 1;
+
+        final valSaatIni = matriks[i][j];
+        if (saatySaran != valSaatIni.round()) {
+          final matriksTest = matriks
+              .map((row) => List<double>.from(row))
+              .toList();
+          setNilaiMatriks(matriksTest, i, j, saatySaran.toDouble());
+          final testHasil = _hitungAHPInternal(matriksTest);
+
+          final deviasi = (valSaatIni - rasioIdeal).abs();
+          hasil.add(
+            SaranInkonsistensi(
+              i: i,
+              j: j,
+              nilaiSaatIni: valSaatIni,
+              nilaiSaran: saatySaran,
+              deviasi: deviasi,
+              crSetelahGanti: testHasil.cr,
+            ),
+          );
+        }
+      }
+    }
+
+    // Urutkan: yang paling menurunkan CR lebih dulu
+    hasil.sort((a, b) => a.crSetelahGanti.compareTo(b.crSetelahGanti));
+    return hasil;
   }
 
   static List<List<double>> matriksAwal(int n) {
@@ -170,7 +255,7 @@ class KalkulasiService {
   static double _nilaiRingkasan(Murid murid, Kriteria k) {
     // Derived dihitung dari frekuensi ngulang, bukan dari nilaiList langsung
     if (k.jenis == JenisKriteria.derived) {
-      return murid.getFrekuensiNgulang().toDouble();
+      return murid.getFrekuensiNgulang(k.targetKriteriaIds).toDouble();
     }
 
     final semuaNilai = murid.getNilaiByKriteria(k.id);

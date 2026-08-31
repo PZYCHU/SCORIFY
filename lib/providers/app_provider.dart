@@ -114,11 +114,12 @@ class AppProvider extends ChangeNotifier {
   Future<void> tambahMurid(
     String kelasId, {
     required String nama,
+    String? nis,
     required List<Nilai> nilaiList,
   }) async {
     final idx = _kelasList.indexWhere((k) => k.id == kelasId);
     if (idx < 0) return;
-    final murid = Murid(id: _uuid.v4(), nama: nama, nilaiList: nilaiList);
+    final murid = Murid(id: _uuid.v4(), nama: nama, nis: nis, nilaiList: nilaiList);
     await _firestore.upsertMurid(kelasId, murid);
 
     // Update sudahKalkulasi = false di kelas
@@ -130,6 +131,7 @@ class AppProvider extends ChangeNotifier {
     String kelasId,
     String muridId, {
     String? nama,
+    String? nis,
     List<Nilai>? nilaiList,
   }) async {
     final kIdx = _kelasList.indexWhere((k) => k.id == kelasId);
@@ -140,6 +142,7 @@ class AppProvider extends ChangeNotifier {
 
     final updatedMurid = kelas.muridList[mIdx].copyWith(
       nama: nama,
+      nis: nis,
       nilaiList: nilaiList,
     );
     await _firestore.upsertMurid(kelasId, updatedMurid);

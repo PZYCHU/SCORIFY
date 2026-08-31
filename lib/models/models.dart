@@ -1,15 +1,14 @@
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 enum JenisKriteria {
-  performa, // diinput saat KBM (counter, toggle)
+  performa, // diinput saat KBM (counter/poin tambahan, nilai angka)
   hasil,    // diinput setelah koreksi, punya sesi (nilai tugas, UTS, UAS)
   derived,  // otomatis dihitung sistem (frekuensi ngulang = count attempt > 1)
 }
 
 enum InputType {
-  counter,   // tombol +, cocok untuk keaktifan
-  number,    // input angka manual, cocok untuk nilai tugas
-  toggle,    // ya/tidak, cocok untuk sikap
+  counter,   // poin tambahan / akumulasi (+), cocok untuk keaktifan
+  number,    // input angka manual, cocok untuk nilai tugas / ujian
 }
 
 enum ArahKriteria {
@@ -27,11 +26,7 @@ class Kriteria {
   ArahKriteria arah;
   double bobot; // hasil AHP, 0.0 sebelum dihitung
   bool perSesi; // true jika butuh sesi (hanya jenis: hasil)
-
-  /// Label custom untuk toggle (hanya relevan jika inputType == toggle).
-  /// Contoh: toggleLabelOn = 'Hadir', toggleLabelOff = 'Tidak Hadir'
-  String? toggleLabelOn;
-  String? toggleLabelOff;
+  List<String> targetKriteriaIds; // ID kriteria hasil yang dipantau (hanya jenis: derived)
 
   Kriteria({
     required this.id,
@@ -41,8 +36,7 @@ class Kriteria {
     this.arah = ArahKriteria.benefit,
     this.bobot = 0.0,
     this.perSesi = false,
-    this.toggleLabelOn,
-    this.toggleLabelOff,
+    this.targetKriteriaIds = const [],
   });
 
   Kriteria copyWith({
@@ -52,8 +46,7 @@ class Kriteria {
     ArahKriteria? arah,
     double? bobot,
     bool? perSesi,
-    String? toggleLabelOn,
-    String? toggleLabelOff,
+    List<String>? targetKriteriaIds,
   }) {
     return Kriteria(
       id: id,
@@ -63,8 +56,7 @@ class Kriteria {
       arah: arah ?? this.arah,
       bobot: bobot ?? this.bobot,
       perSesi: perSesi ?? this.perSesi,
-      toggleLabelOn: toggleLabelOn ?? this.toggleLabelOn,
-      toggleLabelOff: toggleLabelOff ?? this.toggleLabelOff,
+      targetKriteriaIds: targetKriteriaIds ?? this.targetKriteriaIds,
     );
   }
 
@@ -76,8 +68,7 @@ class Kriteria {
     'arah': arah.name,
     'bobot': bobot,
     'perSesi': perSesi,
-    'toggleLabelOn': toggleLabelOn,
-    'toggleLabelOff': toggleLabelOff,
+    'targetKriteriaIds': targetKriteriaIds,
   };
 
   factory Kriteria.fromJson(Map<String, dynamic> json) => Kriteria(
@@ -85,15 +76,20 @@ class Kriteria {
     nama: json['nama'],
     jenis: JenisKriteria.values.firstWhere((e) => e.name == json['jenis']),
     inputType: json['inputType'] != null
-        ? InputType.values.firstWhere((e) => e.name == json['inputType'])
+        ? InputType.values.firstWhere(
+            (e) => e.name == json['inputType'],
+            orElse: () => InputType.number,
+          )
         : null,
     arah: ArahKriteria.values.firstWhere(
       (e) => e.name == (json['arah'] ?? 'benefit'),
     ),
     bobot: (json['bobot'] as num).toDouble(),
     perSesi: json['perSesi'] ?? false,
-    toggleLabelOn: json['toggleLabelOn'] as String?,
-    toggleLabelOff: json['toggleLabelOff'] as String?,
+    targetKriteriaIds: (json['targetKriteriaIds'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        const [],
   );
 }
 
@@ -179,12 +175,14 @@ class Nilai {
 class Murid {
   final String id;
   String nama;
+  String? nis;          // Nomor Induk Siswa (opsional)
   List<Nilai> nilaiList;
   double? skorFinal;
 
   Murid({
     required this.id,
     required this.nama,
+    this.nis,
     required this.nilaiList,
     this.skorFinal,
   });
@@ -203,15 +201,19 @@ class Murid {
     return filtered.first;
   }
 
-  /// Hitung frekuensi ngulang (lintas semua kriteria hasil).
-  /// Derived criteria tidak punya nilaiList sendiri — retake tersimpan
-  /// di bawah kriteriaId hasil dengan attempt > 1.
+  /// Hitung frekuensi ngulang (remedial).
+  /// Jika targetKriteriaIds disediakan, hanya hitung pengulangan pada kriteria hasil tersebut.
   /// Return: jumlah sesi unik di mana siswa pernah ngulang.
-  int getFrekuensiNgulang() {
+  int getFrekuensiNgulang([List<String>? targetKriteriaIds]) {
     // Grup nilai per (kriteriaId, sesiId)
     final Map<String, int> maxAttemptPerSesi = {};
     for (final n in nilaiList) {
       if (n.sesiId == null) continue; // skip nilai performa
+      if (targetKriteriaIds != null &&
+          targetKriteriaIds.isNotEmpty &&
+          !targetKriteriaIds.contains(n.kriteriaId)) {
+        continue;
+      }
       final key = '${n.kriteriaId}_${n.sesiId}';
       if (!maxAttemptPerSesi.containsKey(key) ||
           n.attempt > maxAttemptPerSesi[key]!) {
@@ -224,12 +226,14 @@ class Murid {
 
   Murid copyWith({
     String? nama,
+    String? nis,
     List<Nilai>? nilaiList,
     double? skorFinal,
   }) {
     return Murid(
       id: id,
       nama: nama ?? this.nama,
+      nis: nis ?? this.nis,
       nilaiList: nilaiList ?? this.nilaiList,
       skorFinal: skorFinal ?? this.skorFinal,
     );
@@ -238,6 +242,7 @@ class Murid {
   Map<String, dynamic> toJson() => {
     'id': id,
     'nama': nama,
+    'nis': nis,
     'nilaiList': nilaiList.map((n) => n.toJson()).toList(),
     'skorFinal': skorFinal,
   };
@@ -245,6 +250,7 @@ class Murid {
   factory Murid.fromJson(Map<String, dynamic> json) => Murid(
     id: json['id'],
     nama: json['nama'],
+    nis: json['nis'] as String?,
     nilaiList: (json['nilaiList'] as List)
         .map((n) => Nilai.fromJson(n))
         .toList(),

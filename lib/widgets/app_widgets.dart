@@ -76,7 +76,7 @@ class JenisChip extends StatelessWidget {
         const Color(0xFF283593),
       ),
       JenisKriteria.derived => (
-        'Otomatis',
+        'Perhitungan Remedi',
         const Color(0xFFFFF3E0),
         const Color(0xFFE65100),
       ),
@@ -132,9 +132,8 @@ class InputTypeChip extends StatelessWidget {
   Widget build(BuildContext context) {
     if (inputType == null) return const SizedBox.shrink();
     final label = switch (inputType!) {
-      InputType.counter => 'Akumulasi Poin',
-      InputType.number => 'Angka',
-      InputType.toggle => 'Toggle',
+      InputType.counter => 'Poin Tambahan (+)',
+      InputType.number => 'Nilai Angka (0–100)',
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
