@@ -48,53 +48,12 @@ class DetailKelasScreen extends StatelessWidget {
               ],
             ),
           ),
-          floatingActionButton: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Export ke Excel
-              if (kelas.muridList.isNotEmpty)
-                FloatingActionButton.small(
-                  heroTag: 'export',
-                  onPressed: () => _exportExcel(context, kelas),
-                  backgroundColor: const Color(0xFF217346), // warna Excel hijau
-                  tooltip: 'Export Excel',
-                  child: const Icon(Icons.table_chart_outlined,
-                      color: Colors.white, size: 20),
-                ),
-              if (kelas.muridList.isNotEmpty) const SizedBox(height: 8),
-              // Import via Excel
-              FloatingActionButton.small(
-                heroTag: 'import',
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ImportSiswaScreen(
-                      kelasId: kelasId,
-                      kelas: kelas,
-                    ),
-                  ),
-                ),
-                backgroundColor: AppColors.accent,
-                tooltip: 'Import Excel',
-                child: const Icon(Icons.upload_file_outlined,
-                    color: Colors.white, size: 20),
-              ),
-              const SizedBox(height: 8),
-              // Tambah satu siswa
-              FloatingActionButton(
-                heroTag: 'add',
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        TambahMuridScreen(kelasId: kelasId, kelas: kelas),
-                  ),
-                ),
-                backgroundColor: AppColors.primary,
-                tooltip: 'Tambah Siswa',
-                child: const Icon(Icons.person_add, color: Colors.white),
-              ),
-            ],
+          floatingActionButton: FloatingActionButton(
+            heroTag: 'tambah_siswa',
+            onPressed: () => _showTambahSiswaOptions(context, kelas),
+            backgroundColor: AppColors.primary,
+            tooltip: 'Tambah Siswa',
+            child: const Icon(Icons.add, color: Colors.white, size: 28),
           ),
         );
       },
@@ -126,12 +85,22 @@ class DetailKelasScreen extends StatelessWidget {
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, color: Colors.white),
                 onSelected: (val) async {
-                  if (val == 'edit') {
+                  if (val == 'export') {
+                    if (kelas.muridList.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Belum ada data siswa untuk diekspor'),
+                          backgroundColor: AppColors.warning,
+                        ),
+                      );
+                      return;
+                    }
+                    _exportExcel(context, kelas);
+                  } else if (val == 'edit') {
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>
-                            BuatKelasScreen(existingKelas: kelas),
+                        builder: (_) => BuatKelasScreen(existingKelas: kelas),
                       ),
                     );
                   } else if (val == 'hapus') {
@@ -148,12 +117,46 @@ class DetailKelasScreen extends StatelessWidget {
                   }
                 },
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'edit', child: Text('Edit Kelas')),
+                  const PopupMenuItem(
+                    value: 'export',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.table_chart_outlined,
+                          color: Color(0xFF217346),
+                          size: 18,
+                        ),
+                        SizedBox(width: 10),
+                        Text('Export ke Excel'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 18),
+                        SizedBox(width: 10),
+                        Text('Edit Kelas'),
+                      ],
+                    ),
+                  ),
                   const PopupMenuItem(
                     value: 'hapus',
-                    child: Text(
-                      'Hapus Kelas',
-                      style: TextStyle(color: AppColors.danger),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.delete_outline,
+                          color: AppColors.danger,
+                          size: 18,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Hapus Kelas',
+                          style: TextStyle(color: AppColors.danger),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -218,16 +221,15 @@ class DetailKelasScreen extends StatelessWidget {
     AppProvider provider,
   ) {
     final bobotBelumDiisi = kelas.kriteria.any((k) => k.bobot == 0.0);
-    final adaKriteriaHasil =
-        kelas.kriteria.any((k) => k.jenis == JenisKriteria.hasil);
+    final adaKriteriaHasil = kelas.kriteria.any(
+      (k) => k.jenis == JenisKriteria.hasil,
+    );
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       decoration: const BoxDecoration(
         color: AppColors.surface,
-        border: Border(
-          top: BorderSide(color: AppColors.border, width: 0.5),
-        ),
+        border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -240,11 +242,11 @@ class DetailKelasScreen extends StatelessWidget {
                   onPressed: kelas.muridList.isEmpty
                       ? null
                       : () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => AhpScreen(kelasId: kelasId),
-                            ),
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AhpScreen(kelasId: kelasId),
                           ),
+                        ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     side: const BorderSide(color: AppColors.primary),
@@ -257,23 +259,25 @@ class DetailKelasScreen extends StatelessWidget {
                   label: Text(
                     bobotBelumDiisi ? 'Isi Bobot AHP' : 'Edit AHP',
                     style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 13),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),
-              if (adaKriteriaHasil) ...[  
+              if (adaKriteriaHasil) ...[
                 const SizedBox(width: 10),
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: kelas.muridList.isEmpty
                         ? null
                         : () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => InputNilaiHasilScreen(
-                                    kelasId: kelasId),
-                              ),
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  InputNilaiHasilScreen(kelasId: kelasId),
                             ),
+                          ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.accent,
                       side: const BorderSide(color: AppColors.accent),
@@ -286,7 +290,9 @@ class DetailKelasScreen extends StatelessWidget {
                     label: const Text(
                       'Nilai Tugas',
                       style: TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 13),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ),
@@ -294,26 +300,81 @@ class DetailKelasScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          // Baris 2: Kalkulasi (full width)
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: (kelas.muridList.isEmpty || bobotBelumDiisi)
-                  ? null
-                  : () => _jalankanKalkulasi(context, provider, kelas),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+          // Baris 2: Kalkulasi — pisah "Lihat Hasil" & "Hitung Ulang" jika sudah pernah dihitung
+          if (kelas.sudahKalkulasi) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => HasilKalkulasiScreen(kelasId: kelasId),
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    icon: const Icon(Icons.bar_chart_rounded, size: 16),
+                    label: const Text(
+                      'Lihat Hasil',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: (kelas.muridList.isEmpty || bobotBelumDiisi)
+                        ? null
+                        : () => _jalankanKalkulasi(context, provider, kelas),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text(
+                      'Hitung Ulang',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: (kelas.muridList.isEmpty || bobotBelumDiisi)
+                    ? null
+                    : () => _jalankanKalkulasi(context, provider, kelas),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                icon: const Icon(Icons.calculate_outlined, size: 18),
+                label: const Text(
+                  'Hitung Nilai Akhir',
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
-              icon: const Icon(Icons.calculate_outlined, size: 18),
-              label: const Text(
-                'Hitung Nilai Akhir',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -335,11 +396,13 @@ class DetailKelasScreen extends StatelessWidget {
           ),
           title: const Row(
             children: [
-              Icon(Icons.warning_amber_rounded,
-                  color: AppColors.danger, size: 22),
+              Icon(
+                Icons.warning_amber_rounded,
+                color: AppColors.danger,
+                size: 22,
+              ),
               SizedBox(width: 8),
-              Text('Data Belum Lengkap',
-                  style: TextStyle(fontSize: 16)),
+              Text('Data Belum Lengkap', style: TextStyle(fontSize: 16)),
             ],
           ),
           content: SizedBox(
@@ -351,7 +414,9 @@ class DetailKelasScreen extends StatelessWidget {
                 const Text(
                   'Nilai hasil belum dimasukkan untuk:',
                   style: TextStyle(
-                      fontSize: 13, color: AppColors.textSecondary),
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 ConstrainedBox(
@@ -373,15 +438,17 @@ class DetailKelasScreen extends StatelessWidget {
                               Text(
                                 e.key, // nama murid
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13),
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
                               ),
                               const SizedBox(height: 3),
                               Text(
                                 e.value.map((k) => '• $k').join('\n'),
                                 style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.costChipText),
+                                  fontSize: 12,
+                                  color: AppColors.costChipText,
+                                ),
                               ),
                             ],
                           ),
@@ -472,10 +539,101 @@ class DetailKelasScreen extends StatelessWidget {
               ? 'File Excel disimpan:\n$path'
               : 'Gagal mengekspor data siswa',
         ),
-        backgroundColor:
-            path != null ? const Color(0xFF217346) : AppColors.danger,
+        backgroundColor: path != null
+            ? const Color(0xFF217346)
+            : AppColors.danger,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+
+  void _showTambahSiswaOptions(BuildContext context, Kelas kelas) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: AppColors.surfaceWhite,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(
+                  'Tambah Siswa',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.person_add_outlined,
+                    color: AppColors.primary,
+                  ),
+                ),
+                title: const Text(
+                  'Tambah Manual',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: const Text('Input NIS dan Nama satu per satu'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          TambahMuridScreen(kelasId: kelasId, kelas: kelas),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.upload_file_outlined,
+                    color: AppColors.accent,
+                  ),
+                ),
+                title: const Text(
+                  'Import dari Excel',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: const Text(
+                  'Unggah daftar siswa sekaligus via file Excel',
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ImportSiswaScreen(kelasId: kelasId, kelas: kelas),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

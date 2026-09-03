@@ -7,6 +7,7 @@ class AppColors {
   static const Color primaryLight = Color(0xFF2D7D8E);  // medium teal
   static const Color accent = Color(0xFF4CAF82);        // green (tombol B / benefit)
   static const Color danger = Color(0xFFE53935);        // red (tombol hapus / cost)
+  static const Color warning = Color(0xFFFFA000);       // amber/orange (peringatan)
   static const Color background = Color(0xFFE8EDE6);    // sage background
   static const Color surface = Color(0xFFF5F7F3);       // card putih keabuan
   static const Color surfaceWhite = Color(0xFFFFFFFF);

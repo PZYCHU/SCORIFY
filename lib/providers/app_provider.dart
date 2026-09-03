@@ -208,6 +208,11 @@ class AppProvider extends ChangeNotifier {
 
     final updatedMurid = murid.copyWith(nilaiList: updatedNilaiList);
     await _firestore.upsertMurid(kelasId, updatedMurid);
+
+    // Reset flag agar kalkulasi bisa diulang setelah ada perubahan nilai
+    if (kelas.sudahKalkulasi) {
+      await _firestore.upsertKelas(kelas.copyWith(sudahKalkulasi: false));
+    }
   }
 
   // ─── Sesi CRUD ───────────────────────────────────────────────────────────

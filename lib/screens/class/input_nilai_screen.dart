@@ -30,15 +30,9 @@ class InputNilaiSheet extends StatefulWidget {
 }
 
 class _InputNilaiSheetState extends State<InputNilaiSheet> {
-  // Nilai sementara di memory per kriteria (kriteriaId -> nilai)
+  // Nilai tersimpan saat ini di memory per kriteria (kriteriaId -> nilai)
   late Map<String, double> _nilaiMap;
   late AppProvider _provider;
-
-  bool _isSaving = false;
-  bool _isDirty = false; // ada perubahan yang belum disimpan
-
-  // Debounce timer per kriteria (untuk background auto-save)
-  final Map<String, Timer> _debounceTimers = {};
 
   // Kriteria performa saja (bukan hasil & bukan derived)
   List<Kriteria> get _kriteriaPerforma => widget.kelas.kriteria
@@ -67,14 +61,9 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
       }).toList();
 
       if (k.inputType == InputType.counter) {
-        // Counter: tampilkan nilai hari ini saja (bukan akumulasi semua hari)
-        // Akumulasi antar hari dilakukan di SAW, bukan di UI
-        _nilaiMap[k.id] = nilaiHariIni.isNotEmpty
-            ? nilaiHariIni.first.nilai
-            : 0;
+        _nilaiMap[k.id] =
+            nilaiHariIni.isNotEmpty ? nilaiHariIni.first.nilai : 0;
       } else {
-        // Toggle, number: tampilkan nilai hari ini jika ada,
-        // kalau tidak tampilkan nilai terakhir yang tersimpan
         if (nilaiHariIni.isNotEmpty) {
           _nilaiMap[k.id] = nilaiHariIni.first.nilai;
         } else {
@@ -85,37 +74,10 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
     }
   }
 
-  @override
-  void dispose() {
-    // Flush semua pending debounce (fire-and-forget sebagai fallback)
-    for (final timer in _debounceTimers.values) {
-      timer.cancel();
-    }
-    // Jika masih ada perubahan belum tersimpan, coba simpan sekarang
-    if (_isDirty) {
-      for (final entry in _nilaiMap.entries) {
-        _provider.inputNilaiPerforma(
-          kelasId: widget.kelas.id,
-          muridId: widget.murid.id,
-          kriteriaId: entry.key,
-          nilai: entry.value,
-          tanggal: DateTime.now(),
-        );
-      }
-    }
-    super.dispose();
-  }
-
-  // Auto-save background (debounce) — hanya backup, bukan andalan utama
-  void _autoSave(String kriteriaId, double nilai) {
-    _debounceTimers[kriteriaId]?.cancel();
-    _debounceTimers[kriteriaId] = Timer(
-      const Duration(milliseconds: 1200),
-      () => _simpanSatuKriteria(kriteriaId, nilai),
-    );
-  }
-
-  Future<void> _simpanSatuKriteria(String kriteriaId, double nilai) async {
+  Future<void> _simpanKriteria(String kriteriaId, double nilai) async {
+    setState(() {
+      _nilaiMap[kriteriaId] = nilai;
+    });
     await _provider.inputNilaiPerforma(
       kelasId: widget.kelas.id,
       muridId: widget.murid.id,
@@ -123,36 +85,6 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
       nilai: nilai,
       tanggal: DateTime.now(),
     );
-  }
-
-  /// Simpan SEMUA kriteria sekaligus dan tutup sheet.
-  Future<void> _simpanSemua() async {
-    // Cancel semua debounce — kita simpan sekarang secara eksplisit
-    for (final t in _debounceTimers.values) t.cancel();
-    _debounceTimers.clear();
-
-    setState(() => _isSaving = true);
-    try {
-      for (final entry in _nilaiMap.entries) {
-        await _simpanSatuKriteria(entry.key, entry.value);
-      }
-      setState(() {
-        _isDirty = false;
-        _isSaving = false;
-      });
-      if (mounted) Navigator.of(context).pop();
-    } catch (_) {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
-  void _updateNilai(String kriteriaId, double nilai) {
-    setState(() {
-      _nilaiMap[kriteriaId] = nilai;
-      _isDirty = true;
-    });
-    // Background auto-save sebagai fallback
-    _autoSave(kriteriaId, nilai);
   }
 
   @override
@@ -199,17 +131,15 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Penilaian KBM',
+                          'Penilaian KBM (Tersimpan otomatis per kriteria)',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             color: AppColors.textSecondary,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  // Status indikator
-                  _SaveStatusIndicator(isDirty: _isDirty, isSaving: _isSaving),
                 ],
               ),
             ),
@@ -235,50 +165,27 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
                     ),
             ),
 
-            // ── Tombol Simpan Semua ──────────────────────────────────────────
+            // ── Tombol Selesai / Tutup ──────────────────────────────────────────
             SafeArea(
               top: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                 child: SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: (_isSaving || _kriteriaPerforma.isEmpty)
-                        ? null
-                        : _simpanSemua,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _isDirty
-                          ? AppColors.accent
-                          : AppColors.primary,
-                      foregroundColor: Colors.white,
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary, width: 1.5),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      elevation: _isDirty ? 4 : 0,
                     ),
-                    icon: _isSaving
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Icon(
-                            _isDirty
-                                ? Icons.save_outlined
-                                : Icons.check_circle_outline,
-                            size: 18,
-                          ),
-                    label: Text(
-                      _isSaving
-                          ? 'Menyimpan...'
-                          : _isDirty
-                              ? 'Simpan Semua Nilai'
-                              : 'Selesai',
-                      style: const TextStyle(
+                    icon: const Icon(Icons.check_circle_outline, size: 18),
+                    label: const Text(
+                      'Selesai Menilai',
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
                       ),
@@ -316,7 +223,7 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
                   ),
                 ),
               ),
-              _inputTypeIcon(k.inputType),
+              _inputTypeChip(k.inputType),
             ],
           ),
           const SizedBox(height: 14),
@@ -332,13 +239,19 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
     switch (k.inputType) {
       case InputType.counter:
         return _AccumulatorWidget(
-          onAddPoin: (poinBaru) => _updateNilai(k.id, nilai + poinBaru),
+          currentTotal: nilai,
+          onSavePoin: (poinBaru) async {
+            final newTotal = nilai + poinBaru;
+            await _simpanKriteria(k.id, newTotal);
+          },
         );
 
       case InputType.number:
         return _NumberWidget(
-          nilai: nilai,
-          onChanged: (v) => _updateNilai(k.id, v),
+          initialValue: nilai,
+          onSaveNilai: (nilaiBaru) async {
+            await _simpanKriteria(k.id, nilaiBaru);
+          },
         );
 
       case null:
@@ -346,76 +259,40 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
     }
   }
 
-  Widget _inputTypeIcon(InputType? t) {
-    final icon = switch (t) {
-      InputType.counter => Icons.add_circle_outline,
-      InputType.number => Icons.edit_outlined,
-      null => Icons.auto_awesome_outlined,
+  Widget _inputTypeChip(InputType? t) {
+    final label = switch (t) {
+      InputType.counter => 'Poin Tambahan (+)',
+      InputType.number => 'Nilai Angka',
+      null => 'Penilaian',
     };
-    return Icon(icon, size: 16, color: AppColors.textSecondary);
-  }
-}
-
-// ─── Save Status Indicator ────────────────────────────────────────────────────
-
-class _SaveStatusIndicator extends StatelessWidget {
-  final bool isDirty;
-  final bool isSaving;
-
-  const _SaveStatusIndicator({required this.isDirty, required this.isSaving});
-
-  @override
-  Widget build(BuildContext context) {
-    if (isSaving) {
-      return Row(
-        children: [
-          SizedBox(
-            width: 12,
-            height: 12,
-            child: CircularProgressIndicator(
-              strokeWidth: 1.5,
-              color: AppColors.accent,
-            ),
-          ),
-          const SizedBox(width: 5),
-          Text(
-            'Menyimpan...',
-            style: TextStyle(fontSize: 11, color: AppColors.accent),
-          ),
-        ],
-      );
-    }
-    if (isDirty) {
-      return Row(
-        children: [
-          const Icon(Icons.circle, size: 8, color: Colors.orange),
-          const SizedBox(width: 5),
-          Text(
-            'Belum disimpan',
-            style: TextStyle(fontSize: 11, color: Colors.orange[700]),
-          ),
-        ],
-      );
-    }
-    return Row(
-      children: [
-        Icon(Icons.cloud_done_outlined, size: 14, color: AppColors.accent),
-        const SizedBox(width: 4),
-        Text(
-          'Tersimpan',
-          style: TextStyle(fontSize: 11, color: AppColors.accent),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          color: AppColors.primary,
+          fontWeight: FontWeight.w500,
         ),
-      ],
+      ),
     );
   }
 }
 
-// ─── Accumulator Widget ─────────────────────────────────────────────────────────
+// ─── Accumulator Widget (Poin Tambahan) ─────────────────────────────────────────
 
 class _AccumulatorWidget extends StatefulWidget {
-  final ValueChanged<double> onAddPoin;
+  final double currentTotal;
+  final Future<void> Function(double poin) onSavePoin;
 
-  const _AccumulatorWidget({required this.onAddPoin});
+  const _AccumulatorWidget({
+    required this.currentTotal,
+    required this.onSavePoin,
+  });
 
   @override
   State<_AccumulatorWidget> createState() => _AccumulatorWidgetState();
@@ -423,6 +300,7 @@ class _AccumulatorWidget extends StatefulWidget {
 
 class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
   final _poinCtrl = TextEditingController();
+  bool _isSaving = false;
   bool _showSuccess = false;
   Timer? _successTimer;
 
@@ -433,20 +311,203 @@ class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
     super.dispose();
   }
 
-  void _kirimPoin() {
+  Future<void> _kirimPoin() async {
     final input = _poinCtrl.text.trim();
     if (input.isEmpty) return;
 
     final poin = double.tryParse(input);
-    if (poin != null) {
-      widget.onAddPoin(poin);
-      _poinCtrl.clear();
+    if (poin != null && poin > 0) {
+      setState(() => _isSaving = true);
+      try {
+        await widget.onSavePoin(poin);
+        _poinCtrl.clear();
+        FocusScope.of(context).unfocus();
+        if (mounted) {
+          setState(() {
+            _showSuccess = true;
+            _isSaving = false;
+          });
+          _successTimer?.cancel();
+          _successTimer = Timer(const Duration(seconds: 2), () {
+            if (mounted) setState(() => _showSuccess = false);
+          });
+        }
+      } catch (_) {
+        if (mounted) setState(() => _isSaving = false);
+      }
+    }
+  }
 
-      setState(() => _showSuccess = true);
-      _successTimer?.cancel();
-      _successTimer = Timer(const Duration(seconds: 2), () {
-        if (mounted) setState(() => _showSuccess = false);
-      });
+  @override
+  Widget build(BuildContext context) {
+    final total = widget.currentTotal;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Tampilkan total poin terakumulasi
+        if (total > 0)
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.functions, size: 14, color: AppColors.accent),
+                const SizedBox(width: 6),
+                Text(
+                  'Total nilai hari ini: ${total.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.accent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _poinCtrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _kirimPoin(),
+                decoration: InputDecoration(
+                  hintText: 'Tambah poin (mis. 10 atau 80)',
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        const BorderSide(color: AppColors.accent, width: 2),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            ElevatedButton.icon(
+              onPressed: _isSaving ? null : _kirimPoin,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: _isSaving
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.add, size: 18),
+              label: Text(
+                _isSaving ? '...' : 'Tambah',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        if (_showSuccess) ...[
+          const SizedBox(height: 6),
+          const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 14),
+              SizedBox(width: 4),
+              Text(
+                'Poin berhasil ditambahkan & tersimpan!',
+                style: TextStyle(
+                  color: Colors.green,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ─── Number Widget (Nilai Angka Langsung) ──────────────────────────────────────
+
+class _NumberWidget extends StatefulWidget {
+  final double initialValue;
+  final Future<void> Function(double nilai) onSaveNilai;
+
+  const _NumberWidget({
+    required this.initialValue,
+    required this.onSaveNilai,
+  });
+
+  @override
+  State<_NumberWidget> createState() => _NumberWidgetState();
+}
+
+class _NumberWidgetState extends State<_NumberWidget> {
+  late TextEditingController _ctrl;
+  bool _isSaving = false;
+  bool _showSuccess = false;
+  Timer? _successTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(
+      text: widget.initialValue > 0
+          ? widget.initialValue.toStringAsFixed(0)
+          : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _successTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _simpan() async {
+    final val = double.tryParse(_ctrl.text.trim());
+    if (val == null) return;
+
+    setState(() => _isSaving = true);
+    try {
+      await widget.onSaveNilai(val);
+      FocusScope.of(context).unfocus();
+      if (mounted) {
+        setState(() {
+          _showSuccess = true;
+          _isSaving = false;
+        });
+        _successTimer?.cancel();
+        _successTimer = Timer(const Duration(seconds: 2), () {
+          if (mounted) setState(() => _showSuccess = false);
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -459,50 +520,73 @@ class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
           children: [
             Expanded(
               child: TextField(
-                controller: _poinCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                controller: _ctrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _simpan(),
                 decoration: InputDecoration(
-                  hintText: '+ Tambah Poin (mis. 80)',
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  hintText: 'Masukkan nilai (0–100)',
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.border),
+                    borderSide: const BorderSide(color: AppColors.border),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.border),
+                    borderSide: const BorderSide(color: AppColors.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.accent, width: 2),
+                    borderSide:
+                        const BorderSide(color: AppColors.primary, width: 2),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            ElevatedButton(
-              onPressed: _kirimPoin,
+            const SizedBox(width: 10),
+            ElevatedButton.icon(
+              onPressed: _isSaving ? null : _simpan,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Send', style: TextStyle(fontWeight: FontWeight.w600)),
+              icon: _isSaving
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.check, size: 18),
+              label: Text(
+                _isSaving ? '...' : 'Simpan',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         ),
         if (_showSuccess) ...[
-          const SizedBox(height: 8),
-          Row(
+          const SizedBox(height: 6),
+          const Row(
             children: [
-              const Icon(Icons.check_circle, color: Colors.green, size: 16),
-              const SizedBox(width: 4),
-              const Text(
-                'Poin tersimpan ke akumulasi!',
-                style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.w500),
+              Icon(Icons.check_circle, color: Colors.green, size: 14),
+              SizedBox(width: 4),
+              Text(
+                'Nilai berhasil disimpan!',
+                style: TextStyle(
+                  color: Colors.green,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -511,56 +595,3 @@ class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
     );
   }
 }
-
-
-// ─── Number Widget ────────────────────────────────────────────────────────────
-
-class _NumberWidget extends StatefulWidget {
-  final double nilai;
-  final ValueChanged<double> onChanged;
-
-  const _NumberWidget({required this.nilai, required this.onChanged});
-
-  @override
-  State<_NumberWidget> createState() => _NumberWidgetState();
-}
-
-class _NumberWidgetState extends State<_NumberWidget> {
-  late TextEditingController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = TextEditingController(
-      text: widget.nilai > 0 ? widget.nilai.toStringAsFixed(0) : '',
-    );
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: _ctrl,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      decoration: InputDecoration(
-        hintText: 'Masukkan angka',
-        suffixIcon: Icon(
-          Icons.edit_outlined,
-          size: 16,
-          color: AppColors.textSecondary,
-        ),
-      ),
-      onChanged: (v) {
-        final parsed = double.tryParse(v);
-        if (parsed != null) widget.onChanged(parsed);
-      },
-    );
-  }
-}
-
-
