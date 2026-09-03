@@ -47,44 +47,124 @@ class HomeScreen extends StatelessWidget {
 
   
 
-    Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context) {
+    final user = AuthService().currentUser;
+    final displayName = user?.displayName?.isNotEmpty == true
+        ? user!.displayName!
+        : (user?.email?.split('@').first ?? 'Guru');
+    final photoUrl = user?.photoURL;
+    final email = user?.email ?? '';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.school, color: Colors.white, size: 22),
+            // Avatar Profil
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.primary,
+              backgroundImage:
+                  photoUrl != null && photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+              child: photoUrl == null || photoUrl.isEmpty
+                  ? Text(
+                      displayName.isNotEmpty ? displayName[0].toUpperCase() : 'G',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : null,
             ),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('AHP-SAW',
-                    style: Theme.of(context).textTheme.titleLarge),
-                Text('Sistem Penilaian Kinerja Siswa',
-                    style: Theme.of(context).textTheme.bodyMedium),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Halo, $displayName 👋',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    email.isNotEmpty ? email : 'Sistem Penilaian Kinerja Siswa',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
-            const Spacer(), // ← tambah ini
-            IconButton(
-              icon: const Icon(Icons.logout, color: AppColors.primary),
-              onPressed: () async {
-                await AuthService().signOut();
-                // Tambahkan navigasi paksa ke LoginScreen
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    (route) => false,
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: AppColors.textPrimary),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              onSelected: (val) async {
+                if (val == 'logout') {
+                  final confirm = await showConfirmDialog(
+                    context,
+                    title: 'Keluar Akun',
+                    content: 'Apakah Anda yakin ingin keluar dari akun ini?',
                   );
+                  if (confirm && context.mounted) {
+                    await AuthService().signOut();
+                    if (context.mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        (route) => false,
+                      );
+                    }
+                  }
                 }
               },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  enabled: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        email,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const Divider(),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, color: AppColors.danger, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Keluar',
+                        style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -160,7 +240,7 @@ class _KelasCard extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(Icons.class_outlined,

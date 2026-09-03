@@ -207,11 +207,87 @@ class AppProvider extends ChangeNotifier {
     }
 
     final updatedMurid = murid.copyWith(nilaiList: updatedNilaiList);
-    await _firestore.upsertMurid(kelasId, updatedMurid);
 
-    // Reset flag agar kalkulasi bisa diulang setelah ada perubahan nilai
-    if (kelas.sudahKalkulasi) {
-      await _firestore.upsertKelas(kelas.copyWith(sudahKalkulasi: false));
+    // Update in-memory local state segera agar UI langsung re-render seketika
+    final updatedMuridList = List<Murid>.from(kelas.muridList);
+    updatedMuridList[mIdx] = updatedMurid;
+    _kelasList[kIdx] = kelas.copyWith(
+      muridList: updatedMuridList,
+      sudahKalkulasi: false,
+    );
+    notifyListeners();
+
+    // Simpan ke Firestore
+    await _firestore.upsertMurid(kelasId, updatedMurid);
+    await _firestore.upsertKelas(_kelasList[kIdx]);
+  }
+
+  /// Input nilai massal / serentak untuk seluruh murid di kelas pada kriteria tertentu
+  Future<void> inputNilaiMassal({
+    required String kelasId,
+    required String kriteriaId,
+    required double nilai,
+    bool hanyaYangKosong = false,
+  }) async {
+    final kIdx = _kelasList.indexWhere((k) => k.id == kelasId);
+    if (kIdx < 0) return;
+    final kelas = _kelasList[kIdx];
+    final tanggal = DateTime.now();
+    final todayStr = '${tanggal.year}-${tanggal.month}-${tanggal.day}';
+
+    final updatedMuridList = List<Murid>.from(kelas.muridList);
+
+    for (int i = 0; i < updatedMuridList.length; i++) {
+      final murid = updatedMuridList[i];
+      final existingIdx = murid.nilaiList.indexWhere((n) {
+        final nStr = '${n.tanggal.year}-${n.tanggal.month}-${n.tanggal.day}';
+        return n.kriteriaId == kriteriaId && nStr == todayStr;
+      });
+
+      if (hanyaYangKosong && existingIdx >= 0) {
+        continue;
+      }
+
+      List<Nilai> updatedNilaiList = List.from(murid.nilaiList);
+      if (existingIdx >= 0) {
+        updatedNilaiList[existingIdx] = Nilai(
+          id: updatedNilaiList[existingIdx].id,
+          siswaId: murid.id,
+          kriteriaId: kriteriaId,
+          nilai: nilai,
+          attempt: 1,
+          tanggal: tanggal,
+        );
+      } else {
+        updatedNilaiList.add(Nilai(
+          id: '${murid.id}_${kriteriaId}_$todayStr',
+          siswaId: murid.id,
+          kriteriaId: kriteriaId,
+          nilai: nilai,
+          attempt: 1,
+          tanggal: tanggal,
+        ));
+      }
+
+      final updatedMurid = murid.copyWith(nilaiList: updatedNilaiList);
+      updatedMuridList[i] = updatedMurid;
+      await _firestore.upsertMurid(kelasId, updatedMurid);
+    }
+
+    _kelasList[kIdx] = kelas.copyWith(
+      muridList: updatedMuridList,
+      sudahKalkulasi: false,
+    );
+    notifyListeners();
+
+    await _firestore.upsertKelas(_kelasList[kIdx]);
+  }
+
+  /// Refresh paksa data dari Firestore
+  Future<void> refresh() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      listenToUser(uid);
     }
   }
 

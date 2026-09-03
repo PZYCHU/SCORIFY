@@ -350,6 +350,123 @@ class ExcelService {
           ..cellStyle = infoStyle;
       }
 
+      // ────────────────────────────────────────────────────────────────────────
+      // SHEET 3: Riwayat Kriteria yang Sudah Dihapus
+      // Scan semua nilaiList murid → cari kriteriaId yang tidak ada di kelas.kriteria aktif
+      // ────────────────────────────────────────────────────────────────────────
+      final activeKriteriaIds = kelas.kriteria.map((k) => k.id).toSet();
+
+      // Kumpulkan semua nilai "yatim piatu" per kriteriaId (yang sudah dihapus)
+      // Map<kriteriaId, {nama: String, entri: List<{murid, nilai}>}>
+      final Map<String, Map<String, dynamic>> orphanedData = {};
+
+      for (final m in sortedMurid) {
+        for (final n in m.nilaiList) {
+          if (!activeKriteriaIds.contains(n.kriteriaId)) {
+            orphanedData.putIfAbsent(n.kriteriaId, () => {
+              'nama': n.kriteriaId, // fallback: pakai ID jika nama tidak diketahui
+              'entries': <Map<String, dynamic>>[],
+            });
+            (orphanedData[n.kriteriaId]!['entries'] as List<Map<String, dynamic>>).add({
+              'murid': m,
+              'nilai': n,
+            });
+          }
+        }
+      }
+
+      if (orphanedData.isNotEmpty) {
+        final sheet3Name = 'Kriteria Dihapus';
+        final sheet3 = excel[sheet3Name];
+
+        final header3Style = CellStyle(
+          bold: true,
+          backgroundColorHex: ExcelColor.fromHexString('#4A1942'),
+          fontColorHex: ExcelColor.fromHexString('#FFFFFF'),
+          horizontalAlign: HorizontalAlign.Center,
+        );
+
+        final headers3 = [
+          'No',
+          'NIS',
+          'Nama Siswa',
+          'ID Kriteria (Sudah Dihapus)',
+          'Nilai',
+          'Tanggal Input',
+          'Keterangan',
+        ];
+
+        for (int c = 0; c < headers3.length; c++) {
+          sheet3.cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: 0))
+            ..value = TextCellValue(headers3[c])
+            ..cellStyle = header3Style;
+        }
+
+        sheet3.setColumnWidth(0, 8);
+        sheet3.setColumnWidth(1, 16);
+        sheet3.setColumnWidth(2, 28);
+        sheet3.setColumnWidth(3, 32);
+        sheet3.setColumnWidth(4, 12);
+        sheet3.setColumnWidth(5, 18);
+        sheet3.setColumnWidth(6, 30);
+
+        int s3Row = 1;
+        for (final entry in orphanedData.entries) {
+          final kriteriaIdLabel = entry.key;
+          final entries = entry.value['entries'] as List<Map<String, dynamic>>;
+          entries.sort((a, b) {
+            final dateA = (a['nilai'] as Nilai).tanggal;
+            final dateB = (b['nilai'] as Nilai).tanggal;
+            final muridA = (a['murid'] as Murid).nama;
+            final muridB = (b['murid'] as Murid).nama;
+            final dateCmp = dateA.compareTo(dateB);
+            return dateCmp != 0 ? dateCmp : muridA.compareTo(muridB);
+          });
+
+          for (final e in entries) {
+            final murid = e['murid'] as Murid;
+            final n = e['nilai'] as Nilai;
+
+            final rowBg = s3Row.isEven
+                ? ExcelColor.fromHexString('#FAF0FF')
+                : ExcelColor.fromHexString('#FFFFFF');
+            final s3Style = CellStyle(backgroundColorHex: rowBg, horizontalAlign: HorizontalAlign.Left);
+            final s3Center = CellStyle(backgroundColorHex: rowBg, horizontalAlign: HorizontalAlign.Center);
+
+            final tglStr = '${n.tanggal.day.toString().padLeft(2, '0')}/'
+                '${n.tanggal.month.toString().padLeft(2, '0')}/'
+                '${n.tanggal.year}';
+            final nilaiStr = n.nilai % 1 == 0
+                ? n.nilai.toInt().toString()
+                : n.nilai.toStringAsFixed(2);
+
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: s3Row))
+              ..value = IntCellValue(s3Row)
+              ..cellStyle = s3Center;
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: s3Row))
+              ..value = TextCellValue(murid.nis ?? '-')
+              ..cellStyle = s3Center;
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: s3Row))
+              ..value = TextCellValue(murid.nama)
+              ..cellStyle = s3Style;
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: s3Row))
+              ..value = TextCellValue(kriteriaIdLabel)
+              ..cellStyle = s3Style;
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: s3Row))
+              ..value = TextCellValue(nilaiStr)
+              ..cellStyle = s3Center;
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: s3Row))
+              ..value = TextCellValue(tglStr)
+              ..cellStyle = s3Center;
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: s3Row))
+              ..value = TextCellValue('Kriteria ini sudah dihapus dari kelas — data nilai tetap tercatat')
+              ..cellStyle = s3Style;
+
+            s3Row++;
+          }
+        }
+      }
+
       // ─ Simpan file ─
       final bytes = excel.save();
       if (bytes == null) return null;
