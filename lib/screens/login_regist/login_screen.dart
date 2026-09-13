@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:scorify/providers/app_provider.dart';
 import 'package:scorify/services/auth_service.dart';
 import 'package:scorify/screens/login_regist/register_screen.dart';
 import 'package:scorify/screens/home_screen.dart';
@@ -55,11 +57,12 @@ class _LoginScreenState extends State<LoginScreen>
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
-      await _authService.signInWithEmail(
+      final credential = await _authService.signInWithEmail(
         _emailController.text.trim(),
         _passwordController.text,
       );
       if (mounted) {
+        context.read<AppProvider>().listenToUser(credential.user?.uid);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -75,8 +78,9 @@ class _LoginScreenState extends State<LoginScreen>
   Future<void> _signInWithGoogle() async {
     setState(() => _isGoogleLoading = true);
     try {
-      await _authService.signInWithGoogle();
+      final credential = await _authService.signInWithGoogle();
       if (mounted) {
+        context.read<AppProvider>().listenToUser(credential.user?.uid);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -175,10 +179,12 @@ class _LoginScreenState extends State<LoginScreen>
                                 icon: Icons.alternate_email_rounded,
                                 keyboardType: TextInputType.emailAddress,
                                 validator: (v) {
-                                  if (v == null || v.isEmpty)
+                                  if (v == null || v.isEmpty) {
                                     return 'Email tidak boleh kosong';
-                                  if (!v.contains('@'))
+                                  }
+                                  if (!v.contains('@')) {
                                     return 'Format email tidak valid';
+                                  }
                                   return null;
                                 },
                               ),
@@ -203,10 +209,12 @@ class _LoginScreenState extends State<LoginScreen>
                                   ),
                                 ),
                                 validator: (v) {
-                                  if (v == null || v.isEmpty)
+                                  if (v == null || v.isEmpty) {
                                     return 'Password tidak boleh kosong';
-                                  if (v.length < 6)
+                                  }
+                                  if (v.length < 6) {
                                     return 'Password minimal 6 karakter';
+                                  }
                                   return null;
                                 },
                               ),

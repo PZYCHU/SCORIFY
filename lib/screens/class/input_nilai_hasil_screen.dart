@@ -4,45 +4,56 @@ import '../../models/models.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_widgets.dart';
+import 'sesi_detail_screen.dart';
 
 class InputNilaiHasilScreen extends StatelessWidget {
   final String kelasId;
-  const InputNilaiHasilScreen({super.key, required this.kelasId});
+  final bool isEmbedded;
+  const InputNilaiHasilScreen({
+    super.key,
+    required this.kelasId,
+    this.isEmbedded = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AppProvider>(
       builder: (context, provider, _) {
         final kelas = provider.getKelas(kelasId);
-        if (kelas == null) return const Scaffold(body: SizedBox());
+        if (kelas == null) {
+          return isEmbedded ? const SizedBox() : const Scaffold(body: SizedBox());
+        }
 
         final kriteriaHasil = kelas.kriteria
             .where((k) => k.jenis == JenisKriteria.hasil)
             .toList();
+
+        final content = kriteriaHasil.isEmpty
+            ? const EmptyState(
+                icon: '📝',
+                title: 'Tidak ada kriteria nilai',
+                subtitle: 'Belum ada kriteria jenis "hasil"\ndi kelas ini',
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                itemCount: kriteriaHasil.length,
+                itemBuilder: (ctx, i) => _KriteriaHasilCard(
+                  kelas: kelas,
+                  kriteria: kriteriaHasil[i],
+                  kelasId: kelasId,
+                ),
+              );
+
+        if (isEmbedded) {
+          return content;
+        }
 
         return Scaffold(
           body: SafeArea(
             child: Column(
               children: [
                 _buildHeader(context, kelas),
-                Expanded(
-                  child: kriteriaHasil.isEmpty
-                      ? const EmptyState(
-                          icon: '📝',
-                          title: 'Tidak ada kriteria nilai',
-                          subtitle:
-                              'Belum ada kriteria jenis "hasil"\ndi kelas ini',
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                          itemCount: kriteriaHasil.length,
-                          itemBuilder: (ctx, i) => _KriteriaHasilCard(
-                            kelas: kelas,
-                            kriteria: kriteriaHasil[i],
-                            kelasId: kelasId,
-                          ),
-                        ),
-                ),
+                Expanded(child: content),
               ],
             ),
           ),
@@ -67,7 +78,7 @@ class InputNilaiHasilScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Nilai Tugas & Tes',
+                  'Daftar Sesi & Penilaian Hasil',
                   style: Theme.of(context)
                       .textTheme
                       .titleLarge
@@ -138,9 +149,9 @@ class _KriteriaHasilCard extends StatelessWidget {
                 ),
                 TextButton.icon(
                   onPressed: () => _showTambahSesiDialog(context),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('+ Sesi',
-                      style: TextStyle(fontSize: 12)),
+                  icon: const Icon(Icons.add_task_rounded, size: 16),
+                  label: const Text('+ Tambah Sesi',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(
@@ -162,10 +173,10 @@ class _KriteriaHasilCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Text(
-                  'Belum ada sesi. Tap "+ Sesi" untuk mulai.',
+                  'Belum ada sesi penilaian. Tap "+ Tambah Sesi" untuk menambahkan.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontSize: 12, color: AppColors.textSecondary),
+                      fontSize: 13, color: AppColors.textSecondary),
                 ),
               ),
             )
@@ -194,14 +205,14 @@ class _KriteriaHasilCard extends StatelessWidget {
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          'Tambah Sesi — ${kriteria.nama}',
-          style: const TextStyle(fontSize: 16),
+          'Tambah Sesi Penilaian — ${kriteria.nama}',
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
         ),
         content: TextField(
           controller: namaCtrl,
-          decoration: const InputDecoration(
-            hintText: 'Contoh: Tugas Bab 1, UTS, Quiz 2',
-            labelText: 'Nama Sesi',
+          decoration: InputDecoration(
+            hintText: 'Contoh: ${kriteria.nama.toLowerCase().contains('uts') ? 'UTS Semester 1, UTS Susulan' : 'Tugas 1, Quiz 2, Latihan 3'}',
+            labelText: 'Nama Sesi Penilaian',
           ),
           autofocus: true,
           textCapitalization: TextCapitalization.words,
@@ -228,7 +239,7 @@ class _KriteriaHasilCard extends StatelessWidget {
                   .tambahSesi(kelasId, kriteria.id, nama);
               if (ctx.mounted) Navigator.of(ctx).pop();
             },
-            child: const Text('Buat'),
+            child: const Text('Tambah'),
           ),
         ],
       ),
@@ -256,21 +267,10 @@ class _SesiTile extends StatefulWidget {
 }
 
 class _SesiTileState extends State<_SesiTile> {
-  late bool _expanded;
-
   int get _jumlahTerisi => widget.kelas.muridList
       .where((m) => m.nilaiList
           .any((n) => n.kriteriaId == widget.kriteria.id && n.sesiId == widget.sesi.id))
       .length;
-
-  @override
-  void initState() {
-    super.initState();
-    final total = widget.kelas.muridList.length;
-    final terisi = _jumlahTerisi;
-    // Sesi yang sudah selesai → collapsed by default
-    _expanded = !(terisi == total && total > 0);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -278,112 +278,72 @@ class _SesiTileState extends State<_SesiTile> {
     final terisi = _jumlahTerisi;
     final selesai = terisi == total && total > 0;
 
-    return Column(
-      children: [
-        InkWell(
-          onTap: () {
-            if (selesai) {
-              // Toggle collapse/expand untuk sesi selesai
-              setState(() => _expanded = !_expanded);
-            } else {
-              // Sesi belum selesai → langsung buka input
-              _showInputSheet(context);
-            }
-          },
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SesiDetailScreen(
+              kelasId: widget.kelasId,
+              kriteriaId: widget.kriteria.id,
+              sesiId: widget.sesi.id,
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: selesai ? AppColors.benefitChip : AppColors.background,
           borderRadius: BorderRadius.circular(10),
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: selesai ? AppColors.benefitChip : AppColors.background,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: selesai
-                    ? AppColors.benefitChipText.withValues(alpha: 0.3)
-                    : AppColors.border,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  selesai ? Icons.check_circle : Icons.edit_note,
-                  color: selesai
-                      ? AppColors.benefitChipText
-                      : AppColors.primary,
-                  size: 18,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.sesi.nama,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 13),
-                      ),
-                      Text(
-                        selesai
-                            ? 'Selesai — $terisi/$total murid'
-                            : '$terisi / $total murid sudah diisi',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: selesai
-                              ? AppColors.benefitChipText
-                              : AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (selesai)
-                  Icon(
-                    _expanded ? Icons.expand_less : Icons.expand_more,
-                    size: 18,
-                    color: AppColors.benefitChipText,
-                  )
-                else
-                  const Icon(Icons.chevron_right,
-                      size: 18, color: AppColors.textSecondary),
-              ],
-            ),
+          border: Border.all(
+            color: selesai
+                ? AppColors.benefitChipText.withValues(alpha: 0.3)
+                : AppColors.border,
           ),
         ),
-        // Tombol edit — hanya muncul saat expanded (selesai tapi mau edit)
-        if (selesai && _expanded)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _showInputSheet(context),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: const BorderSide(color: AppColors.border),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-                icon: const Icon(Icons.edit_outlined, size: 16),
-                label: const Text('Edit / Tambah Nilai',
-                    style: TextStyle(fontSize: 12)),
+        child: Row(
+          children: [
+            Icon(
+              selesai ? Icons.check_circle : Icons.edit_note,
+              color: selesai
+                  ? AppColors.benefitChipText
+                  : AppColors.primary,
+              size: 18,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.sesi.nama,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                  Text(
+                    selesai
+                        ? 'Selesai — $terisi/$total murid'
+                        : '$terisi / $total murid sudah diisi',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: selesai
+                          ? AppColors.benefitChipText
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-      ],
-    );
-  }
-
-  void _showInputSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _InputNilaiPerSesiSheet(
-        kelas: widget.kelas,
-        kriteria: widget.kriteria,
-        sesi: widget.sesi,
-        kelasId: widget.kelasId,
+            const Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: AppColors.textSecondary,
+            ),
+          ],
+        ),
       ),
     );
   }

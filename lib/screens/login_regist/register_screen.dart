@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:scorify/providers/app_provider.dart';
 import 'package:scorify/services/auth_service.dart';
 import 'package:scorify/screens/home_screen.dart';
 
@@ -58,12 +60,13 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
-      await _authService.registerWithEmail(
+      final credential = await _authService.registerWithEmail(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
       if (mounted) {
+        context.read<AppProvider>().listenToUser(credential.user?.uid);
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -80,8 +83,9 @@ class _RegisterScreenState extends State<RegisterScreen>
     Future<void> _signInWithGoogle() async {
       setState(() => _isGoogleLoading = true);
       try {
-        await _authService.signInWithGoogle();
+        final credential = await _authService.signInWithGoogle();
         if (mounted) {
+          context.read<AppProvider>().listenToUser(credential.user?.uid);
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (_) => const HomeScreen()),

@@ -8,10 +8,29 @@ import 'class/create_class.dart';
 import 'class/class_detail.dart';
 import '../services/auth_service.dart';
 import '../screens/login_regist/login_screen.dart';
+import 'profile/profile_screen.dart';
+import 'tutorial_screen.dart';
 
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final uid = AuthService().currentUser?.uid;
+      final provider = context.read<AppProvider>();
+      if (uid != null && provider.kelasList.isEmpty && !provider.loading) {
+        provider.listenToUser(uid);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +44,15 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 28),
               _buildHeader(context),
               const SizedBox(height: 24),
-              Expanded(child: _buildBody(context)),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    final uid = AuthService().currentUser?.uid;
+                    context.read<AppProvider>().listenToUser(uid);
+                  },
+                  child: _buildBody(context),
+                ),
+              ),
             ],
           ),
         ),
@@ -60,22 +87,31 @@ class HomeScreen extends StatelessWidget {
       children: [
         Row(
           children: [
-            // Avatar Profil
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: AppColors.primary,
-              backgroundImage:
-                  photoUrl != null && photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-              child: photoUrl == null || photoUrl.isEmpty
-                  ? Text(
-                      displayName.isNotEmpty ? displayName[0].toUpperCase() : 'G',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : null,
+            // Avatar Profil (bisa di-tap untuk ke profil)
+            GestureDetector(
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+                setState(() {});
+              },
+              child: CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.primary,
+                backgroundImage:
+                    photoUrl != null && photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+                child: photoUrl == null || photoUrl.isEmpty
+                    ? Text(
+                        displayName.isNotEmpty ? displayName[0].toUpperCase() : 'G',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -104,19 +140,41 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
+            IconButton(
+              tooltip: 'Panduan & Tutorial',
+              icon: const Icon(Icons.help_outline_rounded, color: AppColors.primary),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TutorialScreen()),
+                );
+              },
+            ),
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: AppColors.textPrimary),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               onSelected: (val) async {
-                if (val == 'logout') {
+                if (val == 'tutorial') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TutorialScreen()),
+                  );
+                } else if (val == 'profile') {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  );
+                  setState(() {});
+                } else if (val == 'logout') {
                   final confirm = await showConfirmDialog(
                     context,
                     title: 'Keluar Akun',
                     content: 'Apakah Anda yakin ingin keluar dari akun ini?',
                   );
                   if (confirm && context.mounted) {
+                    context.read<AppProvider>().listenToUser(null);
                     await AuthService().signOut();
                     if (context.mounted) {
                       Navigator.of(context).pushAndRemoveUntil(
@@ -152,6 +210,32 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 const PopupMenuItem(
+                  value: 'tutorial',
+                  child: Row(
+                    children: [
+                      Icon(Icons.menu_book_outlined, color: AppColors.primary, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Panduan & Tutorial',
+                        style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'profile',
+                  child: Row(
+                    children: [
+                      Icon(Icons.person_outline_rounded, color: AppColors.primary, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Profil Saya',
+                        style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
                   value: 'logout',
                   child: Row(
                     children: [
@@ -180,10 +264,16 @@ class HomeScreen extends StatelessWidget {
         }
 
         if (provider.kelasList.isEmpty) {
-          return const EmptyState(
-            icon: '📚',
-            title: 'Belum ada kelas',
-            subtitle: 'Tap tombol "Kelas Baru" untuk\nmembuat kelas pertamamu',
+          return const SingleChildScrollView(
+            physics: AlwaysScrollableScrollPhysics(),
+            child: SizedBox(
+              height: 450,
+              child: EmptyState(
+                icon: '📚',
+                title: 'Belum ada kelas',
+                subtitle: 'Tap tombol "Kelas Baru" untuk\nmembuat kelas pertamamu',
+              ),
+            ),
           );
         }
 

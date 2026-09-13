@@ -85,7 +85,7 @@ class HasilKalkulasiScreen extends StatelessWidget {
                   margin: const EdgeInsets.only(right: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -129,7 +129,7 @@ class _RankingCard extends StatelessWidget {
     if (rank == 1) return const Color(0xFFF9A825);
     if (rank == 2) return const Color(0xFF78909C);
     if (rank == 3) return const Color(0xFF8D6E63);
-    return AppColors.primary.withOpacity(0.5);
+    return AppColors.primary.withValues(alpha: 0.5);
   }
 
   /// Ambil nilai ringkasan per kriteria untuk ditampilkan:
@@ -176,12 +176,12 @@ class _RankingCard extends StatelessWidget {
         color: AppColors.surfaceWhite,
         borderRadius: BorderRadius.circular(16),
         border: rank <= 3
-            ? Border.all(color: _rankColor.withOpacity(0.4), width: 1.5)
+            ? Border.all(color: _rankColor.withValues(alpha: 0.4), width: 1.5)
             : Border.all(color: AppColors.border, width: 0.5),
         boxShadow: rank == 1
             ? [
                 BoxShadow(
-                    color: _rankColor.withOpacity(0.2),
+                    color: _rankColor.withValues(alpha: 0.2),
                     blurRadius: 12,
                     offset: const Offset(0, 4))
               ]

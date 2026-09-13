@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import '../models/models.dart';
 
 class CriteriaScreen extends StatefulWidget {
@@ -10,6 +11,44 @@ class CriteriaScreen extends StatefulWidget {
 
 class _CriteriaScreenState extends State<CriteriaScreen> {
   final List<Kriteria> _criteria = [];
+
+  void _loadDefaultCriteria() {
+    const uuid = Uuid();
+    final tugasId = uuid.v4();
+    setState(() {
+      _criteria.clear();
+      _criteria.addAll([
+        Kriteria(
+          id: uuid.v4(),
+          nama: 'Kehadiran',
+          jenis: JenisKriteria.performa,
+          inputType: InputType.counter,
+          arah: ArahKriteria.benefit,
+        ),
+        Kriteria(
+          id: uuid.v4(),
+          nama: 'Keaktifan',
+          jenis: JenisKriteria.performa,
+          inputType: InputType.counter,
+          arah: ArahKriteria.benefit,
+        ),
+        Kriteria(
+          id: tugasId,
+          nama: 'Nilai Tugas',
+          jenis: JenisKriteria.hasil,
+          perSesi: true,
+          arah: ArahKriteria.benefit,
+        ),
+        Kriteria(
+          id: uuid.v4(),
+          nama: 'Frekuensi Remedial',
+          jenis: JenisKriteria.derived,
+          arah: ArahKriteria.cost,
+          targetKriteriaIds: [tugasId],
+        ),
+      ]);
+    });
+  }
 
   void _addCriterion() {
     showDialog(
@@ -89,6 +128,16 @@ class _CriteriaScreenState extends State<CriteriaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Kriteria Penilaian'),
+        actions: [
+          IconButton(
+            tooltip: 'Muat Kriteria Default',
+            icon: const Icon(Icons.auto_awesome),
+            onPressed: _loadDefaultCriteria,
+          ),
+        ],
+      ),
       body: _criteria.isEmpty
           ? Center(
               child: Column(
@@ -181,7 +230,7 @@ class _Chip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -244,10 +293,29 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
       _arah = c.arah;
       _targetKriteriaIds = List.from(c.targetKriteriaIds);
     }
+    _nameController.addListener(_onNameChanged);
+  }
+
+  void _onNameChanged() {
+    final lower = _nameController.text.toLowerCase();
+    if (lower.contains('hadir') ||
+        lower.contains('kehadiran') ||
+        lower.contains('absen') ||
+        lower.contains('absensi') ||
+        lower.contains('presensi') ||
+        lower.contains('attendance')) {
+      if (_jenis != JenisKriteria.performa || _inputType != InputType.counter) {
+        setState(() {
+          _jenis = JenisKriteria.performa;
+          _inputType = InputType.counter;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
+    _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
     super.dispose();
   }
@@ -551,10 +619,10 @@ class _SegmentedRow<T> extends StatelessWidget {
             duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: isSelected ? color.withOpacity(0.15) : Colors.transparent,
+              color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: isSelected ? color : Colors.grey.withOpacity(0.4),
+                color: isSelected ? color : Colors.grey.withValues(alpha: 0.4),
                 width: isSelected ? 1.5 : 1,
               ),
             ),

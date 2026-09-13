@@ -80,26 +80,44 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
   }
 
   Future<void> _downloadTemplate() async {
-    setState(() => _loading = true);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: const Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Expanded(
+              child: Text(
+                'Mengunduh Template Excel...',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
     try {
       final path = await ExcelService.downloadTemplate();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              path != null
-                  ? 'Template disimpan ke:\n$path'
-                  : 'Gagal membuat template',
-            ),
-            backgroundColor:
-                path != null ? AppColors.accent : AppColors.danger,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-          ),
+      if (mounted) Navigator.of(context).pop(); // Tutup dialog progress
+
+      if (path != null && mounted) {
+        AppFeedback.showDownloadSuccessSheet(
+          context,
+          filePath: path,
+          title: 'Template Excel Berhasil Diunduh',
         );
+      } else if (mounted) {
+        AppFeedback.showError(context, 'Gagal mengunduh template Excel');
       }
-    } finally {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        AppFeedback.showError(context, 'Terjadi kesalahan: $e');
+      }
     }
   }
 
@@ -128,12 +146,7 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
 
     setState(() => _saving = false);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${toImport.length} siswa berhasil diimport!'),
-          backgroundColor: AppColors.accent,
-        ),
-      );
+      AppFeedback.showSuccess(context, '${toImport.length} siswa berhasil diimport!');
       Navigator.of(context).pop();
     }
   }
@@ -251,23 +264,78 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
                               _tableRow('12347', 'Citra Dewi'),
                             ],
                           ),
-                          const SizedBox(height: 10),
-                          // Tombol download template
-                          TextButton.icon(
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // ── Tombol Terpisah: Download Template Excel (Point 3) ───
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceWhite,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.file_download_outlined,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Belum Punya Template?',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13.5,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Unduh format template Excel resmi',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
                             onPressed: _loading ? null : _downloadTemplate,
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              foregroundColor: AppColors.primary,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
                             ),
-                            icon: const Icon(
-                              Icons.download_outlined,
-                              size: 16,
-                            ),
+                            icon: const Icon(Icons.download_rounded, size: 16),
                             label: const Text(
-                              'Download Template Excel',
+                              'Unduh',
                               style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
@@ -386,7 +454,7 @@ class _ImportSiswaScreenState extends State<ImportSiswaScreen> {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: _preview.length,
-                          separatorBuilder: (_, __) => const Divider(
+                          separatorBuilder: (_, index) => const Divider(
                             height: 1,
                             color: AppColors.border,
                           ),

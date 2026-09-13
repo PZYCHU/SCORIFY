@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_widgets.dart';
 
 /// Buka bottom sheet penilaian KBM untuk satu murid
 void showInputNilaiSheet(
@@ -75,6 +76,41 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
   }
 
   Future<void> _simpanKriteria(String kriteriaId, double nilai) async {
+    final kriteria = widget.kelas.kriteria.firstWhere((k) => k.id == kriteriaId);
+    final isAttendance = kriteria.nama.toLowerCase().contains('hadir') ||
+        kriteria.nama.toLowerCase().contains('presensi') ||
+        kriteria.nama.toLowerCase().contains('absen');
+
+    if (isAttendance) {
+      final existing = widget.murid.getNilaiByKriteria(kriteriaId);
+      final today = DateTime.now();
+      final todayStr = '${today.year}-${today.month}-${today.day}';
+      final nilaiHariIni = existing.where((n) {
+        final nStr = '${n.tanggal.year}-${n.tanggal.month}-${n.tanggal.day}';
+        return nStr == todayStr;
+      }).toList();
+
+      if (nilaiHariIni.isNotEmpty) {
+        final prevDate = nilaiHariIni.first.tanggal;
+        final jam = prevDate.hour.toString().padLeft(2, '0');
+        final mnt = prevDate.minute.toString().padLeft(2, '0');
+        final prevVal = nilaiHariIni.first.nilai % 1 == 0
+            ? nilaiHariIni.first.nilai.toInt()
+            : nilaiHariIni.first.nilai;
+
+        final confirm = await AppFeedback.showConfirmDialog(
+          context,
+          title: 'Konfirmasi Presensi',
+          message:
+              'Presensi ${widget.murid.nama} untuk hari ini sudah pernah dicatat pada pukul $jam:$mnt WIB (Nilai: $prevVal).\n\nApakah Anda ingin memperbarui nilai presensi ini?',
+          confirmText: 'Ya, Perbarui',
+          cancelText: 'Batal',
+        );
+        if (!confirm) return;
+      }
+    }
+
+    if (!mounted) return;
     setState(() {
       _nilaiMap[kriteriaId] = nilai;
     });
@@ -320,18 +356,17 @@ class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
       setState(() => _isSaving = true);
       try {
         await widget.onSavePoin(poin);
+        if (!mounted) return;
         _poinCtrl.clear();
         FocusScope.of(context).unfocus();
-        if (mounted) {
-          setState(() {
-            _showSuccess = true;
-            _isSaving = false;
-          });
-          _successTimer?.cancel();
-          _successTimer = Timer(const Duration(seconds: 2), () {
-            if (mounted) setState(() => _showSuccess = false);
-          });
-        }
+        setState(() {
+          _showSuccess = true;
+          _isSaving = false;
+        });
+        _successTimer?.cancel();
+        _successTimer = Timer(const Duration(seconds: 2), () {
+          if (mounted) setState(() => _showSuccess = false);
+        });
       } catch (_) {
         if (mounted) setState(() => _isSaving = false);
       }
@@ -495,17 +530,16 @@ class _NumberWidgetState extends State<_NumberWidget> {
     setState(() => _isSaving = true);
     try {
       await widget.onSaveNilai(val);
+      if (!mounted) return;
       FocusScope.of(context).unfocus();
-      if (mounted) {
-        setState(() {
-          _showSuccess = true;
-          _isSaving = false;
-        });
-        _successTimer?.cancel();
-        _successTimer = Timer(const Duration(seconds: 2), () {
-          if (mounted) setState(() => _showSuccess = false);
-        });
-      }
+      setState(() {
+        _showSuccess = true;
+        _isSaving = false;
+      });
+      _successTimer?.cancel();
+      _successTimer = Timer(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _showSuccess = false);
+      });
     } catch (_) {
       if (mounted) setState(() => _isSaving = false);
     }

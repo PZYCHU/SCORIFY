@@ -143,6 +143,71 @@ class AuthService {
     return doc.data();
   }
 
+  // ── Update Nama Tampilan ──────────────────────────────────────────────────
+  Future<void> updateDisplayName(String newName) async {
+    final user = _auth.currentUser;
+    if (user == null) throw 'Pengguna tidak ditemukan.';
+    try {
+      await user.updateDisplayName(newName);
+      await _firestore.collection('users').doc(user.uid).update({'name': newName});
+      await user.reload();
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    } catch (e) {
+      throw 'Gagal memperbarui nama: $e';
+    }
+  }
+
+  // ── Update Email ──────────────────────────────────────────────────────────
+  Future<void> updateEmail({
+    required String newEmail,
+    required String currentPassword,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null || user.email == null) throw 'Pengguna tidak ditemukan.';
+    try {
+      // Re-autentikasi demi keamanan
+      final cred = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(cred);
+
+      // Kirim verifikasi sebelum email diubah
+      await user.verifyBeforeUpdateEmail(newEmail);
+
+      // Sinkronkan ke Firestore
+      await _firestore.collection('users').doc(user.uid).update({'email': newEmail});
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    } catch (e) {
+      throw 'Gagal memperbarui email: $e';
+    }
+  }
+
+  // ── Update Password ───────────────────────────────────────────────────────
+  Future<void> updatePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null || user.email == null) throw 'Pengguna tidak ditemukan.';
+    try {
+      // Re-autentikasi demi keamanan
+      final cred = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(cred);
+
+      await user.updatePassword(newPassword);
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    } catch (e) {
+      throw 'Gagal memperbarui password: $e';
+    }
+  }
+
   // ─── Private helpers ───────────────────────────────────────────────────────
   Future<void> _saveUserToFirestore({
     required String uid,

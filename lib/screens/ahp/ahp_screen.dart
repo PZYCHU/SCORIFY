@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../providers/app_provider.dart';
@@ -106,55 +105,52 @@ class _AhpScreenState extends State<AhpScreen> {
               child: Row(
                 children: [
                   const Icon(Icons.info_outline,
-                      color: AppColors.primary, size: 18),
+                      color: AppColors.primary, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Isi seberapa penting kriteria di baris dibanding kriteria di kolom. Gunakan skala 1–9.',
+                      'Bandingkan kriteria secara berpasangan. Pilih kriteria yang lebih diutamakan, lalu tentukan tingkat keutamaannya.',
                       style: Theme.of(context)
                           .textTheme
                           .bodyMedium
-                          ?.copyWith(fontSize: 12),
+                          ?.copyWith(fontSize: 13, height: 1.35),
                     ),
                   ),
                 ],
               ),
             ),
-            // ── Panduan Skala ──
-            _buildPanduanSkala(context),
+            
+            const SizedBox(height: 16),
 
-            const SizedBox(height: 20),
-
-            // ── Matriks ──
+            // ── Header Perbandingan Berpasangan ──
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Text(
-                    'Matriks Perbandingan Berpasangan',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    'Perbandingan Berpasangan',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16),
                   ),
                 ),
                 if (hasInconsistency) ...[
-                  const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
+                      color: AppColors.costChip,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade300),
+                      border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.lightbulb_outline, size: 14, color: Colors.red.shade700),
+                        const Icon(Icons.lightbulb_outline, size: 14, color: AppColors.costChipText),
                         const SizedBox(width: 4),
                         Text(
-                          'Saran tersedia',
+                          'Saran perbaikan tersedia',
                           style: TextStyle(
                             fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.red.shade700,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.costChipText,
                           ),
                         ),
                       ],
@@ -164,12 +160,9 @@ class _AhpScreenState extends State<AhpScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            _buildMatriks(context),
 
-            const SizedBox(height: 20),
-
-            // ── Makna Perbandingan Verbal ──
-            _buildPenjelasanVerbal(context),
+            // ── Daftar Kartu Perbandingan ──
+            _buildPairwiseCards(context),
 
             const SizedBox(height: 20),
 
@@ -190,7 +183,8 @@ class _AhpScreenState extends State<AhpScreen> {
     );
   }
 
-  Widget _buildMatriks(BuildContext context) {
+  /// Membangun daftar kartu perbandingan berpasangan berbentuk kalimat verbal & dropdown
+  Widget _buildPairwiseCards(BuildContext context) {
     final n = _kriteria.length;
     final Map<String, SaranInkonsistensi> saranMap = {};
     if (_hasilPreview != null && !_hasilPreview!.konsisten) {
@@ -199,331 +193,388 @@ class _AhpScreenState extends State<AhpScreen> {
       }
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceWhite,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Column(
-          children: [
-            // Header baris
-            Row(
-              children: [
-                _MatriksCell(
-                    isHeader: true, width: 90, height: 60,
-                    child: const SizedBox()),
-                ...List.generate(
-                  n,
-                  (j) => _MatriksCell(
-                    isHeader: true,
-                    height: 60,
-                    width: 74,
-                    child: Text(
-                      _kriteria[j].nama,
-                      style: const TextStyle(
-                          fontSize: 11, fontWeight: FontWeight.w600,
-                          color: AppColors.primary),
-                      textAlign: TextAlign.center,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 1, color: AppColors.border),
+    final List<Widget> cardList = [];
+    int pairIndex = 1;
+    final totalPairs = (n * (n - 1)) ~/ 2;
 
-            // Data rows
-            ...List.generate(n, (i) {
-              return Column(
-                children: [
-                  Row(
-                    children: [
-                      // Nama kriteria (kolom pertama)
-                      _MatriksCell(
-                        isHeader: true,
-                        width: 90,
-                        height: 60,
-                        child: Text(
-                          _kriteria[i].nama,
-                          style: const TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.w600,
-                              color: AppColors.primary),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      // Nilai
-                      ...List.generate(n, (j) {
-                        if (i == j) {
-                          // Diagonal = 1
-                          return _MatriksCell(
-                            isDiagonal: true,
-                            height: 60,
-                            width: 74,
-                            child: const Text('1',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.textSecondary),
-                                textAlign: TextAlign.center),
-                          );
-                        }
-                        if (i > j) {
-                          // Bawah diagonal = resiprokal (tampilkan saja)
-                          final val = _matriks[i][j];
-                          return _MatriksCell(
-                            isReciprocal: true,
-                            height: 60,
-                            width: 74,
-                            child: Text(
-                              val < 1
-                                  ? '1/${(1 / val).round()}'
-                                  : val.round().toString(),
-                              style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.textSecondary),
-                              textAlign: TextAlign.center,
-                            ),
-                          );
-                        }
-                        // Atas diagonal = input
-                        final saran = saranMap['$i-$j'];
-                        return _MatriksInputCell(
-                          key: ValueKey('cell_${i}_${j}_${_matriks[i][j]}'),
-                          value: _matriks[i][j],
-                          saran: saran,
-                          onChanged: (val) => _updateNilai(i, j, val),
-                        );
-                      }),
-                    ],
-                  ),
-                  if (i < n - 1) const Divider(height: 1, color: AppColors.border),
-                ],
-              );
-            }),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPenjelasanVerbal(BuildContext context) {
-    final n = _kriteria.length;
-    final Map<String, SaranInkonsistensi> saranMap = {};
-    if (_hasilPreview != null && !_hasilPreview!.konsisten) {
-      for (final s in _hasilPreview!.saranList) {
-        saranMap['${s.i}-${s.j}'] = s;
-      }
-    }
-
-    final List<Widget> items = [];
     for (int i = 0; i < n; i++) {
       for (int j = i + 1; j < n; j++) {
         final val = _matriks[i][j];
         final saran = saranMap['$i-$j'];
         final isError = saran != null;
 
-        items.add(
+        final kriteriaA = _kriteria[i];
+        final kriteriaB = _kriteria[j];
+
+        // Tentukan mana yang dominan
+        // val > 1.0 -> A lebih penting
+        // val < 1.0 -> B lebih penting (skala = 1/val)
+        // val == 1.0 -> Sama penting
+        final int dominant; // 0: A, 1: Sama, 2: B
+        final int scaleValue; // 1..9
+
+        if (val > 1.0) {
+          dominant = 0;
+          scaleValue = val.round().clamp(1, 9);
+        } else if (val < 1.0) {
+          dominant = 2;
+          scaleValue = (1 / val).round().clamp(1, 9);
+        } else {
+          dominant = 1;
+          scaleValue = 1;
+        }
+
+        cardList.add(
           Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: isError ? Colors.red.shade50 : AppColors.surface,
-              borderRadius: BorderRadius.circular(8),
+              color: isError ? AppColors.costChip : AppColors.surfaceWhite,
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: isError ? Colors.red.shade300 : AppColors.border,
-                width: isError ? 1.2 : 1,
+                color: isError ? AppColors.danger.withValues(alpha: 0.5) : AppColors.border,
+                width: isError ? 1.5 : 1,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            child: Row(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Icon(
-                    isError ? Icons.warning_amber_rounded : Icons.check_circle_outline,
-                    size: 16,
-                    color: isError ? Colors.red.shade700 : Colors.teal.shade700,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      RichText(
-                        text: TextSpan(
-                          style: const TextStyle(fontSize: 12, color: Colors.black87, height: 1.4),
-                          children: _buildDeskripsiSpan(_kriteria[i].nama, _kriteria[j].nama, val),
+                // Header kartu: Pasangan X dari Y & Indikator Status
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'Pasangan $pairIndex dari $totalPairs',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
                         ),
                       ),
-                      if (isError) ...[
-                        const SizedBox(height: 6),
+                    ),
+                    const Spacer(),
+                    if (isError)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.danger,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'Perlu Penyesuaian',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Baris Pilihan Utama (Keutamaan)
+                Text(
+                  'Mana yang lebih diutamakan?',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                Row(
+                  children: [
+                    // Tombol Kriteria A
+                    Expanded(
+                      flex: 4,
+                      child: _buildChoiceChip(
+                        label: kriteriaA.nama,
+                        isSelected: dominant == 0,
+                        onTap: () {
+                          final newScale = (dominant == 0 && scaleValue > 1) ? scaleValue : 3;
+                          _updateNilai(i, j, newScale.toDouble());
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Tombol Sama Penting
+                    Expanded(
+                      flex: 3,
+                      child: _buildChoiceChip(
+                        label: 'Sama Penting',
+                        isSelected: dominant == 1,
+                        onTap: () {
+                          _updateNilai(i, j, 1.0);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Tombol Kriteria B
+                    Expanded(
+                      flex: 4,
+                      child: _buildChoiceChip(
+                        label: kriteriaB.nama,
+                        isSelected: dominant == 2,
+                        onTap: () {
+                          final newScale = (dominant == 2 && scaleValue > 1) ? scaleValue : 3;
+                          _updateNilai(i, j, 1.0 / newScale);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Dropdown Tingkat Keutamaan (hanya muncul jika salah satu lebih diutamakan, atau pilih tingkat)
+                if (dominant != 1) ...[
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Text(
+                      'Tingkat Keutamaan Verbal:',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: scaleValue,
+                        isExpanded: true,
+                        alignment: Alignment.center,
+                        icon: const Icon(Icons.arrow_drop_down, color: AppColors.primary),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 1, child: Center(child: Text('1 - Sama pentingnya'))),
+                          DropdownMenuItem(value: 2, child: Center(child: Text('2 - Antara sama & sedikit lebih penting'))),
+                          DropdownMenuItem(value: 3, child: Center(child: Text('3 - Sedikit lebih penting'))),
+                          DropdownMenuItem(value: 4, child: Center(child: Text('4 - Antara sedikit & cukup lebih penting'))),
+                          DropdownMenuItem(value: 5, child: Center(child: Text('5 - Cukup lebih penting'))),
+                          DropdownMenuItem(value: 6, child: Center(child: Text('6 - Antara cukup & sangat penting'))),
+                          DropdownMenuItem(value: 7, child: Center(child: Text('7 - Sangat lebih penting'))),
+                          DropdownMenuItem(value: 8, child: Center(child: Text('8 - Antara sangat & mutlak penting'))),
+                          DropdownMenuItem(value: 9, child: Center(child: Text('9 - Mutlak lebih penting'))),
+                        ],
+                        onChanged: (newScale) {
+                          if (newScale == null) return;
+                          if (newScale == 1) {
+                            _updateNilai(i, j, 1.0);
+                          } else if (dominant == 0) {
+                            _updateNilai(i, j, newScale.toDouble());
+                          } else {
+                            _updateNilai(i, j, 1.0 / newScale);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 12),
+
+                // Banner Kalimat Verbal Pembacaan
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(fontSize: 12.5, color: AppColors.textPrimary, height: 1.4),
+                      children: _buildKalimatVerbalSpan(kriteriaA.nama, kriteriaB.nama, val),
+                    ),
+                  ),
+                ),
+
+                // Saran Inkonsistensi (jika ada)
+                if (isError) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.warningBg,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.warningBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Row(
                           children: [
-                            Text(
-                              '⚠️ Tidak selaras. Disarankan: ${saran.nilaiSaran}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.red.shade700,
-                              ),
-                            ),
-                            const Spacer(),
-                            InkWell(
-                              onTap: () => _updateNilai(i, j, saran.nilaiSaran.toDouble()),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.shade700,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'Terapkan: ${saran.nilaiSaran}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                            const Icon(Icons.lightbulb, size: 16, color: AppColors.warningDark),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Saran Penyelarasan AHP:',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.warningDark,
                                 ),
                               ),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 4),
+                        Text(
+                          saran.nilaiSaran == 1
+                              ? 'Ubah perbandingan kedua kriteria menjadi "Sama penting" (Skala 1).'
+                              : 'Disarankan ubah ${kriteriaA.nama} dibanding ${kriteriaB.nama} ke Skala ${saran.nilaiSaran}.',
+                          style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                        ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: InkWell(
+                            onTap: () => _updateNilai(i, j, saran.nilaiSaran.toDouble()),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: AppColors.warningDark,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'Terapkan Skala ${saran.nilaiSaran}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
         );
+
+        pairIndex++;
       }
     }
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceWhite,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.menu_book_outlined, size: 16, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text(
-                'Penjelasan Perbandingan Kriteria',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 13),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Rincian arti nilai perbandingan yang sedang Anda tentukan:',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11, color: Colors.grey.shade600),
-          ),
-          const SizedBox(height: 12),
-          ...items,
-        ],
-      ),
-    );
+    return Column(children: cardList);
   }
 
-  List<InlineSpan> _buildDeskripsiSpan(String namaA, String namaB, double val) {
-    final v = val.round();
-    final String hubungan;
-    if (v == 1) {
-      hubungan = ' sama penting dengan ';
-    } else if (v == 2) {
-      hubungan = ' antara sama penting & sedikit lebih penting dibanding ';
-    } else if (v == 3) {
-      hubungan = ' sedikit lebih penting dibanding ';
-    } else if (v == 4) {
-      hubungan = ' antara sedikit lebih penting & cukup penting dibanding ';
-    } else if (v == 5) {
-      hubungan = ' cukup lebih penting dibanding ';
-    } else if (v == 6) {
-      hubungan = ' antara cukup penting & sangat penting dibanding ';
-    } else if (v == 7) {
-      hubungan = ' sangat lebih penting dibanding ';
-    } else if (v == 8) {
-      hubungan = ' antara sangat penting & mutlak penting dibanding ';
-    } else {
-      hubungan = ' mutlak lebih penting dibanding ';
-    }
-
-    return [
-      TextSpan(text: namaA, style: const TextStyle(fontWeight: FontWeight.w700)),
-      TextSpan(text: hubungan),
-      TextSpan(text: namaB, style: const TextStyle(fontWeight: FontWeight.w700)),
-      TextSpan(text: ' (Skala $v)', style: const TextStyle(color: Colors.grey, fontSize: 11)),
-    ];
-  }
-
-  Widget _buildPanduanSkala(BuildContext context) {
-    final skala = [1, 3, 5, 7, 9];
-    final label = [
-      'Sama penting',
-      'Sedikit lebih penting',
-      'Cukup lebih penting',
-      'Sangat lebih penting',
-      'Mutlak lebih penting',
-    ];
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Panduan Skala Saaty',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 13)),
-          const SizedBox(height: 8),
-          ...List.generate(
-            skala.length,
-            (i) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${skala[i]}',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(label[i],
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(fontSize: 12)),
-                ],
-              ),
+  /// Tombol pilihan chip keutamaan
+  Widget _buildChoiceChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : AppColors.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+              color: isSelected ? Colors.white : AppColors.textSecondary,
+              height: 1.25,
             ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-        ],
+        ),
       ),
     );
+  }
+
+  /// Formatter kalimat verbal perbandingan
+  List<InlineSpan> _buildKalimatVerbalSpan(String namaA, String namaB, double val) {
+    if (val == 1.0) {
+      return [
+        TextSpan(text: namaA, style: const TextStyle(fontWeight: FontWeight.w700)),
+        const TextSpan(text: ' sama pentingnya dengan '),
+        TextSpan(text: namaB, style: const TextStyle(fontWeight: FontWeight.w700)),
+        const TextSpan(text: ' (Skala 1)', style: TextStyle(color: Colors.grey, fontSize: 11)),
+      ];
+    } else if (val > 1.0) {
+      final v = val.round();
+      final ket = _getDeskripsiKeutamaan(v);
+      return [
+        TextSpan(text: namaA, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
+        TextSpan(text: ' $ket daripada '),
+        TextSpan(text: namaB, style: const TextStyle(fontWeight: FontWeight.w700)),
+        TextSpan(text: ' (Skala $v)', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+      ];
+    } else {
+      final v = (1 / val).round();
+      final ket = _getDeskripsiKeutamaan(v);
+      return [
+        TextSpan(text: namaB, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
+        TextSpan(text: ' $ket daripada '),
+        TextSpan(text: namaA, style: const TextStyle(fontWeight: FontWeight.w700)),
+        TextSpan(text: ' (Skala $v)', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+      ];
+    }
+  }
+
+  String _getDeskripsiKeutamaan(int v) {
+    switch (v) {
+      case 2:
+        return 'antara sama & sedikit lebih penting';
+      case 3:
+        return 'sedikit lebih penting';
+      case 4:
+        return 'antara sedikit & cukup lebih penting';
+      case 5:
+        return 'cukup lebih penting';
+      case 6:
+        return 'antara cukup & sangat penting';
+      case 7:
+        return 'sangat lebih penting';
+      case 8:
+        return 'antara sangat & mutlak penting';
+      case 9:
+        return 'mutlak lebih penting';
+      default:
+        return 'sama penting';
+    }
   }
 
   Widget _buildHasilPreview(BuildContext context) {
@@ -533,14 +584,13 @@ class _AhpScreenState extends State<AhpScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: konsisten
-            ? AppColors.benefitChip
-            : AppColors.costChip,
-        borderRadius: BorderRadius.circular(12),
+        color: konsisten ? AppColors.benefitChip : AppColors.costChip,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: konsisten
-              ? AppColors.benefitChipText.withValues(alpha: 0.3)
-              : AppColors.costChipText.withValues(alpha: 0.3),
+              ? AppColors.benefitChipText.withValues(alpha: 0.35)
+              : AppColors.costChipText.withValues(alpha: 0.35),
+          width: 1.2,
         ),
       ),
       child: Column(
@@ -549,212 +599,92 @@ class _AhpScreenState extends State<AhpScreen> {
           Row(
             children: [
               Icon(
-                konsisten ? Icons.check_circle : Icons.warning_amber,
+                konsisten ? Icons.check_circle : Icons.warning_amber_rounded,
                 color: konsisten
                     ? AppColors.benefitChipText
                     : AppColors.costChipText,
-                size: 18,
+                size: 22,
               ),
               const SizedBox(width: 8),
-              Text(
-                konsisten ? 'Konsisten ✓' : 'Tidak Konsisten ✗',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: konsisten
-                      ? AppColors.benefitChipText
-                      : AppColors.costChipText,
+              Expanded(
+                child: Text(
+                  konsisten
+                      ? 'Perbandingan Konsisten ✓'
+                      : 'Perbandingan Tidak Konsisten ✗',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: konsisten
+                        ? AppColors.benefitChipText
+                        : AppColors.costChipText,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _ResultRow('λ max', h.lambdaMax.toStringAsFixed(4)),
-          _ResultRow('CI', h.ci.toStringAsFixed(4)),
-          _ResultRow('CR', '${h.cr.toStringAsFixed(4)} ${h.cr <= 0.10 ? "≤ 0.10 ✓" : "> 0.10 ✗"}'),
-          const Divider(height: 16),
-          Text('Bobot Kriteria:',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyLarge
-                  ?.copyWith(fontWeight: FontWeight.w600, fontSize: 13)),
-          const SizedBox(height: 8),
-          ...List.generate(_kriteria.length, (i) {
-            return _ResultRow(
-              _kriteria[i].nama,
-              '${(h.bobot[i] * 100).toStringAsFixed(2)}%',
-            );
-          }),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Sel header / diagonal / resiprokal ──────────────────────────────────────
-
-class _MatriksCell extends StatelessWidget {
-  final Widget child;
-  final bool isHeader;
-  final bool isDiagonal;
-  final bool isReciprocal;
-  final double width;
-  final double height;
-
-  const _MatriksCell({
-    required this.child,
-    this.isHeader = false,
-    this.isDiagonal = false,
-    this.isReciprocal = false,
-    this.width = 74,
-    this.height = 60,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDiagonal
-            ? AppColors.background
-            : isHeader
-                ? AppColors.primary.withValues(alpha: 0.05)
-                : isReciprocal
-                    ? AppColors.background
-                    : AppColors.surfaceWhite,
-      ),
-      alignment: Alignment.center,
-      child: child,
-    );
-  }
-}
-
-// ─── Sel input (atas diagonal) ────────────────────────────────────────────────
-
-class _MatriksInputCell extends StatefulWidget {
-  final double value;
-  final SaranInkonsistensi? saran;
-  final ValueChanged<double> onChanged;
-
-  const _MatriksInputCell({
-    super.key,
-    required this.value,
-    this.saran,
-    required this.onChanged,
-  });
-
-  @override
-  State<_MatriksInputCell> createState() => _MatriksInputCellState();
-}
-
-class _MatriksInputCellState extends State<_MatriksInputCell> {
-  late TextEditingController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = TextEditingController(
-        text: widget.value == 1.0 ? '1' : widget.value.toStringAsFixed(0));
-  }
-
-  @override
-  void didUpdateWidget(covariant _MatriksInputCell oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.value != widget.value) {
-      _ctrl.text = widget.value == 1.0 ? '1' : widget.value.toStringAsFixed(0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final hasSaran = widget.saran != null;
-
-    return Container(
-      width: 74,
-      height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      decoration: BoxDecoration(
-        color: hasSaran ? Colors.red.shade50 : AppColors.surfaceWhite,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            height: 32,
-            child: TextField(
-              controller: _ctrl,
-              textAlign: TextAlign.center,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: hasSaran ? Colors.red.shade900 : AppColors.primary,
-              ),
-              decoration: InputDecoration(
-                contentPadding: EdgeInsets.zero,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(
-                    color: hasSaran ? Colors.red.shade400 : AppColors.border,
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(
-                    color: hasSaran ? Colors.red.shade400 : AppColors.border,
-                    width: hasSaran ? 1.5 : 1.0,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(
-                    color: hasSaran ? Colors.red.shade700 : AppColors.primary,
-                    width: 2.0,
-                  ),
-                ),
-                fillColor: hasSaran ? Colors.red.shade50 : AppColors.surfaceWhite,
-                filled: true,
-              ),
-              onChanged: (v) {
-                final parsed = int.tryParse(v);
-                if (parsed != null && parsed >= 1 && parsed <= 9) {
-                  widget.onChanged(parsed.toDouble());
-                }
-              },
+          _ResultRow('λ maks', h.lambdaMax.toStringAsFixed(4)),
+          _ResultRow('CI (Consistency Index)', h.ci.toStringAsFixed(4)),
+          _ResultRow(
+            'CR (Consistency Ratio)',
+            '${h.cr.toStringAsFixed(4)} ${h.cr <= 0.10 ? "(≤ 0.10 ✓ Konsisten)" : "(> 0.10 ✗ Tidak Konsisten)"}',
+          ),
+          const Divider(height: 20),
+          const Text(
+            'Hasil Bobot Prioritas Kriteria:',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: AppColors.textPrimary,
             ),
           ),
-          if (hasSaran)
-            GestureDetector(
-              onTap: () {
-                final s = widget.saran!.nilaiSaran;
-                _ctrl.text = '$s';
-                widget.onChanged(s.toDouble());
-              },
-              child: Container(
-                margin: const EdgeInsets.only(top: 2),
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade700,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '💡 Coba:${widget.saran!.nilaiSaran}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 8.5,
-                    fontWeight: FontWeight.w700,
+          const SizedBox(height: 10),
+          ...List.generate(_kriteria.length, (i) {
+            final bobotPercent = (h.bobot[i] * 100);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _kriteria[i].nama,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${bobotPercent.toStringAsFixed(2)}%',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: h.bobot[i].clamp(0.0, 1.0),
+                      backgroundColor: AppColors.border.withValues(alpha: 0.5),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        konsisten ? AppColors.primary : AppColors.warningDark,
+                      ),
+                      minHeight: 6,
+                    ),
+                  ),
+                ],
               ),
-            ),
+            );
+          }),
         ],
       ),
     );
@@ -770,16 +700,25 @@ class _ResultRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: 5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12)),
-          Text(value,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w600, fontSize: 12)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 12.5,
+              color: AppColors.textPrimary,
+            ),
+          ),
         ],
       ),
     );

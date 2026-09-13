@@ -34,6 +34,39 @@ class _BuatKelasScreenState extends State<BuatKelasScreen> {
     if (isEdit) {
       _namaKelasCtrl.text = widget.existingKelas!.nama;
       _kriteriaList = List.from(widget.existingKelas!.kriteria);
+    } else {
+      // Inisialisasi kriteria default yang lazim untuk penilaian sekolah
+      final tugasId = _uuid.v4();
+      _kriteriaList = [
+        Kriteria(
+          id: _uuid.v4(),
+          nama: 'Kehadiran',
+          jenis: JenisKriteria.performa,
+          inputType: InputType.counter,
+          arah: ArahKriteria.benefit,
+        ),
+        Kriteria(
+          id: _uuid.v4(),
+          nama: 'Keaktifan',
+          jenis: JenisKriteria.performa,
+          inputType: InputType.counter,
+          arah: ArahKriteria.benefit,
+        ),
+        Kriteria(
+          id: tugasId,
+          nama: 'Nilai Tugas',
+          jenis: JenisKriteria.hasil,
+          perSesi: true,
+          arah: ArahKriteria.benefit,
+        ),
+        Kriteria(
+          id: _uuid.v4(),
+          nama: 'Frekuensi Remedial',
+          jenis: JenisKriteria.derived,
+          arah: ArahKriteria.cost,
+          targetKriteriaIds: [tugasId],
+        ),
+      ];
     }
   }
 
@@ -93,6 +126,58 @@ class _BuatKelasScreenState extends State<BuatKelasScreen> {
     });
   }
 
+  void _muatKriteriaDefault() async {
+    if (_kriteriaList.isNotEmpty) {
+      final confirm = await AppFeedback.showConfirmDialog(
+        context,
+        title: 'Muat Kriteria Default',
+        message:
+            'Daftar kriteria saat ini akan digantikan dengan 4 kriteria standar sekolah (Kehadiran, Keaktifan, Nilai Tugas, Frekuensi Remedial). Lanjutkan?',
+        confirmText: 'Ya, Muat',
+        cancelText: 'Batal',
+      );
+      if (!confirm) return;
+    }
+
+    final tugasId = _uuid.v4();
+    setState(() {
+      _kriteriaList = [
+        Kriteria(
+          id: _uuid.v4(),
+          nama: 'Kehadiran',
+          jenis: JenisKriteria.performa,
+          inputType: InputType.number,
+          arah: ArahKriteria.benefit,
+        ),
+        Kriteria(
+          id: _uuid.v4(),
+          nama: 'Keaktifan',
+          jenis: JenisKriteria.performa,
+          inputType: InputType.counter,
+          arah: ArahKriteria.benefit,
+        ),
+        Kriteria(
+          id: tugasId,
+          nama: 'Nilai Tugas',
+          jenis: JenisKriteria.hasil,
+          perSesi: true,
+          arah: ArahKriteria.benefit,
+        ),
+        Kriteria(
+          id: _uuid.v4(),
+          nama: 'Frekuensi Remedial',
+          jenis: JenisKriteria.derived,
+          arah: ArahKriteria.cost,
+          targetKriteriaIds: [tugasId],
+        ),
+      ];
+    });
+
+    if (mounted) {
+      AppFeedback.showSuccess(context, '4 Kriteria default berhasil dimuat');
+    }
+  }
+
   Future<void> _simpan() async {
     if (!_formKey.currentState!.validate()) return;
     if (_kriteriaList.length < _minKriteria) {
@@ -102,6 +187,53 @@ class _BuatKelasScreenState extends State<BuatKelasScreen> {
       return;
     }
 
+    // Cek apakah ada perubahan kriteria saat edit
+    bool kriteriaBerubah = false;
+    if (isEdit) {
+      final idLama = widget.existingKelas!.kriteria.map((e) => e.id).toSet();
+      final idBaru = _kriteriaList.map((e) => e.id).toSet();
+      kriteriaBerubah = idLama.length != idBaru.length || !idLama.containsAll(idBaru);
+
+      if (kriteriaBerubah) {
+        final setuju = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Perubahan Kriteria',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: const Text(
+              'Menambah atau mengubah kriteria penilaian akan mereset bobot AHP kelas ini.\n\n'
+              'Anda perlu menghitung ulang (re-calculate) bobot AHP agar proses perankingan SAW tetap valid. Lanjutkan?',
+              style: TextStyle(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Batal'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Ya, Lanjutkan'),
+              ),
+            ],
+          ),
+        );
+        if (setuju != true) return;
+      }
+    }
+
+    if (!mounted) return;
     setState(() => _saving = true);
     final provider = context.read<AppProvider>();
 
@@ -118,7 +250,40 @@ class _BuatKelasScreenState extends State<BuatKelasScreen> {
           kriteria: _kriteriaList,
         );
       }
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        Navigator.of(context).pop();
+        if (isEdit && kriteriaBerubah) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.white, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Kriteria diperbarui. Harap hitung ulang (re-calculate) bobot AHP!',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyimpan kelas: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -177,39 +342,58 @@ class _BuatKelasScreenState extends State<BuatKelasScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Tombol tambah kriteria
-                GestureDetector(
-                  onTap: _tambahKriteria,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceWhite,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.accent.withOpacity(0.5),
-                        style: BorderStyle.solid,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.add_circle_outline,
-                          color: AppColors.accent,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Tambah Kriteria',
-                          style: TextStyle(
-                            color: AppColors.accent,
-                            fontWeight: FontWeight.w600,
+                // Tombol aksi kriteria
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: OutlinedButton.icon(
+                        onPressed: _tambahKriteria,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.accent,
+                          side: BorderSide(
+                            color: AppColors.accent.withValues(alpha: 0.5),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                      ],
+                        icon: const Icon(Icons.add_circle_outline, size: 18),
+                        label: const Text(
+                          'Tambah Manual',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 3,
+                      child: ElevatedButton.icon(
+                        onPressed: _muatKriteriaDefault,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(Icons.auto_awesome, size: 18),
+                        label: const Text(
+                          'Muat Default',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
 
                 // ── Daftar Kriteria ──
@@ -343,10 +527,29 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
       _arah = c.arah;
       _targetKriteriaIds = List.from(c.targetKriteriaIds);
     }
+    _nameController.addListener(_onNameChanged);
+  }
+
+  void _onNameChanged() {
+    final lower = _nameController.text.toLowerCase();
+    if (lower.contains('hadir') ||
+        lower.contains('kehadiran') ||
+        lower.contains('absen') ||
+        lower.contains('absensi') ||
+        lower.contains('presensi') ||
+        lower.contains('attendance')) {
+      if (_jenis != JenisKriteria.performa || _inputType != InputType.counter) {
+        setState(() {
+          _jenis = JenisKriteria.performa;
+          _inputType = InputType.counter;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
+    _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
     super.dispose();
   }
@@ -646,10 +849,10 @@ class _SegmentedRow<T> extends StatelessWidget {
             duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: isSelected ? color.withOpacity(0.15) : Colors.transparent,
+              color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: isSelected ? color : Colors.grey.withOpacity(0.4),
+                color: isSelected ? color : Colors.grey.withValues(alpha: 0.4),
                 width: isSelected ? 1.5 : 1,
               ),
             ),

@@ -26,9 +26,9 @@ class AppProvider extends ChangeNotifier {
   void listenToUser(String? uid) {
     _kelajsub?.cancel();
     _kelajsub = null;
+    _kelasList = [];
 
     if (uid == null) {
-      _kelasList = [];
       _loading = false;
       notifyListeners();
       return;
@@ -85,13 +85,26 @@ class AppProvider extends ChangeNotifier {
     final idx = _kelasList.indexWhere((k) => k.id == kelasId);
     if (idx < 0) return;
     final kelas = _kelasList[idx];
+    List<Kriteria>? finalKriteria = kriteria;
+    List<List<double>>? newMatriks;
+
+    if (kriteria != null) {
+      final idLama = kelas.kriteria.map((e) => e.id).toSet();
+      final idBaru = kriteria.map((e) => e.id).toSet();
+      final adaPerubahan = idLama.length != idBaru.length || !idLama.containsAll(idBaru);
+
+      if (adaPerubahan) {
+        // Reset bobot seluruh kriteria ke 0 karena harus di-recalculate via AHP
+        finalKriteria = kriteria.map((k) => k.copyWith(bobot: 0.0)).toList();
+        newMatriks = KalkulasiService.matriksAwal(kriteria.length);
+      }
+    }
+
     final newKelas = kelas.copyWith(
       nama: nama,
-      kriteria: kriteria,
+      kriteria: finalKriteria,
       sudahKalkulasi: false,
-      matriksAHP: kriteria != null
-          ? KalkulasiService.matriksAwal(kriteria.length)
-          : null,
+      matriksAHP: newMatriks,
     );
     await _firestore.upsertKelas(newKelas);
     // Stream Firestore akan update _kelasList otomatis
@@ -222,11 +235,13 @@ class AppProvider extends ChangeNotifier {
     await _firestore.upsertKelas(_kelasList[kIdx]);
   }
 
-  /// Input nilai massal / serentak untuk seluruh murid di kelas pada kriteria tertentu
+  /// Input nilai massal / serentak untuk murid tertentu / seluruh murid di kelas pada kriteria performa maupun hasil (tugas)
   Future<void> inputNilaiMassal({
     required String kelasId,
     required String kriteriaId,
     required double nilai,
+    String? sesiId,
+    List<String>? targetMuridIds,
     bool hanyaYangKosong = false,
   }) async {
     final kIdx = _kelasList.indexWhere((k) => k.id == kelasId);
@@ -239,39 +254,75 @@ class AppProvider extends ChangeNotifier {
 
     for (int i = 0; i < updatedMuridList.length; i++) {
       final murid = updatedMuridList[i];
-      final existingIdx = murid.nilaiList.indexWhere((n) {
-        final nStr = '${n.tanggal.year}-${n.tanggal.month}-${n.tanggal.day}';
-        return n.kriteriaId == kriteriaId && nStr == todayStr;
-      });
-
-      if (hanyaYangKosong && existingIdx >= 0) {
+      if (targetMuridIds != null && !targetMuridIds.contains(murid.id)) {
         continue;
       }
 
-      List<Nilai> updatedNilaiList = List.from(murid.nilaiList);
-      if (existingIdx >= 0) {
-        updatedNilaiList[existingIdx] = Nilai(
-          id: updatedNilaiList[existingIdx].id,
+      if (sesiId != null) {
+        // Input untuk kriteria hasil (sesi tugas)
+        final existing = murid.nilaiList
+            .where((n) => n.kriteriaId == kriteriaId && n.sesiId == sesiId)
+            .toList();
+
+        if (hanyaYangKosong && existing.isNotEmpty) {
+          continue;
+        }
+
+        final attempt = existing.isEmpty
+            ? 1
+            : (existing.map((e) => e.attempt).reduce((a, b) => a > b ? a : b) + 1);
+
+        final nilaiBaru = Nilai(
+          id: _uuid.v4(),
           siswaId: murid.id,
           kriteriaId: kriteriaId,
+          sesiId: sesiId,
           nilai: nilai,
-          attempt: 1,
+          attempt: attempt,
           tanggal: tanggal,
         );
-      } else {
-        updatedNilaiList.add(Nilai(
-          id: '${murid.id}_${kriteriaId}_$todayStr',
-          siswaId: murid.id,
-          kriteriaId: kriteriaId,
-          nilai: nilai,
-          attempt: 1,
-          tanggal: tanggal,
-        ));
-      }
 
-      final updatedMurid = murid.copyWith(nilaiList: updatedNilaiList);
-      updatedMuridList[i] = updatedMurid;
-      await _firestore.upsertMurid(kelasId, updatedMurid);
+        final updatedMurid = murid.copyWith(
+          nilaiList: [...murid.nilaiList, nilaiBaru],
+        );
+        updatedMuridList[i] = updatedMurid;
+        await _firestore.upsertMurid(kelasId, updatedMurid);
+      } else {
+        // Input untuk kriteria performa harian
+        final existingIdx = murid.nilaiList.indexWhere((n) {
+          final nStr = '${n.tanggal.year}-${n.tanggal.month}-${n.tanggal.day}';
+          return n.kriteriaId == kriteriaId && nStr == todayStr;
+        });
+
+        if (hanyaYangKosong && existingIdx >= 0) {
+          continue;
+        }
+
+        List<Nilai> updatedNilaiList = List.from(murid.nilaiList);
+        if (existingIdx >= 0) {
+          updatedNilaiList[existingIdx] = Nilai(
+            id: updatedNilaiList[existingIdx].id,
+            siswaId: murid.id,
+            kriteriaId: kriteriaId,
+            nilai: nilai,
+            attempt: 1,
+            tanggal: tanggal,
+          );
+        } else {
+          updatedNilaiList.add(Nilai(
+            id: '${murid.id}_${kriteriaId}_$todayStr',
+            siswaId: murid.id,
+            kriteriaId: kriteriaId,
+            nilai: nilai,
+            attempt: 1,
+            tanggal: tanggal,
+          ));
+        }
+
+        final updatedMurid = murid.copyWith(nilaiList: updatedNilaiList);
+        updatedMuridList[i] = updatedMurid;
+        await _firestore.upsertMurid(kelasId, updatedMurid);
+      }
     }
 
     _kelasList[kIdx] = kelas.copyWith(
