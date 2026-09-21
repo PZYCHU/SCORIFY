@@ -150,105 +150,26 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: AppColors.textPrimary),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              onSelected: (val) async {
-                if (val == 'tutorial') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const TutorialScreen()),
-                  );
-                } else if (val == 'profile') {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                  );
-                  setState(() {});
-                } else if (val == 'logout') {
-                  final confirm = await showConfirmDialog(
-                    context,
-                    title: 'Keluar Akun',
-                    content: 'Apakah Anda yakin ingin keluar dari akun ini?',
-                  );
-                  if (confirm && context.mounted) {
-                    context.read<AppProvider>().listenToUser(null);
-                    await AuthService().signOut();
-                    if (context.mounted) {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                        (route) => false,
-                      );
-                    }
+            IconButton(
+              tooltip: 'Keluar Akun',
+              icon: const Icon(Icons.logout_rounded, color: AppColors.danger),
+              onPressed: () async {
+                final confirm = await showConfirmDialog(
+                  context,
+                  title: 'Keluar Akun',
+                  content: 'Apakah Anda yakin ingin keluar dari akun ini?',
+                );
+                if (confirm && context.mounted) {
+                  context.read<AppProvider>().listenToUser(null);
+                  await AuthService().signOut();
+                  if (context.mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      (route) => false,
+                    );
                   }
                 }
               },
-              itemBuilder: (_) => [
-                PopupMenuItem(
-                  enabled: false,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        displayName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        email,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const Divider(),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'tutorial',
-                  child: Row(
-                    children: [
-                      Icon(Icons.menu_book_outlined, color: AppColors.primary, size: 18),
-                      SizedBox(width: 8),
-                      Text(
-                        'Panduan & Tutorial',
-                        style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'profile',
-                  child: Row(
-                    children: [
-                      Icon(Icons.person_outline_rounded, color: AppColors.primary, size: 18),
-                      SizedBox(width: 8),
-                      Text(
-                        'Profil Saya',
-                        style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'logout',
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout, color: AppColors.danger, size: 18),
-                      SizedBox(width: 8),
-                      Text(
-                        'Keluar',
-                        style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -314,6 +235,14 @@ class _KelasCard extends StatelessWidget {
 
   const _KelasCard({required this.kelas});
 
+  String _formatDate(DateTime dt) {
+    const months = [
+      '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+    ];
+    return '${dt.day} ${months[dt.month]} ${dt.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -371,6 +300,23 @@ class _KelasCard extends StatelessWidget {
                       ],
                     ],
                   ),
+                  if (kelas.createdAt != null) ...[
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today_outlined,
+                            size: 11, color: AppColors.textHint),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Dibuat ${_formatDate(kelas.createdAt!)}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textHint,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

@@ -509,7 +509,8 @@ class ExcelService {
       return total / bestPerSesi.length;
     }
 
-    if (k.jenis == JenisKriteria.performa && k.inputType == InputType.counter) {
+    if (k.jenis == JenisKriteria.performa &&
+        (k.inputType == InputType.counter || k.inputType == InputType.attendance)) {
       return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
     }
 

@@ -54,7 +54,10 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                   if (kelas.kriteria.any((k) => k.bobot == 0.0))
                     Container(
                       margin: const EdgeInsets.fromLTRB(16, 10, 16, 2),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.warningBg,
                         borderRadius: BorderRadius.circular(12),
@@ -62,7 +65,11 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.warning_amber_rounded, color: AppColors.warningDark, size: 22),
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            color: AppColors.warningDark,
+                            size: 22,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
@@ -79,7 +86,12 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                                 const SizedBox(height: 2),
                                 Text(
                                   'Ada kriteria baru atau bobot belum diisi. Hitung ulang bobot AHP agar perankingan valid.',
-                                  style: TextStyle(fontSize: 12, color: AppColors.textPrimary.withValues(alpha: 0.8)),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textPrimary.withValues(
+                                      alpha: 0.8,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -89,7 +101,10 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.warningDark,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               shape: RoundedRectangleBorder(
@@ -99,7 +114,8 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                             onPressed: () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => AhpScreen(kelasId: widget.kelasId),
+                                builder: (_) =>
+                                    AhpScreen(kelasId: widget.kelasId),
                               ),
                             ),
                             child: const Text(
@@ -124,7 +140,8 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                                   ? RefreshIndicator(
                                       onRefresh: () => provider.refresh(),
                                       child: ListView(
-                                        physics: const AlwaysScrollableScrollPhysics(),
+                                        physics:
+                                            const AlwaysScrollableScrollPhysics(),
                                         children: [
                                           const SizedBox(height: 60),
                                           const EmptyState(
@@ -137,17 +154,23 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                                           Center(
                                             child: ElevatedButton.icon(
                                               style: ElevatedButton.styleFrom(
-                                                backgroundColor: AppColors.primary,
+                                                backgroundColor:
+                                                    AppColors.primary,
                                                 foregroundColor: Colors.white,
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 24,
-                                                  vertical: 12,
-                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 24,
+                                                      vertical: 12,
+                                                    ),
                                                 shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(24),
+                                                  borderRadius:
+                                                      BorderRadius.circular(24),
                                                 ),
                                               ),
-                                              icon: const Icon(Icons.person_add_alt_1, size: 18),
+                                              icon: const Icon(
+                                                Icons.person_add_alt_1,
+                                                size: 18,
+                                              ),
                                               label: const Text(
                                                 'Tambah Siswa',
                                                 style: TextStyle(
@@ -156,7 +179,10 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                                                 ),
                                               ),
                                               onPressed: () =>
-                                                  _showTambahSiswaOptions(context, kelas),
+                                                  _showTambahSiswaOptions(
+                                                    context,
+                                                    kelas,
+                                                  ),
                                             ),
                                           ),
                                         ],
@@ -187,6 +213,25 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
     );
   }
 
+  String _formatDate(DateTime dt) {
+    const months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    return '${dt.day} ${months[dt.month]} ${dt.year}';
+  }
+
   Widget _buildHeader(BuildContext context, Kelas kelas, AppProvider provider) {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
@@ -195,64 +240,61 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               const AppBackButton(),
               const SizedBox(width: 4),
-              Flexible(
-                fit: FlexFit.loose,
-                child: Text(
-                  kelas.nama,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        kelas.nama,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _HeaderChip(
+                        icon: Icons.people_outline,
+                        label: '${kelas.jumlahSiswa}',
+                      ),
+                      const SizedBox(width: 4),
+                      _HeaderChip(
+                        icon: Icons.tune,
+                        label: '${kelas.jumlahKriteria}',
+                      ),
+                      const SizedBox(width: 4),
+                      if (kelas.sudahKalkulasi)
+                        _HeaderChip(
+                          icon: Icons.check_circle_outline,
+                          label: 'Terhitung',
+                          color: const Color(0xFF34D399),
+                          backgroundColor: const Color(
+                            0xFF064E3B,
+                          ).withValues(alpha: 0.6),
+                        )
+                      else
+                        _HeaderChip(
+                          icon: Icons.cancel_outlined,
+                          label: 'Belum',
+                          color: const Color(0xFFF87171),
+                          backgroundColor: const Color(
+                            0xFF7F1D1D,
+                          ).withValues(alpha: 0.6),
+                        ),
+                    ],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 4),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _HeaderChip(
-                          icon: Icons.people_outline,
-                          label: '${kelas.jumlahSiswa}',
-                        ),
-                        const SizedBox(width: 4),
-                        _HeaderChip(
-                          icon: Icons.tune,
-                          label: '${kelas.jumlahKriteria}',
-                        ),
-                        const SizedBox(width: 4),
-                        if (kelas.sudahKalkulasi)
-                          _HeaderChip(
-                            icon: Icons.check_circle_outline,
-                            label: 'Terhitung',
-                            color: const Color(0xFF34D399),
-                            backgroundColor: const Color(0xFF064E3B).withValues(alpha: 0.6),
-                          )
-                        else
-                          _HeaderChip(
-                            icon: Icons.cancel_outlined,
-                            label: 'Belum',
-                            color: const Color(0xFFF87171),
-                            backgroundColor: const Color(0xFF7F1D1D).withValues(alpha: 0.6),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 2),
               PopupMenuButton<String>(
                 padding: EdgeInsets.zero,
                 icon: const Icon(Icons.more_vert, color: Colors.white),
@@ -335,7 +377,31 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          if (kelas.createdAt != null) ...[
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 44, bottom: 2),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: 11,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Dibuat ${_formatDate(kelas.createdAt!)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white.withValues(alpha: 0.75),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
           const TabBar(
             indicatorColor: Colors.white,
             indicatorWeight: 3,
@@ -377,19 +443,21 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
 
     return Column(
       children: [
-        // Sub-bar di atas list: Search + Daftar Murid + Action Buttons
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           color: AppColors.surface,
           child: Column(
             children: [
-              // Search Bar Siswa (Point 11: Tombol / bar search jelas)
               TextField(
                 controller: _searchCtrl,
                 onChanged: (val) => setState(() => _searchQuery = val.trim()),
                 decoration: InputDecoration(
                   hintText: 'Cari nama atau NIS siswa...',
-                  prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.primary),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    size: 20,
+                    color: AppColors.primary,
+                  ),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.close, size: 18),
@@ -401,7 +469,10 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                           },
                         )
                       : null,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   fillColor: AppColors.surfaceWhite,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -432,21 +503,32 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Tombol Tambah Siswa
                           InkWell(
-                            onTap: () => _showTambahSiswaOptions(context, kelas),
+                            onTap: () =>
+                                _showTambahSiswaOptions(context, kelas),
                             borderRadius: BorderRadius.circular(20),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 5,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.3,
+                                  ),
+                                ),
                               ),
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.person_add_alt_1, size: 14, color: AppColors.primary),
+                                  Icon(
+                                    Icons.person_add_alt_1,
+                                    size: 14,
+                                    color: AppColors.primary,
+                                  ),
                                   SizedBox(width: 4),
                                   Text(
                                     '+ Siswa',
@@ -461,21 +543,31 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          // Tombol Input Kolektif
                           InkWell(
                             onTap: () => _showIsiMassalDialog(context, kelas),
                             borderRadius: BorderRadius.circular(20),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 5,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.accent.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
+                                border: Border.all(
+                                  color: AppColors.accent.withValues(
+                                    alpha: 0.4,
+                                  ),
+                                ),
                               ),
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.checklist_rtl_rounded, size: 14, color: AppColors.accent),
+                                  Icon(
+                                    Icons.checklist_rtl_rounded,
+                                    size: 14,
+                                    color: AppColors.accent,
+                                  ),
                                   SizedBox(width: 4),
                                   Text(
                                     'Input Kolektif',
@@ -507,7 +599,10 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                       _searchQuery.isNotEmpty
                           ? 'Tidak ada siswa yang cocok dengan "$_searchQuery"'
                           : 'Belum ada siswa',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 )
@@ -520,10 +615,18 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                       murid: murid,
                       kelas: kelas,
                       rank: kelas.sudahKalkulasi ? i + 1 : null,
-                      onTapNilai: () =>
-                          showInputNilaiSheet(context, kelas: kelas, murid: murid),
+                      onTapNilai: () => showInputNilaiSheet(
+                        context,
+                        kelas: kelas,
+                        murid: murid,
+                      ),
                       onTapKriteria: (kriteria) =>
-                          _showQuickInputKriteriaDialog(context, kelas, murid, kriteria),
+                          _showQuickInputKriteriaDialog(
+                            context,
+                            kelas,
+                            murid,
+                            kriteria,
+                          ),
                     );
                   },
                 ),
@@ -548,7 +651,6 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Baris 1: AHP
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -579,7 +681,6 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          // Baris 2: Kalkulasi — pisah "Lihat Hasil" & "Hitung Ulang" jika sudah pernah dihitung
           if (kelas.sudahKalkulasi) ...[
             Row(
               children: [
@@ -588,7 +689,8 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                     onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => HasilKalkulasiScreen(kelasId: widget.kelasId),
+                        builder: (_) =>
+                            HasilKalkulasiScreen(kelasId: widget.kelasId),
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
@@ -664,7 +766,6 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
     AppProvider provider,
     Kelas kelas,
   ) async {
-    // ─ Readiness check: semua nilai hasil harus ada ─
     final missing = provider.cekKesiapanKalkulasi(widget.kelasId);
     if (missing.isNotEmpty && context.mounted) {
       await showDialog(
@@ -826,98 +927,294 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
     }
   }
 
-  void _showTambahTugasDialog(BuildContext context, Kelas kelas, {String? defaultKriteriaId}) {
-    final kriteriaHasil = kelas.kriteria.where((k) => k.jenis == JenisKriteria.hasil).toList();
+  void _showTambahTugasDialog(
+    BuildContext context,
+    Kelas kelas, {
+    String? defaultKriteriaId,
+  }) {
+    final kriteriaHasil = kelas.kriteria
+        .where((k) => k.jenis == JenisKriteria.hasil)
+        .toList();
     if (kriteriaHasil.isEmpty) {
-      AppFeedback.showWarning(context, 'Kelas ini belum memiliki kriteria dengan jenis hasil/tugas');
+      AppFeedback.showWarning(
+        context,
+        'Kelas ini belum memiliki kriteria dengan jenis hasil/tugas',
+      );
       return;
     }
 
     String selectedKriteriaId = defaultKriteriaId ?? kriteriaHasil.first.id;
     final namaCtrl = TextEditingController();
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Row(
-              children: [
-                Icon(Icons.add_task_rounded, color: AppColors.primary, size: 22),
-                SizedBox(width: 8),
-                Text('Tambah Tugas Baru', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-              ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: AppColors.textPrimary.withValues(alpha: 0.6),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheetState) {
+          return Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
             ),
-            content: Column(
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (kriteriaHasil.length > 1) ...[
-                  const Text('Kategori Kriteria:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border),
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedKriteriaId,
-                        isExpanded: true,
-                        items: kriteriaHasil.map((k) {
-                          return DropdownMenuItem(value: k.id, child: Text(k.nama));
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setDialogState(() => selectedKriteriaId = val);
+                  ),
+                ),
+
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.add_task_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Tambah Sesi Tugas',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Buat sesi penilaian baru untuk tugas atau ujian',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.pop(sheetCtx),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppColors.border.withValues(alpha: 0.3),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            size: 18,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Divider(height: 16, thickness: 0.8, indent: 20, endIndent: 20),
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (kriteriaHasil.length > 1) ...[
+                        const Text(
+                          'Kategori Kriteria',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          height: 46,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceWhite,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.border.withValues(alpha: 0.8),
+                            ),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: selectedKriteriaId,
+                              isExpanded: true,
+                              icon: const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: AppColors.textSecondary,
+                                size: 20,
+                              ),
+                              items: kriteriaHasil.map((k) {
+                                return DropdownMenuItem(
+                                  value: k.id,
+                                  child: Text(
+                                    k.nama,
+                                    style: const TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setSheetState(() => selectedKriteriaId = val);
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                      const Text(
+                        'Nama Sesi Tugas / Ujian',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: namaCtrl,
+                        autofocus: true,
+                        textCapitalization: TextCapitalization.words,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Contoh: Tugas Bab 1, Quiz 2, UTS',
+                          hintStyle: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textHint,
+                            fontWeight: FontWeight.normal,
+                          ),
+                          filled: true,
+                          fillColor: AppColors.surfaceWhite,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppColors.border.withValues(alpha: 0.8),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppColors.border.withValues(alpha: 0.8),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: AppColors.primary,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        onSubmitted: (_) async {
+                          final nama = namaCtrl.text.trim();
+                          if (nama.isEmpty) return;
+                          Navigator.pop(sheetCtx);
+                          await context.read<AppProvider>().tambahSesi(
+                            kelas.id,
+                            selectedKriteriaId,
+                            nama,
+                          );
+                          if (context.mounted) {
+                            AppFeedback.showSuccess(
+                              context,
+                              'Tugas "$nama" berhasil ditambahkan!',
+                            );
+                          }
                         },
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: const StadiumBorder(),
+                          ),
+                          onPressed: () async {
+                            final nama = namaCtrl.text.trim();
+                            if (nama.isEmpty) {
+                              AppFeedback.showWarning(
+                                context,
+                                'Nama tugas tidak boleh kosong',
+                              );
+                              return;
+                            }
+                            Navigator.pop(sheetCtx);
+                            await context.read<AppProvider>().tambahSesi(
+                              kelas.id,
+                              selectedKriteriaId,
+                              nama,
+                            );
+                            if (context.mounted) {
+                              AppFeedback.showSuccess(
+                                context,
+                                'Tugas "$nama" berhasil ditambahkan!',
+                              );
+                            }
+                          },
+                          child: const Text(
+                            'Tambah Tugas',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: MediaQuery.of(sheetCtx).padding.bottom),
+                    ],
                   ),
-                  const SizedBox(height: 14),
-                ],
-                const Text('Nama Sesi Tugas / Ujian:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: namaCtrl,
-                  decoration: const InputDecoration(
-                    hintText: 'Contoh: Tugas Bab 1, Quiz 2, UTS',
-                    filled: true,
-                    fillColor: AppColors.surface,
-                  ),
-                  autofocus: true,
-                  textCapitalization: TextCapitalization.words,
                 ),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Batal'),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () async {
-                  final nama = namaCtrl.text.trim();
-                  if (nama.isEmpty) {
-                    AppFeedback.showWarning(context, 'Nama tugas tidak boleh kosong');
-                    return;
-                  }
-                  Navigator.pop(ctx);
-                  await context.read<AppProvider>().tambahSesi(kelas.id, selectedKriteriaId, nama);
-                  if (context.mounted) {
-                    AppFeedback.showSuccess(context, 'Tugas "$nama" berhasil ditambahkan!');
-                  }
-                },
-                child: const Text('Tambah'),
-              ),
-            ],
           );
         },
       ),
@@ -935,469 +1232,26 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
         .toList();
 
     if (actionableKriteria.isEmpty) {
-      AppFeedback.showWarning(context, 'Tidak ada kriteria penilaian untuk diisi massal');
+      AppFeedback.showWarning(
+        context,
+        'Tidak ada kriteria penilaian untuk diisi massal',
+      );
       return;
     }
 
-    String selectedKriteriaId = actionableKriteria.first.id;
-    final nilaiCtrl = TextEditingController(text: '100');
-    bool hanyaYangKosong = false;
-
-    // Set siswa yang dicentang (default: semua siswa terpilih)
-    final Set<String> selectedMuridIds = kelas.muridList.map((m) => m.id).toSet();
-
-    // Sesi untuk kriteria hasil
-    String? selectedSesiId;
-    final firstK = actionableKriteria.first;
-    if (firstK.jenis == JenisKriteria.hasil) {
-      final sesis = kelas.getSesiByKriteria(firstK.id);
-      if (sesis.isNotEmpty) {
-        selectedSesiId = sesis.first.id;
-      }
-    }
-
-    String searchQuery = '';
-
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          final selectedKriteria = actionableKriteria.firstWhere((k) => k.id == selectedKriteriaId);
-          final isHasil = selectedKriteria.jenis == JenisKriteria.hasil;
-          final sesis = isHasil ? kelas.getSesiByKriteria(selectedKriteria.id) : <Sesi>[];
-
-          final filteredMuridList = kelas.muridList.where((m) {
-            if (searchQuery.trim().isEmpty) return true;
-            final q = searchQuery.toLowerCase().trim();
-            final matchNama = m.nama.toLowerCase().contains(q);
-            final matchNis = m.nis != null && m.nis!.toLowerCase().contains(q);
-            return matchNama || matchNis;
-          }).toList();
-
-          final isAllFilteredSelected = filteredMuridList.isNotEmpty &&
-              filteredMuridList.every((m) => selectedMuridIds.contains(m.id));
-
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            title: const Row(
-              children: [
-                Icon(Icons.checklist_rtl_rounded, color: AppColors.accent, size: 24),
-                SizedBox(width: 8),
-                Text(
-                  'Input Kolektif Siswa',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Pilih Kriteria
-                    const Text('Pilih Kriteria:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: selectedKriteriaId,
-                          isExpanded: true,
-                          items: actionableKriteria.map((k) {
-                            final jenisLabel = k.jenis == JenisKriteria.hasil ? ' (Tugas/Tes)' : ' (Harian)';
-                            return DropdownMenuItem(
-                              value: k.id,
-                              child: Text(
-                                '${k.nama}$jenisLabel',
-                                style: const TextStyle(fontSize: 13.5),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setDialogState(() {
-                                selectedKriteriaId = val;
-                                final newK = actionableKriteria.firstWhere((k) => k.id == val);
-                                if (newK.jenis == JenisKriteria.hasil) {
-                                  final newSesis = kelas.getSesiByKriteria(newK.id);
-                                  selectedSesiId = newSesis.isNotEmpty ? newSesis.first.id : null;
-                                } else {
-                                  selectedSesiId = null;
-                                }
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-
-                    // Jika kriteria hasil: Pilih Sesi Tugas (Point 14)
-                    if (isHasil) ...[
-                      const SizedBox(height: 12),
-                      const Text('Pilih Sesi Tugas:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 6),
-                      if (sesis.isEmpty) ...[
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.warningBg,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.warningBorder),
-                          ),
-                          child: Row(
-                            children: [
-                              const Expanded(
-                                child: Text(
-                                  'Belum ada sesi tugas untuk kriteria ini.',
-                                  style: TextStyle(fontSize: 12, color: AppColors.warningDark),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pop(ctx);
-                                  _showTambahTugasDialog(context, kelas, defaultKriteriaId: selectedKriteria.id);
-                                },
-                                child: const Text('+ Buat Sesi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ] else ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: selectedSesiId ?? sesis.first.id,
-                              isExpanded: true,
-                              items: sesis.map((s) {
-                                return DropdownMenuItem(
-                                  value: s.id,
-                                  child: Text(s.nama, style: const TextStyle(fontSize: 13.5)),
-                                );
-                              }).toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setDialogState(() => selectedSesiId = val);
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-
-                    const SizedBox(height: 14),
-                    const Text('Nilai / Poin yang Diterapkan:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: nilaiCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                      decoration: InputDecoration(
-                        hintText: 'Contoh: 100, 85, 1',
-                        filled: true,
-                        fillColor: AppColors.surface,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      ),
-                    ),
-
-                    const SizedBox(height: 10),
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      value: hanyaYangKosong,
-                      title: const Text('Hanya untuk siswa yang belum memiliki nilai', style: TextStyle(fontSize: 12.5)),
-                      onChanged: (val) => setDialogState(() => hanyaYangKosong = val ?? false),
-                    ),
-
-                    const Divider(height: 20),
-
-                    // Header Daftar Siswa & Tombol Select All (Point 12)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Pilih Siswa (${selectedMuridIds.length}/${kelas.muridList.length}):',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            setDialogState(() {
-                              if (isAllFilteredSelected) {
-                                for (final m in filteredMuridList) {
-                                  selectedMuridIds.remove(m.id);
-                                }
-                              } else {
-                                for (final m in filteredMuridList) {
-                                  selectedMuridIds.add(m.id);
-                                }
-                              }
-                            });
-                          },
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: Text(
-                            isAllFilteredSelected ? 'Batal Semua' : 'Pilih Semua',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-
-                    // Search Bar Siswa
-                    TextField(
-                      onChanged: (val) => setDialogState(() => searchQuery = val),
-                      style: const TextStyle(fontSize: 12.5),
-                      decoration: InputDecoration(
-                        hintText: 'Cari nama atau NIS siswa...',
-                        hintStyle: const TextStyle(fontSize: 12, color: AppColors.textHint),
-                        prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textSecondary),
-                        suffixIcon: searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 16),
-                                onPressed: () {
-                                  setDialogState(() {
-                                    searchQuery = '';
-                                  });
-                                },
-                              )
-                            : null,
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        fillColor: AppColors.surface,
-                        filled: true,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Container daftar murid dengan card checkbox
-                    Container(
-                      constraints: const BoxConstraints(maxHeight: 220),
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
-                      ),
-                      child: filteredMuridList.isEmpty
-                          ? const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Center(
-                                child: Text(
-                                  'Siswa tidak ditemukan',
-                                  style: TextStyle(fontSize: 12, color: AppColors.textHint),
-                                ),
-                              ),
-                            )
-                          : ListView.separated(
-                              shrinkWrap: true,
-                              itemCount: filteredMuridList.length,
-                              separatorBuilder: (_, index) => const SizedBox(height: 6),
-                              itemBuilder: (ctx, i) {
-                                final murid = filteredMuridList[i];
-                                final isChecked = selectedMuridIds.contains(murid.id);
-
-                                return InkWell(
-                                  onTap: () {
-                                    setDialogState(() {
-                                      if (isChecked) {
-                                        selectedMuridIds.remove(murid.id);
-                                      } else {
-                                        selectedMuridIds.add(murid.id);
-                                      }
-                                    });
-                                  },
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 150),
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: isChecked
-                                          ? AppColors.primary.withValues(alpha: 0.08)
-                                          : Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: isChecked
-                                            ? AppColors.primary.withValues(alpha: 0.4)
-                                            : AppColors.border.withValues(alpha: 0.6),
-                                        width: isChecked ? 1.5 : 1.0,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: Checkbox(
-                                            value: isChecked,
-                                            activeColor: AppColors.primary,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                            onChanged: (val) {
-                                              setDialogState(() {
-                                                if (val == true) {
-                                                  selectedMuridIds.add(murid.id);
-                                                } else {
-                                                  selectedMuridIds.remove(murid.id);
-                                                }
-                                              });
-                                            },
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        CircleAvatar(
-                                          radius: 14,
-                                          backgroundColor: isChecked ? AppColors.primary : AppColors.border,
-                                          child: Text(
-                                            murid.nama.isNotEmpty ? murid.nama[0].toUpperCase() : '?',
-                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                murid.nama,
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: isChecked ? FontWeight.w700 : FontWeight.w600,
-                                                  color: AppColors.textPrimary,
-                                                ),
-                                              ),
-                                              if (murid.nis != null && murid.nis!.isNotEmpty) ...[
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  'NIS: ${murid.nis}',
-                                                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Batal'),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () async {
-                  if (selectedMuridIds.isEmpty) {
-                    AppFeedback.showWarning(context, 'Pilih minimal satu siswa untuk dinilai');
-                    return;
-                  }
-                  if (isHasil && selectedSesiId == null) {
-                    AppFeedback.showWarning(context, 'Pilih atau buat sesi tugas terlebih dahulu');
-                    return;
-                  }
-
-                  final parsed = double.tryParse(nilaiCtrl.text.replaceAll(',', '.'));
-                  if (parsed == null) {
-                    AppFeedback.showError(context, 'Masukkan angka nilai yang valid');
-                    return;
-                  }
-
-                  // Cek konfirmasi absensi hari ini (Point 13)
-                  final isAbsensi = selectedKriteria.nama.toLowerCase().contains('hadir') ||
-                      selectedKriteria.nama.toLowerCase().contains('absen');
-                  if (isAbsensi) {
-                    final today = DateTime.now();
-                    final todayStr = '${today.year}-${today.month}-${today.day}';
-                    int sudahAbsenCount = 0;
-                    DateTime? latestAbsenTime;
-
-                    for (final mid in selectedMuridIds) {
-                      final m = kelas.muridList.firstWhere((elem) => elem.id == mid);
-                      final existing = m.nilaiList.where((n) {
-                        final nStr = '${n.tanggal.year}-${n.tanggal.month}-${n.tanggal.day}';
-                        return n.kriteriaId == selectedKriteria.id && nStr == todayStr;
-                      }).toList();
-
-                      if (existing.isNotEmpty) {
-                        sudahAbsenCount++;
-                        if (latestAbsenTime == null || existing.first.tanggal.isAfter(latestAbsenTime)) {
-                          latestAbsenTime = existing.first.tanggal;
-                        }
-                      }
-                    }
-
-                    if (sudahAbsenCount > 0 && latestAbsenTime != null) {
-                      final jam = latestAbsenTime.hour.toString().padLeft(2, '0');
-                      final menit = latestAbsenTime.minute.toString().padLeft(2, '0');
-                      final confirm = await AppFeedback.showConfirmDialog(
-                        context,
-                        title: 'Konfirmasi Pembaruan Absensi',
-                        content: '$sudahAbsenCount siswa terpilih sudah tercatat absensinya hari ini (terakhir pukul $jam:$menit).\n\nApakah Anda yakin ingin memperbarui nilai absensi mereka?',
-                        confirmLabel: 'Perbarui Absensi',
-                        cancelLabel: 'Batal',
-                      );
-                      if (!confirm) return;
-                    }
-                  }
-
-                  if (!context.mounted) return;
-                  Navigator.pop(ctx);
-                  final provider = context.read<AppProvider>();
-                  await provider.inputNilaiMassal(
-                    kelasId: kelas.id,
-                    kriteriaId: selectedKriteriaId,
-                    nilai: parsed,
-                    sesiId: isHasil ? selectedSesiId : null,
-                    targetMuridIds: selectedMuridIds.toList(),
-                    hanyaYangKosong: hanyaYangKosong,
-                  );
-
-                  if (context.mounted) {
-                    AppFeedback.showSuccess(
-                      context,
-                      'Berhasil memberi nilai kolektif ke ${selectedMuridIds.length} siswa untuk kriteria "${selectedKriteria.nama}"',
-                    );
-                  }
-                },
-                child: Text('Terapkan (${selectedMuridIds.length})'),
-              ),
-            ],
-          );
-        },
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: AppColors.textPrimary.withValues(alpha: 0.6),
+      builder: (_) => _InputKolektifSheet(
+        kelas: kelas,
+        actionableKriteria: actionableKriteria,
+        onShowTambahTugas: (defaultKriteriaId) => _showTambahTugasDialog(
+          context,
+          kelas,
+          defaultKriteriaId: defaultKriteriaId,
+        ),
       ),
     );
   }
@@ -1419,7 +1273,10 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
     }
 
     if (kriteria.jenis == JenisKriteria.derived) {
-      AppFeedback.showInfo(context, 'Kriteria ini dihitung otomatis dari riwayat remedial.');
+      AppFeedback.showInfo(
+        context,
+        'Kriteria ini dihitung otomatis dari riwayat remedial.',
+      );
       return;
     }
 
@@ -1431,17 +1288,33 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
       return nStr == todayStr;
     }).toList();
 
-    double currentVal = 0;
-    if (nilaiHariIni.isNotEmpty) {
-      currentVal = nilaiHariIni.first.nilai;
-    } else if (existingList.isNotEmpty) {
-      existingList.sort((a, b) => b.tanggal.compareTo(a.tanggal));
-      currentVal = existingList.first.nilai;
-    }
-
     final isCounter = kriteria.inputType == InputType.counter;
 
-    final ctrl = TextEditingController(); // Selalu kosongkan field awal agar guru mengetik nilai baru
+    double currentVal = 0;
+    if (isCounter) {
+      currentVal = existingList.fold(0.0, (sum, n) => sum + n.nilai);
+    } else {
+      if (nilaiHariIni.isNotEmpty) {
+        currentVal = nilaiHariIni.first.nilai;
+      } else if (existingList.isNotEmpty) {
+        existingList.sort((a, b) => b.tanggal.compareTo(a.tanggal));
+        currentVal = existingList.first.nilai;
+      }
+    }
+
+    final todayVal = nilaiHariIni.isNotEmpty ? nilaiHariIni.first.nilai : 0.0;
+    final nameLower = kriteria.nama.toLowerCase();
+    final isAttendance =
+        kriteria.inputType == InputType.attendance ||
+        nameLower.contains('hadir') ||
+        nameLower.contains('kehadiran') ||
+        nameLower.contains('absen') ||
+        nameLower.contains('absensi') ||
+        nameLower.contains('presensi') ||
+        nameLower.contains('attendance');
+
+    final ctrl =
+        TextEditingController(); // Selalu kosongkan field awal agar guru mengetik nilai baru
 
     showModalBottomSheet(
       context: context,
@@ -1483,7 +1356,9 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      isCounter ? Icons.add_circle_outline : Icons.edit_note_rounded,
+                      isCounter
+                          ? Icons.add_circle_outline
+                          : Icons.edit_note_rounded,
                       color: AppColors.primary,
                       size: 24,
                     ),
@@ -1514,7 +1389,10 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.textSecondary),
+                    icon: const Icon(
+                      Icons.close,
+                      color: AppColors.textSecondary,
+                    ),
                     onPressed: () => Navigator.pop(sheetCtx),
                   ),
                 ],
@@ -1523,26 +1401,29 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
               // Status Timestamp Pengisian Hari Ini
               Builder(
                 builder: (ctx) {
-                  final nameLower = kriteria.nama.toLowerCase();
-                  final isAttendance = nameLower.contains('hadir') ||
-                      nameLower.contains('kehadiran') ||
-                      nameLower.contains('absen') ||
-                      nameLower.contains('absensi') ||
-                      nameLower.contains('presensi') ||
-                      nameLower.contains('attendance');
-
-                  if (!isAttendance && !isCounter) return const SizedBox();
+                  if (!isAttendance) return const SizedBox();
 
                   final sudahDiisiHariIni = nilaiHariIni.isNotEmpty;
-                  final prevDate = sudahDiisiHariIni ? nilaiHariIni.first.tanggal : null;
-                  final jam = prevDate != null ? prevDate.hour.toString().padLeft(2, '0') : '';
-                  final mnt = prevDate != null ? prevDate.minute.toString().padLeft(2, '0') : '';
+                  final prevDate = sudahDiisiHariIni
+                      ? nilaiHariIni.first.tanggal
+                      : null;
+                  final jam = prevDate != null
+                      ? prevDate.hour.toString().padLeft(2, '0')
+                      : '';
+                  final mnt = prevDate != null
+                      ? prevDate.minute.toString().padLeft(2, '0')
+                      : '';
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
-                      color: sudahDiisiHariIni ? AppColors.benefitChip : AppColors.warningBg,
+                      color: sudahDiisiHariIni
+                          ? AppColors.benefitChip
+                          : AppColors.warningBg,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: sudahDiisiHariIni
@@ -1553,9 +1434,13 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                     child: Row(
                       children: [
                         Icon(
-                          sudahDiisiHariIni ? Icons.check_circle : Icons.info_outline,
+                          sudahDiisiHariIni
+                              ? Icons.check_circle
+                              : Icons.info_outline,
                           size: 18,
-                          color: sudahDiisiHariIni ? AppColors.benefitChipText : AppColors.warningDark,
+                          color: sudahDiisiHariIni
+                              ? AppColors.benefitChipText
+                              : AppColors.warningDark,
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -1564,9 +1449,11 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                                 ? 'Status Hari Ini: Sudah dicatat ($jam:$mnt WIB • ${nilaiHariIni.first.nilai.toInt()} poin)'
                                 : 'Status Hari Ini: Belum dicatat',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 13.5,
                               fontWeight: FontWeight.bold,
-                              color: sudahDiisiHariIni ? AppColors.benefitChipText : AppColors.warningDark,
+                              color: sudahDiisiHariIni
+                                  ? AppColors.benefitChipText
+                                  : AppColors.warningDark,
                             ),
                           ),
                         ),
@@ -1577,7 +1464,10 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
               ),
               // Nilai Saat Ini Info
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(12),
@@ -1585,25 +1475,37 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline, size: 16, color: AppColors.textSecondary),
+                    const Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       isCounter ? 'Total poin saat ini:' : 'Nilai saat ini:',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     const Spacer(),
                     Text(
-                      currentVal % 1 == 0 ? '${currentVal.toInt()}' : '$currentVal',
+                      currentVal % 1 == 0
+                          ? '${currentVal.toInt()}'
+                          : '$currentVal',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
                       ),
                     ),
-                    if (isCounter && currentVal >= 100) ...[
+                    if (isAttendance && currentVal >= 100) ...[
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.accent.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(6),
@@ -1632,139 +1534,156 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              TextField(
-                controller: ctrl,
-                autofocus: true,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                  signed: true,
-                ),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
-                decoration: InputDecoration(
-                  hintText: isCounter ? 'Ketik poin tambahan (cth: 1, 2, 5)' : 'Contoh: 85, 100',
-                  hintStyle: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.normal,
-                    color: AppColors.textHint,
-                  ),
-                  filled: true,
-                  fillColor: AppColors.surface,
-                  prefixIcon: Icon(
-                    isCounter ? Icons.add : Icons.pin,
-                    color: AppColors.primaryLight,
-                    size: 20,
-                  ),
-                  suffixIcon: ctrl.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () => ctrl.clear(),
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppColors.border),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppColors.primary, width: 2),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                ),
+              Builder(
+                builder: (context) {
+                  final disableInput = isAttendance && nilaiHariIni.isNotEmpty;
+                  return TextField(
+                    controller: ctrl,
+                    autofocus: !disableInput,
+                    enabled: !disableInput,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                      signed: true,
+                    ),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: disableInput
+                          ? AppColors.textHint
+                          : AppColors.primary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: disableInput
+                          ? 'Sudah diisi hari ini'
+                          : (isCounter
+                                ? 'Ketik poin tambahan (cth: 1, 2, 5)'
+                                : 'Contoh: 85, 100'),
+                      hintStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.normal,
+                        color: AppColors.textHint,
+                      ),
+                      filled: true,
+                      fillColor: AppColors.surface,
+                      prefixIcon: Icon(
+                        isCounter ? Icons.add : Icons.pin,
+                        color: AppColors.primaryLight,
+                        size: 20,
+                      ),
+                      suffixIcon: ctrl.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () => ctrl.clear(),
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: AppColors.primary,
+                          width: 2,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 22),
               // Tombol Simpan
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+              Builder(
+                builder: (context) {
+                  final disableInput = isAttendance && nilaiHariIni.isNotEmpty;
+                  return SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: disableInput
+                            ? Colors.grey.shade400
+                            : AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.check_rounded, size: 20),
+                      label: Text(
+                        disableInput
+                            ? 'Sudah Diisi'
+                            : (isCounter ? 'Tambahkan Poin' : 'Simpan Nilai'),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      onPressed: disableInput
+                          ? null
+                          : () async {
+                              final text = ctrl.text.trim().replaceAll(
+                                ',',
+                                '.',
+                              );
+                              final val = double.tryParse(text);
+                              if (val == null) {
+                                AppFeedback.showError(
+                                  context,
+                                  'Masukkan angka nilai yang valid',
+                                );
+                                return;
+                              }
+
+                              if (isAttendance &&
+                                  currentVal >= 100 &&
+                                  val > 0) {
+                                AppFeedback.showWarning(
+                                  context,
+                                  'Poin ${kriteria.nama} ${murid.nama} sudah mencapai batas maksimal (100)',
+                                );
+                                return;
+                              }
+
+                              if (!sheetCtx.mounted) return;
+                              Navigator.pop(sheetCtx);
+
+                              final rawVal = isCounter ? (todayVal + val) : val;
+                              final totalResult = isCounter
+                                  ? (currentVal + val)
+                                  : val;
+                              // Cap / Batasi maksimal 100 poin hanya untuk kriteria presensi/kehadiran
+                              final finalVal = isAttendance
+                                  ? math.min(100.0, math.max(0.0, rawVal))
+                                  : rawVal;
+
+                              final provider = context.read<AppProvider>();
+                              await provider.inputNilaiPerforma(
+                                kelasId: kelas.id,
+                                muridId: murid.id,
+                                kriteriaId: kriteria.id,
+                                nilai: finalVal,
+                                tanggal: DateTime.now(),
+                              );
+
+                              if (context.mounted) {
+                                final capInfo = isAttendance && rawVal > 100.0
+                                    ? ' (Dibatasi maks 100)'
+                                    : '';
+                                final msg = isCounter
+                                    ? 'Poin ${kriteria.nama} (+${val % 1 == 0 ? val.toInt() : val}) ditambahkan. Total: ${totalResult % 1 == 0 ? totalResult.toInt() : totalResult}$capInfo'
+                                    : 'Nilai ${kriteria.nama} untuk ${murid.nama} tersimpan: ${finalVal % 1 == 0 ? finalVal.toInt() : finalVal}$capInfo';
+                                AppFeedback.showSuccess(context, msg);
+                              }
+                            },
                     ),
-                  ),
-                  icon: const Icon(Icons.check_rounded, size: 20),
-                  label: Text(
-                    isCounter ? 'Tambahkan Poin' : 'Simpan Nilai',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  onPressed: () async {
-                    final text = ctrl.text.trim().replaceAll(',', '.');
-                    final val = double.tryParse(text);
-                    if (val == null) {
-                      AppFeedback.showError(context, 'Masukkan angka nilai yang valid');
-                      return;
-                    }
-
-                    final nameLower = kriteria.nama.toLowerCase();
-                    final isAttendance = nameLower.contains('hadir') ||
-                        nameLower.contains('kehadiran') ||
-                        nameLower.contains('absen') ||
-                        nameLower.contains('absensi') ||
-                        nameLower.contains('presensi') ||
-                        nameLower.contains('attendance');
-
-                    if (isCounter && currentVal >= 100 && val > 0) {
-                      AppFeedback.showWarning(context, 'Poin ${kriteria.nama} ${murid.nama} sudah mencapai batas maksimal (100)');
-                      return;
-                    }
-
-                    if (isAttendance && nilaiHariIni.isNotEmpty) {
-                      final prevDate = nilaiHariIni.first.tanggal;
-                      final jam = prevDate.hour.toString().padLeft(2, '0');
-                      final mnt = prevDate.minute.toString().padLeft(2, '0');
-                      final prevVal = nilaiHariIni.first.nilai % 1 == 0
-                          ? nilaiHariIni.first.nilai.toInt()
-                          : nilaiHariIni.first.nilai;
-
-                      final confirm = await AppFeedback.showConfirmDialog(
-                        context,
-                        title: 'Konfirmasi Presensi',
-                        message:
-                            'Presensi ${murid.nama} untuk hari ini sudah pernah dicatat pada pukul $jam:$mnt WIB (Nilai: $prevVal).\n\nApakah Anda ingin memperbarui data presensi ini?',
-                        confirmText: 'Ya, Perbarui',
-                        cancelText: 'Batal',
-                      );
-                      if (!confirm) return;
-                    }
-
-                    if (!sheetCtx.mounted) return;
-                    Navigator.pop(sheetCtx);
-
-                    final rawVal = isCounter ? (currentVal + val) : val;
-                    // Cap / Batasi maksimal 100 poin untuk kehadiran / counter
-                    final finalVal = (isCounter || isAttendance) ? math.min(100.0, math.max(0.0, rawVal)) : rawVal;
-
-                    final provider = context.read<AppProvider>();
-                    await provider.inputNilaiPerforma(
-                      kelasId: kelas.id,
-                      muridId: murid.id,
-                      kriteriaId: kriteria.id,
-                      nilai: finalVal,
-                      tanggal: DateTime.now(),
-                    );
-
-                    if (context.mounted) {
-                      final capInfo = (isCounter || isAttendance) && rawVal > 100.0 ? ' (Dibatasi maks 100)' : '';
-                      final msg = isCounter
-                          ? 'Poin ${kriteria.nama} (+${val % 1 == 0 ? val.toInt() : val}) ditambahkan. Total: ${finalVal % 1 == 0 ? finalVal.toInt() : finalVal}$capInfo'
-                          : 'Nilai ${kriteria.nama} untuk ${murid.nama} tersimpan: ${finalVal % 1 == 0 ? finalVal.toInt() : finalVal}$capInfo';
-                      AppFeedback.showSuccess(context, msg);
-                    }
-                  },
-                ),
+                  );
+                },
               ),
             ],
           ),
@@ -1819,8 +1738,10 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          TambahMuridScreen(kelasId: widget.kelasId, kelas: kelas),
+                      builder: (_) => TambahMuridScreen(
+                        kelasId: widget.kelasId,
+                        kelas: kelas,
+                      ),
                     ),
                   );
                 },
@@ -1850,8 +1771,10 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          ImportSiswaScreen(kelasId: widget.kelasId, kelas: kelas),
+                      builder: (_) => ImportSiswaScreen(
+                        kelasId: widget.kelasId,
+                        kelas: kelas,
+                      ),
                     ),
                   );
                 },
@@ -1891,7 +1814,11 @@ class _MuridCard extends StatelessWidget {
         ),
         shape: BoxShape.circle,
         boxShadow: [
-          BoxShadow(color: Color(0x40F59E0B), blurRadius: 4, offset: Offset(0, 2)),
+          BoxShadow(
+            color: Color(0x40F59E0B),
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
         ],
       );
     }
@@ -1936,7 +1863,10 @@ class _MuridCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.6), width: 1),
+        border: Border.all(
+          color: AppColors.border.withValues(alpha: 0.6),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -1978,7 +1908,10 @@ class _MuridCard extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(bottom: 2),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.surface,
                             borderRadius: BorderRadius.circular(4),
@@ -1997,10 +1930,10 @@ class _MuridCard extends StatelessWidget {
                     Text(
                       murid.nama,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontSize: 15.5,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                          ),
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ],
                 ),
@@ -2099,7 +2032,9 @@ class _MuridCard extends StatelessWidget {
           return nStr == todayStr;
         }).toList();
 
-        final val = nilaiHariIni.isNotEmpty ? nilaiHariIni.first.nilai : list.last.nilai;
+        final val = nilaiHariIni.isNotEmpty
+            ? nilaiHariIni.first.nilai
+            : list.last.nilai;
         return val % 1 == 0 ? val.toInt().toString() : val.toString();
       }
     }
@@ -2159,7 +2094,9 @@ class _InteractiveKriteriaTag extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: isFilled ? FontWeight.w600 : FontWeight.w500,
-                color: isFilled ? AppColors.textPrimary : AppColors.textSecondary,
+                color: isFilled
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
               ),
             ),
             const SizedBox(width: 5),
@@ -2272,6 +2209,796 @@ class _HeaderChip extends StatelessWidget {
               fontSize: 11,
               color: textColor,
               fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InputKolektifSheet extends StatefulWidget {
+  final Kelas kelas;
+  final List<Kriteria> actionableKriteria;
+  final void Function(String defaultKriteriaId) onShowTambahTugas;
+
+  const _InputKolektifSheet({
+    required this.kelas,
+    required this.actionableKriteria,
+    required this.onShowTambahTugas,
+  });
+
+  @override
+  State<_InputKolektifSheet> createState() => _InputKolektifSheetState();
+}
+
+class _InputKolektifSheetState extends State<_InputKolektifSheet> {
+  late String _selectedKriteriaId;
+  late TextEditingController _nilaiCtrl;
+  late TextEditingController _searchCtrl;
+  String? _selectedSesiId;
+  String _searchQuery = '';
+  late Set<String> _selectedMuridIds;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedKriteriaId = widget.actionableKriteria.first.id;
+    _nilaiCtrl = TextEditingController(text: '100');
+    _searchCtrl = TextEditingController();
+    _selectedMuridIds = widget.kelas.muridList.map((m) => m.id).toSet();
+
+    final firstK = widget.actionableKriteria.first;
+    if (firstK.jenis == JenisKriteria.hasil) {
+      final sesis = widget.kelas.getSesiByKriteria(firstK.id);
+      if (sesis.isNotEmpty) {
+        _selectedSesiId = sesis.first.id;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _nilaiCtrl.dispose();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  String _formatDate(DateTime dt) {
+    const months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    return '${dt.day} ${months[dt.month]} ${dt.year}';
+  }
+
+  Future<void> _terapkanNilai() async {
+    if (_selectedMuridIds.isEmpty) {
+      AppFeedback.showWarning(
+        context,
+        'Pilih minimal satu siswa untuk dinilai',
+      );
+      return;
+    }
+
+    final selectedKriteria = widget.actionableKriteria.firstWhere(
+      (k) => k.id == _selectedKriteriaId,
+    );
+    final isHasil = selectedKriteria.jenis == JenisKriteria.hasil;
+
+    if (isHasil && _selectedSesiId == null) {
+      AppFeedback.showWarning(
+        context,
+        'Pilih atau buat sesi tugas terlebih dahulu',
+      );
+      return;
+    }
+
+    final parsed = double.tryParse(_nilaiCtrl.text.replaceAll(',', '.'));
+    if (parsed == null) {
+      AppFeedback.showError(context, 'Masukkan angka nilai yang valid');
+      return;
+    }
+
+    // Cek konfirmasi absensi hari ini jika kriteria presensi
+    final isAbsensi =
+        selectedKriteria.nama.toLowerCase().contains('hadir') ||
+        selectedKriteria.nama.toLowerCase().contains('absen');
+    if (isAbsensi) {
+      final today = DateTime.now();
+      final todayStr = '${today.year}-${today.month}-${today.day}';
+      int sudahAbsenCount = 0;
+      DateTime? latestAbsenTime;
+
+      for (final mid in _selectedMuridIds) {
+        final m = widget.kelas.muridList.firstWhere((elem) => elem.id == mid);
+        final existing = m.nilaiList.where((n) {
+          final nStr = '${n.tanggal.year}-${n.tanggal.month}-${n.tanggal.day}';
+          return n.kriteriaId == selectedKriteria.id && nStr == todayStr;
+        }).toList();
+
+        if (existing.isNotEmpty) {
+          sudahAbsenCount++;
+          if (latestAbsenTime == null ||
+              existing.first.tanggal.isAfter(latestAbsenTime)) {
+            latestAbsenTime = existing.first.tanggal;
+          }
+        }
+      }
+
+      if (sudahAbsenCount > 0 && latestAbsenTime != null) {
+        final jam = latestAbsenTime.hour.toString().padLeft(2, '0');
+        final menit = latestAbsenTime.minute.toString().padLeft(2, '0');
+        final confirm = await AppFeedback.showConfirmDialog(
+          context,
+          title: 'Konfirmasi Pembaruan Absensi',
+          content:
+              '$sudahAbsenCount siswa terpilih sudah tercatat absensinya hari ini (terakhir pukul $jam:$menit).\n\nApakah Anda yakin ingin memperbarui nilai absensi mereka?',
+          confirmLabel: 'Perbarui Absensi',
+          cancelLabel: 'Batal',
+        );
+        if (!confirm) return;
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _isSaving = true);
+
+    final provider = context.read<AppProvider>();
+    await provider.inputNilaiMassal(
+      kelasId: widget.kelas.id,
+      kriteriaId: _selectedKriteriaId,
+      nilai: parsed,
+      sesiId: isHasil ? _selectedSesiId : null,
+      targetMuridIds: _selectedMuridIds.toList(),
+      hanyaYangKosong: false,
+    );
+
+    if (mounted) {
+      Navigator.pop(context);
+      AppFeedback.showSuccess(
+        context,
+        'Berhasil memberi nilai kolektif ke ${_selectedMuridIds.length} siswa untuk kriteria "${selectedKriteria.nama}"',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedKriteria = widget.actionableKriteria.firstWhere(
+      (k) => k.id == _selectedKriteriaId,
+    );
+    final isHasil = selectedKriteria.jenis == JenisKriteria.hasil;
+    final sesis = isHasil
+        ? widget.kelas.getSesiByKriteria(selectedKriteria.id)
+        : <Sesi>[];
+
+    final filteredMuridList = widget.kelas.muridList.where((m) {
+      if (_searchQuery.trim().isEmpty) return true;
+      final q = _searchQuery.toLowerCase().trim();
+      final matchNama = m.nama.toLowerCase().contains(q);
+      final matchNis = m.nis != null && m.nis!.toLowerCase().contains(q);
+      return matchNama || matchNis;
+    }).toList();
+
+    final isAllFilteredSelected =
+        filteredMuridList.isNotEmpty &&
+        filteredMuridList.every((m) => _selectedMuridIds.contains(m.id));
+
+    final dateText = widget.kelas.createdAt != null
+        ? 'Dibuat: ${_formatDate(widget.kelas.createdAt!)}'
+        : 'Dibuat: ${_formatDate(DateTime.now())}';
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.88,
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // Top Section: Title, timestamp, close button
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Input Kolektif Siswa',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        dateText,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textHint,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                InkWell(
+                  onTap: () => Navigator.pop(context),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.border.withValues(alpha: 0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 2-Column Horizontal Layout: Kriteria & Nilai (Poin)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Kolom Kriteria (Sleek dropdown)
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Kriteria',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Container(
+                            height: 46,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceWhite,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppColors.border.withValues(alpha: 0.8),
+                              ),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedKriteriaId,
+                                isExpanded: true,
+                                icon: const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  color: AppColors.textSecondary,
+                                  size: 20,
+                                ),
+                                items: widget.actionableKriteria.map((k) {
+                                  final jenisLabel =
+                                      k.jenis == JenisKriteria.hasil
+                                      ? ' (Tugas/Tes)'
+                                      : ' (Harian)';
+                                  return DropdownMenuItem(
+                                    value: k.id,
+                                    child: Text(
+                                      '${k.nama}$jenisLabel',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(() {
+                                      _selectedKriteriaId = val;
+                                      final newK = widget.actionableKriteria
+                                          .firstWhere((k) => k.id == val);
+                                      if (newK.jenis == JenisKriteria.hasil) {
+                                        final newSesis = widget.kelas
+                                            .getSesiByKriteria(newK.id);
+                                        _selectedSesiId = newSesis.isNotEmpty
+                                            ? newSesis.first.id
+                                            : null;
+                                      } else {
+                                        _selectedSesiId = null;
+                                      }
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Kolom Nilai (Poin) (Minimal numeric field)
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Nilai (Poin)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          SizedBox(
+                            height: 46,
+                            child: TextField(
+                              controller: _nilaiCtrl,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                    signed: true,
+                                  ),
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Contoh: 100',
+                                hintStyle: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.textHint,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                                filled: true,
+                                fillColor: AppColors.surfaceWhite,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: AppColors.border.withValues(
+                                      alpha: 0.8,
+                                    ),
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: AppColors.border.withValues(
+                                      alpha: 0.8,
+                                    ),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.primary,
+                                    width: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (isHasil) ...[
+                  const SizedBox(height: 10),
+                  if (sesis.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.warningBg,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.warningBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Belum ada sesi tugas untuk kriteria ini.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.warningDark,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              widget.onShowTambahTugas(selectedKriteria.id);
+                            },
+                            child: const Text(
+                              '+ Buat Sesi',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      height: 44,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceWhite,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.border.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedSesiId ?? sesis.first.id,
+                          isExpanded: true,
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: AppColors.textSecondary,
+                            size: 20,
+                          ),
+                          items: sesis.map((s) {
+                            return DropdownMenuItem(
+                              value: s.id,
+                              child: Text(
+                                'Sesi: ${s.nama}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _selectedSesiId = val);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 4),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceWhite,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchCtrl,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      color: AppColors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Cari nama atau NIS siswa...',
+                      hintStyle: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textHint,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        size: 20,
+                        color: AppColors.textSecondary,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 16),
+                              onPressed: () {
+                                _searchCtrl.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      isDense: true,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Pilih Siswa (${_selectedMuridIds.length}/${widget.kelas.muridList.length})',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          if (isAllFilteredSelected) {
+                            for (final m in filteredMuridList) {
+                              _selectedMuridIds.remove(m.id);
+                            }
+                          } else {
+                            for (final m in filteredMuridList) {
+                              _selectedMuridIds.add(m.id);
+                            }
+                          }
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          isAllFilteredSelected ? 'Batal Semua' : 'Pilih Semua',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 6),
+          Expanded(
+            child: filteredMuridList.isEmpty
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'Siswa tidak ditemukan',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textHint,
+                        ),
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: filteredMuridList.length,
+                    separatorBuilder: (context, index) => Divider(
+                      height: 1,
+                      thickness: 0.8,
+                      color: AppColors.border.withValues(alpha: 0.4),
+                      indent: 52,
+                      endIndent: 4,
+                    ),
+                    itemBuilder: (ctx, i) {
+                      final murid = filteredMuridList[i];
+                      final isSelected = _selectedMuridIds.contains(murid.id);
+
+                      return InkWell(
+                        onTap: () {
+                          setState(() {
+                            if (isSelected) {
+                              _selectedMuridIds.remove(murid.id);
+                            } else {
+                              _selectedMuridIds.add(murid.id);
+                            }
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 10,
+                          ),
+                          child: Row(
+                            children: [
+                              // Circular avatar initial
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: isSelected
+                                    ? AppColors.primary.withValues(alpha: 0.12)
+                                    : AppColors.border.withValues(alpha: 0.3),
+                                child: Text(
+                                  murid.nama.isNotEmpty
+                                      ? murid.nama[0].toUpperCase()
+                                      : '?',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Bold student name & muted NIS
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      murid.nama,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w600,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'NIS: ${murid.nis != null && murid.nis!.isNotEmpty ? murid.nis : '-'}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary
+                                            .withValues(alpha: 0.75),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Circular mint-green checkmark toggle on right edge
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isSelected
+                                      ? AppColors.accent
+                                      : Colors.transparent,
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppColors.accent
+                                        : AppColors.border,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: isSelected
+                                    ? const Icon(
+                                        Icons.check_rounded,
+                                        size: 16,
+                                        color: Colors.white,
+                                      )
+                                    : null,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+
+          // Bottom Section: Sticky footer with full-width pill-shaped primary action button
+          Container(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              12,
+              20,
+              14 + MediaQuery.of(context).padding.bottom,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              border: Border(
+                top: BorderSide(
+                  color: AppColors.border.withValues(alpha: 0.4),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: const StadiumBorder(),
+                ),
+                onPressed: _isSaving ? null : _terapkanNilai,
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        'Terapkan (${_selectedMuridIds.length} Siswa)',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+              ),
             ),
           ),
         ],

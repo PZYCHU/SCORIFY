@@ -72,6 +72,7 @@ class AppProvider extends ChangeNotifier {
       muridList: [],
       sesiList: [],
       matriksAHP: KalkulasiService.matriksAwal(kriteria.length),
+      createdAt: DateTime.now(),
     );
     await _firestore.upsertKelas(kelas);
     return kelas;

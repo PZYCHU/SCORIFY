@@ -160,7 +160,7 @@ class _RankingCard extends StatelessWidget {
 
     // Counter: SUM semua pertemuan (konsisten dengan kalkulasi SAW)
     if (k.jenis == JenisKriteria.performa &&
-        k.inputType == InputType.counter) {
+        (k.inputType == InputType.counter || k.inputType == InputType.attendance)) {
       return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
     }
 

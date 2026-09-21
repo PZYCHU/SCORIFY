@@ -7,8 +7,9 @@ enum JenisKriteria {
 }
 
 enum InputType {
-  counter,   // poin tambahan / akumulasi (+), cocok untuk keaktifan
-  number,    // input angka manual, cocok untuk nilai tugas / ujian
+  counter,    // poin tambahan / akumulasi (+), cocok untuk keaktifan
+  attendance, // presensi / kehadiran harian (dibatasi maks 100)
+  number,     // input angka manual, cocok untuk nilai tugas / ujian
 }
 
 enum ArahKriteria {
@@ -270,6 +271,7 @@ class Kelas {
   List<Sesi> sesiList;
   bool sudahKalkulasi;
   List<List<double>> matriksAHP;
+  final DateTime? createdAt;
 
   Kelas({
     required this.id,
@@ -280,6 +282,7 @@ class Kelas {
     List<Sesi>? sesiList,
     this.sudahKalkulasi = false,
     List<List<double>>? matriksAHP,
+    this.createdAt,
   }) : sesiList = sesiList ?? [],
        matriksAHP = matriksAHP ?? [];
 
@@ -301,6 +304,7 @@ class Kelas {
     List<Sesi>? sesiList,
     bool? sudahKalkulasi,
     List<List<double>>? matriksAHP,
+    DateTime? createdAt,
   }) {
     return Kelas(
       id: id,
@@ -311,6 +315,7 @@ class Kelas {
       sesiList: sesiList ?? this.sesiList,
       sudahKalkulasi: sudahKalkulasi ?? this.sudahKalkulasi,
       matriksAHP: matriksAHP ?? this.matriksAHP,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
@@ -324,6 +329,7 @@ class Kelas {
     'sudahKalkulasi': sudahKalkulasi,
     'matriks_ahp': matriksAHP.expand((row) => row).toList(),
     'matriks_n': matriksAHP.isNotEmpty ? matriksAHP.length : 0,
+    if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
   };
 
   factory Kelas.fromJson(Map<String, dynamic> json) {
@@ -344,6 +350,17 @@ class Kelas {
           .toList();
     }
 
+    DateTime? createdAt;
+    if (json['createdAt'] != null) {
+      if (json['createdAt'] is String) {
+        createdAt = DateTime.tryParse(json['createdAt']);
+      } else {
+        try {
+          createdAt = (json['createdAt'] as dynamic).toDate();
+        } catch (_) {}
+      }
+    }
+
     return Kelas(
       id: json['id'],
       userId: json['userId'] ?? '',
@@ -359,6 +376,7 @@ class Kelas {
           .toList(),
       sudahKalkulasi: json['sudahKalkulasi'] ?? false,
       matriksAHP: matriks,
+      createdAt: createdAt,
     );
   }
 }

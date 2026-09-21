@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:open_filex/open_filex.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 
@@ -134,6 +135,7 @@ class InputTypeChip extends StatelessWidget {
     if (inputType == null) return const SizedBox.shrink();
     final label = switch (inputType!) {
       InputType.counter => 'Poin Tambahan (+)',
+      InputType.attendance => 'Presensi/Kehadiran (0–100)',
       InputType.number => 'Nilai Angka (0–100)',
     };
     return Container(
@@ -695,23 +697,36 @@ class AppFeedback {
               ),
             ),
             const SizedBox(height: 20),
-            // Tombol Bagikan File & Tutup
+            // Tombol Buka File & Bagikan File
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(ctx),
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      try {
+                        final result = await OpenFilex.open(filePath);
+                        if (result.type != ResultType.done && context.mounted) {
+                          AppFeedback.showWarning(context, 'Tidak ada aplikasi pendukung untuk membuka file ini');
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          AppFeedback.showError(context, 'Gagal membuka file: $e');
+                        }
+                      }
+                    },
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.border),
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: const Text('Tutup', style: TextStyle(fontWeight: FontWeight.w600)),
+                    icon: const Icon(Icons.folder_open_rounded, size: 18),
+                    label: const Text('Buka File', style: TextStyle(fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  flex: 2,
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       Navigator.pop(ctx);

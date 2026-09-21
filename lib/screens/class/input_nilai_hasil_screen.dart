@@ -199,49 +199,201 @@ class _KriteriaHasilCard extends StatelessWidget {
 
   void _showTambahSesiDialog(BuildContext context) {
     final namaCtrl = TextEditingController();
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Tambah Sesi Penilaian — ${kriteria.nama}',
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: AppColors.textPrimary.withValues(alpha: 0.6),
+      builder: (ctx) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
         ),
-        content: TextField(
-          controller: namaCtrl,
-          decoration: InputDecoration(
-            hintText: 'Contoh: ${kriteria.nama.toLowerCase().contains('uts') ? 'UTS Semester 1, UTS Susulan' : 'Tugas 1, Quiz 2, Latihan 3'}',
-            labelText: 'Nama Sesi Penilaian',
-          ),
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          onSubmitted: (_) async {
-            final nama = namaCtrl.text.trim();
-            if (nama.isEmpty) return;
-            await context
-                .read<AppProvider>()
-                .tambahSesi(kelasId, kriteria.id, nama);
-            if (ctx.mounted) Navigator.of(ctx).pop();
-          },
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final nama = namaCtrl.text.trim();
-              if (nama.isEmpty) return;
-              await context
-                  .read<AppProvider>()
-                  .tambahSesi(kelasId, kriteria.id, nama);
-              if (ctx.mounted) Navigator.of(ctx).pop();
-            },
-            child: const Text('Tambah'),
-          ),
-        ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.assignment_add,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Tambah Sesi Penilaian',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Kategori: ${kriteria.nama}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => Navigator.of(ctx).pop(),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.border.withValues(alpha: 0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(height: 16, thickness: 0.8, indent: 20, endIndent: 20),
+
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Nama Sesi Tugas / Ujian',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: namaCtrl,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.words,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText:
+                          'Contoh: ${kriteria.nama.toLowerCase().contains('uts') ? 'UTS Semester 1, UTS Susulan' : 'Tugas 1, Quiz 2, Latihan 3'}',
+                      hintStyle: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textHint,
+                        fontWeight: FontWeight.normal,
+                      ),
+                      filled: true,
+                      fillColor: AppColors.surfaceWhite,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppColors.border.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppColors.border.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: AppColors.primary,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                    onSubmitted: (_) async {
+                      final nama = namaCtrl.text.trim();
+                      if (nama.isEmpty) return;
+                      await context
+                          .read<AppProvider>()
+                          .tambahSesi(kelasId, kriteria.id, nama);
+                      if (ctx.mounted) Navigator.of(ctx).pop();
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: const StadiumBorder(),
+                      ),
+                      onPressed: () async {
+                        final nama = namaCtrl.text.trim();
+                        if (nama.isEmpty) return;
+                        await context
+                            .read<AppProvider>()
+                            .tambahSesi(kelasId, kriteria.id, nama);
+                        if (ctx.mounted) Navigator.of(ctx).pop();
+                      },
+                      child: const Text(
+                        'Tambah Sesi',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: MediaQuery.of(ctx).padding.bottom),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

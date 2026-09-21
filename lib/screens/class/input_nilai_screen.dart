@@ -77,7 +77,8 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
 
   Future<void> _simpanKriteria(String kriteriaId, double nilai) async {
     final kriteria = widget.kelas.kriteria.firstWhere((k) => k.id == kriteriaId);
-    final isAttendance = kriteria.nama.toLowerCase().contains('hadir') ||
+    final isAttendance = kriteria.inputType == InputType.attendance ||
+        kriteria.nama.toLowerCase().contains('hadir') ||
         kriteria.nama.toLowerCase().contains('presensi') ||
         kriteria.nama.toLowerCase().contains('absen');
 
@@ -282,6 +283,7 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
           },
         );
 
+      case InputType.attendance:
       case InputType.number:
         return _NumberWidget(
           initialValue: nilai,
@@ -298,6 +300,7 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
   Widget _inputTypeChip(InputType? t) {
     final label = switch (t) {
       InputType.counter => 'Poin Tambahan (+)',
+      InputType.attendance => 'Presensi/Kehadiran',
       InputType.number => 'Nilai Angka',
       null => 'Penilaian',
     };

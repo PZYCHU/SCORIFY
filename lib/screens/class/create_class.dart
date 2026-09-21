@@ -42,7 +42,7 @@ class _BuatKelasScreenState extends State<BuatKelasScreen> {
           id: _uuid.v4(),
           nama: 'Kehadiran',
           jenis: JenisKriteria.performa,
-          inputType: InputType.counter,
+          inputType: InputType.attendance,
           arah: ArahKriteria.benefit,
         ),
         Kriteria(
@@ -146,7 +146,7 @@ class _BuatKelasScreenState extends State<BuatKelasScreen> {
           id: _uuid.v4(),
           nama: 'Kehadiran',
           jenis: JenisKriteria.performa,
-          inputType: InputType.number,
+          inputType: InputType.attendance,
           arah: ArahKriteria.benefit,
         ),
         Kriteria(
@@ -531,20 +531,9 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
   }
 
   void _onNameChanged() {
-    final lower = _nameController.text.toLowerCase();
-    if (lower.contains('hadir') ||
-        lower.contains('kehadiran') ||
-        lower.contains('absen') ||
-        lower.contains('absensi') ||
-        lower.contains('presensi') ||
-        lower.contains('attendance')) {
-      if (_jenis != JenisKriteria.performa || _inputType != InputType.counter) {
-        setState(() {
-          _jenis = JenisKriteria.performa;
-          _inputType = InputType.counter;
-        });
-      }
-    }
+    // Tipe input tetap pada apa yang dipilih user (Counter / Number)
+    // Fitur 'Kehadiran' akan diaktifkan secara otomatis (Auto-Magic) 
+    // oleh sistem di halaman detail berdasarkan deteksi kata kunci.
   }
 
   @override
@@ -647,6 +636,58 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                 ),
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'Nama wajib diisi' : null,
+              ),
+              const SizedBox(height: 8),
+
+              // Banner Text Hint Petunjuk Kehadiran
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.lightbulb_outline_rounded, size: 18, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            height: 1.4,
+                            color: AppColors.textPrimary,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'Petunjuk: ',
+                              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
+                            ),
+                            const TextSpan(
+                              text: 'Sertakan kata ',
+                            ),
+                            const TextSpan(
+                              text: '"Kehadiran"',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            const TextSpan(
+                              text: ' atau ',
+                            ),
+                            const TextSpan(
+                              text: '"Presensi"',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            const TextSpan(
+                              text: ' pada nama kriteria agar otomatis mengaktifkan pencatatan presensi harian (Maks 100).',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
 
@@ -791,6 +832,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
 
   String _inputLabel(InputType t) => switch (t) {
     InputType.counter => '➕ Poin Tambahan (+)',
+    InputType.attendance => '📅 Presensi/Kehadiran (0–100)',
     InputType.number => '📝 Nilai Angka (0–100)',
   };
 }
@@ -806,18 +848,26 @@ class _JenisHint extends StatelessWidget {
     final (text, color) = switch (jenis) {
       JenisKriteria.performa => (
         'Dinilai langsung saat KBM berlangsung (keaktifan, sikap)',
-        Colors.teal,
+        AppColors.primary,
       ),
       JenisKriteria.hasil => (
         'Diinput setelah koreksi. Setiap tugas/tes punya sesi tersendiri',
-        Colors.indigo,
+        AppColors.primaryLight,
       ),
       JenisKriteria.derived => (
         'Dihitung otomatis dari frekuensi remedial siswa pada tugas/ujian pilihan',
-        Colors.orange,
+        AppColors.warningDark,
       ),
     };
-    return Text(text, style: TextStyle(fontSize: 12, color: color));
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 13.5,
+        height: 1.35,
+        fontWeight: FontWeight.w500,
+        color: color,
+      ),
+    );
   }
 }
 

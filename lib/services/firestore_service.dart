@@ -112,6 +112,9 @@ class FirestoreService {
     json.remove('muridList');
     // Tambah timestamp
     json['updatedAt'] = FieldValue.serverTimestamp();
+    if (json['createdAt'] == null) {
+      json['createdAt'] = FieldValue.serverTimestamp();
+    }
     return json;
   }
 }
