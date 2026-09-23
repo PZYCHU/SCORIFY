@@ -180,10 +180,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F1),
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Profil Guru',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
+          style: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.w800,
             fontSize: 18,
             color: AppColors.textPrimary,
           ),

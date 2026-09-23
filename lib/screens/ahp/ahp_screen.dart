@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../providers/app_provider.dart';
@@ -49,12 +50,9 @@ class _AhpScreenState extends State<AhpScreen> {
   Future<void> _simpan() async {
     if (_hasilPreview == null) return;
     if (!_hasilPreview!.konsisten) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('CR > 0.10 — perbandingan tidak konsisten. Silakan perbaiki.'),
-          backgroundColor: AppColors.danger,
-        ),
+      AppFeedback.showError(
+        context,
+        'CR > 0.10 — perbandingan belum konsisten. Silakan ikuti saran perbaikan.',
       );
       return;
     }
@@ -65,120 +63,266 @@ class _AhpScreenState extends State<AhpScreen> {
     setState(() => _saving = false);
 
     if (mounted && hasil != null && hasil.konsisten) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Bobot tersimpan! CR = ${hasil.cr.toStringAsFixed(4)} ✓'),
-          backgroundColor: AppColors.accent,
-        ),
+      AppFeedback.showSuccess(
+        context,
+        'Bobot AHP tersimpan! CR = ${hasil.cr.toStringAsFixed(4)} (Konsisten)',
       );
       Navigator.of(context).pop();
     }
   }
 
+  Widget _buildHeader(BuildContext context, Kelas? kelas) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0D252B), Color(0xFF163842), Color(0xFF1B4B5A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+      ),
+      child: Stack(
+        clipBehavior: Clip.antiAlias,
+        children: [
+          // Ambient glowing orbs
+          Positioned(
+            top: -40,
+            right: -30,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -20,
+            left: -20,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      // Frosted back button
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Pembobotan AHP',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              kelas?.nama ?? 'Penetapan Bobot Kriteria',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final kelas = context.watch<AppProvider>().getKelas(widget.kelasId);
     final hasInconsistency = _hasilPreview != null &&
         !_hasilPreview!.konsisten &&
         _hasilPreview!.saranList.isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: Padding(
-            padding: const EdgeInsets.all(10), child: const AppBackButton()),
-        title: const Text('Pembobotan AHP'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Penjelasan ──
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.07),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.2)),
-              ),
-              child: Row(
+      backgroundColor: AppColors.background,
+      body: Column(
+        children: [
+          _buildHeader(context, kelas),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline,
-                      color: AppColors.primary, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Bandingkan kriteria secara berpasangan. Pilih kriteria yang lebih diutamakan, lalu tentukan tingkat keutamaannya.',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(fontSize: 13, height: 1.35),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-
-            // ── Header Perbandingan Berpasangan ──
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Perbandingan Berpasangan',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16),
-                  ),
-                ),
-                if (hasInconsistency) ...[
+                  // ── Guidance Box ──
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.costChip,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+                      color: AppColors.surfaceWhite,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.lightbulb_outline, size: 14, color: AppColors.costChipText),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Saran perbaikan tersedia',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.costChipText,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.lightbulb_outline_rounded,
+                            color: AppColors.primary,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Panduan Matriks Perbandingan',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'Bandingkan kriteria secara berpasangan dengan Skala Saaty (1–9). Matriks harus konsisten (CR ≤ 0.10) agar bobot valid untuk perankingan SAW.',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  height: 1.45,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Header Perbandingan Berpasangan ──
+                  Row(
+                    children: [
+                      Text(
+                        'Perbandingan Berpasangan',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (hasInconsistency)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEE2E2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFFCA5A5)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.auto_fix_high_rounded,
+                                size: 13,
+                                color: AppColors.danger,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Saran Perbaikan',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.danger,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // ── Daftar Kartu Perbandingan ──
+                  _buildPairwiseCards(context),
+
+                  const SizedBox(height: 20),
+
+                  // ── Hasil Preview ──
+                  if (_hasilPreview != null) _buildHasilPreview(context),
+
+                  const SizedBox(height: 16),
+
+                  BottomSaveButton(
+                    label: 'Simpan Bobot AHP',
+                    onPressed: (_hasilPreview?.konsisten ?? false) ? _simpan : null,
+                    isLoading: _saving,
+                  ),
                 ],
-              ],
+              ),
             ),
-            const SizedBox(height: 12),
-
-            // ── Daftar Kartu Perbandingan ──
-            _buildPairwiseCards(context),
-
-            const SizedBox(height: 20),
-
-            // ── Hasil Preview ──
-            if (_hasilPreview != null) _buildHasilPreview(context),
-
-            const SizedBox(height: 16),
-
-            BottomSaveButton(
-              label: 'Simpan Bobot',
-              onPressed:
-                  (_hasilPreview?.konsisten ?? false) ? _simpan : null,
-              isLoading: _saving,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -210,14 +354,22 @@ class _AhpScreenState extends State<AhpScreen> {
 
         cardList.add(
           Container(
-            margin: const EdgeInsets.only(bottom: 16),
+            margin: const EdgeInsets.only(bottom: 14),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.surfaceWhite,
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isError
+                    ? AppColors.danger.withValues(alpha: 0.35)
+                    : AppColors.border.withValues(alpha: 0.7),
+                width: isError ? 1.5 : 1,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: isError
+                      ? AppColors.danger.withValues(alpha: 0.05)
+                      : Colors.black.withValues(alpha: 0.035),
                   blurRadius: 14,
                   offset: const Offset(0, 4),
                 ),
@@ -229,12 +381,19 @@ class _AhpScreenState extends State<AhpScreen> {
                 // Header kartu: Pasangan X dari Y & Indikator Status
                 Row(
                   children: [
-                    Text(
-                      'Pasangan $pairIndex dari $totalPairs',
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textHint,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Pasangan $pairIndex dari $totalPairs',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ),
                     const Spacer(),
@@ -242,12 +401,12 @@ class _AhpScreenState extends State<AhpScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppColors.danger.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          color: const Color(0xFFFEE2E2),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Perlu Penyesuaian',
-                          style: TextStyle(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w700,
                             color: AppColors.danger,
@@ -261,7 +420,7 @@ class _AhpScreenState extends State<AhpScreen> {
                 // Baris horizontal 3 elemen: 2 floating pill seragam & 1 center dropdown (1-9)
                 Row(
                   children: [
-                    // Kiri: Floating pill Kriteria A (Non-clickable, warna sama)
+                    // Kiri: Floating pill Kriteria A
                     Expanded(
                       flex: 3,
                       child: _buildFloatingPill(label: kriteriaA.nama),
@@ -281,7 +440,7 @@ class _AhpScreenState extends State<AhpScreen> {
                     ),
                     const SizedBox(width: 8),
 
-                    // Kanan: Floating pill Kriteria B (Non-clickable, warna sama)
+                    // Kanan: Floating pill Kriteria B
                     Expanded(
                       flex: 3,
                       child: _buildFloatingPill(label: kriteriaB.nama),
@@ -289,17 +448,17 @@ class _AhpScreenState extends State<AhpScreen> {
                   ],
                 ),
 
-                // Kalimat verbal pembacaan bersih tanpa kotak outline
+                // Kalimat verbal pembacaan
                 Padding(
                   padding: const EdgeInsets.only(top: 12, bottom: 2),
                   child: Center(
                     child: RichText(
                       textAlign: TextAlign.center,
                       text: TextSpan(
-                        style: const TextStyle(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           color: AppColors.textSecondary,
-                          height: 1.35,
+                          height: 1.4,
                         ),
                         children: _buildKalimatVerbalSpan(
                           kriteriaA.nama,
@@ -311,21 +470,17 @@ class _AhpScreenState extends State<AhpScreen> {
                   ),
                 ),
 
-                // Floating semi-transparent alert card in soft red (if inconsistency)
+                // Floating alert card in soft red (if inconsistency)
                 if (isError) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2).withValues(alpha: 0.9),
+                      color: const Color(0xFFFEF2F2),
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.danger.withValues(alpha: 0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      border: Border.all(
+                        color: AppColors.danger.withValues(alpha: 0.25),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -336,8 +491,8 @@ class _AhpScreenState extends State<AhpScreen> {
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
-                            Icons.lightbulb_outline_rounded,
-                            size: 16,
+                            Icons.auto_fix_high_rounded,
+                            size: 15,
                             color: AppColors.danger,
                           ),
                         ),
@@ -346,9 +501,9 @@ class _AhpScreenState extends State<AhpScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Saran Penyelarasan AHP',
-                                style: TextStyle(
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.danger,
@@ -357,9 +512,9 @@ class _AhpScreenState extends State<AhpScreen> {
                               const SizedBox(height: 2),
                               Text(
                                 saran.nilaiSaran == 1
-                                    ? 'Ubah perbandingan menjadi Sama Penting (1)'
+                                    ? 'Ubah ke Sama Penting (1)'
                                     : 'Disarankan ubah ke Skala ${saran.nilaiSaran}',
-                                style: const TextStyle(
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   color: AppColors.textSecondary,
                                 ),
@@ -390,7 +545,7 @@ class _AhpScreenState extends State<AhpScreen> {
                             ),
                             child: Text(
                               'Terapkan (${saran.nilaiSaran})',
-                              style: const TextStyle(
+                              style: GoogleFonts.plusJakartaSans(
                                 color: Colors.white,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
@@ -414,7 +569,7 @@ class _AhpScreenState extends State<AhpScreen> {
     return Column(children: cardList);
   }
 
-  /// Floating pill untuk kriteria A / B (Anti-gravity aesthetic - badge visual seragam)
+  /// Floating pill untuk kriteria A / B
   Widget _buildFloatingPill({
     required String label,
   }) {
@@ -423,14 +578,14 @@ class _AhpScreenState extends State<AhpScreen> {
       alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9), // Pale gray soft surface seragam untuk semua pill
+        color: const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
           color: AppColors.textPrimary,
         ),
         textAlign: TextAlign.center,
@@ -471,9 +626,9 @@ class _AhpScreenState extends State<AhpScreen> {
             size: 18,
             color: AppColors.primary,
           ),
-          style: const TextStyle(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 11.5,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
           ),
           items: const [
@@ -525,15 +680,24 @@ class _AhpScreenState extends State<AhpScreen> {
     final v = val.round().clamp(1, 9);
     if (v == 1) {
       return [
-        TextSpan(text: namaA, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
+        TextSpan(
+          text: namaA,
+          style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
+        ),
         const TextSpan(text: ' sama pentingnya dengan '),
-        TextSpan(text: namaB, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
+        TextSpan(
+          text: namaB,
+          style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
+        ),
         const TextSpan(text: ' (Skala 1)', style: TextStyle(color: Colors.grey, fontSize: 11)),
       ];
     } else {
       final ket = _getDeskripsiKeutamaan(v);
       return [
-        TextSpan(text: namaA, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
+        TextSpan(
+          text: namaA,
+          style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
+        ),
         TextSpan(text: ' $ket daripada '),
         TextSpan(text: namaB, style: const TextStyle(fontWeight: FontWeight.w700)),
         TextSpan(text: ' (Skala $v)', style: const TextStyle(color: Colors.grey, fontSize: 11)),
@@ -569,67 +733,107 @@ class _AhpScreenState extends State<AhpScreen> {
     final konsisten = h.konsisten;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: konsisten ? AppColors.benefitChip : AppColors.costChip,
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.surfaceWhite,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: konsisten
-              ? AppColors.benefitChipText.withValues(alpha: 0.35)
-              : AppColors.costChipText.withValues(alpha: 0.35),
-          width: 1.2,
+              ? const Color(0xFF10B981).withValues(alpha: 0.35)
+              : AppColors.danger.withValues(alpha: 0.35),
+          width: 1.5,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: (konsisten ? const Color(0xFF10B981) : AppColors.danger).withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                konsisten ? Icons.check_circle : Icons.warning_amber_rounded,
-                color: konsisten
-                    ? AppColors.benefitChipText
-                    : AppColors.costChipText,
-                size: 22,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: (konsisten ? const Color(0xFF10B981) : AppColors.danger).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  konsisten ? Icons.check_circle_rounded : Icons.warning_amber_rounded,
+                  color: konsisten ? const Color(0xFF059669) : AppColors.danger,
+                  size: 20,
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  konsisten
-                      ? 'Perbandingan Konsisten ✓'
-                      : 'Perbandingan Tidak Konsisten ✗',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: konsisten
-                        ? AppColors.benefitChipText
-                        : AppColors.costChipText,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      konsisten ? 'Perbandingan Konsisten ✓' : 'Perbandingan Tidak Konsisten ✗',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15.5,
+                        color: konsisten ? const Color(0xFF059669) : AppColors.danger,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      konsisten
+                          ? 'Rasio konsistensi memenuhi syarat (CR ≤ 0.10)'
+                          : 'CR > 0.10, gunakan saran penyesuaian di atas',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          _ResultRow('λ maks', h.lambdaMax.toStringAsFixed(4)),
-          _ResultRow('CI (Consistency Index)', h.ci.toStringAsFixed(4)),
-          _ResultRow(
-            'CR (Consistency Ratio)',
-            '${h.cr.toStringAsFixed(4)} ${h.cr <= 0.10 ? "(≤ 0.10 ✓ Konsisten)" : "(> 0.10 ✗ Tidak Konsisten)"}',
+          const SizedBox(height: 16),
+          // Metric cards row
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+            ),
+            child: Column(
+              children: [
+                _ResultRow('λ maks (Eigen Maksimum)', h.lambdaMax.toStringAsFixed(4)),
+                const SizedBox(height: 8),
+                _ResultRow('CI (Consistency Index)', h.ci.toStringAsFixed(4)),
+                const SizedBox(height: 8),
+                _ResultRow(
+                  'CR (Consistency Ratio)',
+                  '${h.cr.toStringAsFixed(4)} ${h.cr <= 0.10 ? "(≤ 0.10 ✓)" : "(> 0.10 ✗)"}',
+                  isHighlight: true,
+                  highlightColor: konsisten ? const Color(0xFF059669) : AppColors.danger,
+                ),
+              ],
+            ),
           ),
-          const Divider(height: 20),
-          const Text(
+          const SizedBox(height: 20),
+          Text(
             'Hasil Bobot Prioritas Kriteria:',
-            style: TextStyle(
+            style: GoogleFonts.plusJakartaSans(
               fontWeight: FontWeight.w700,
               fontSize: 14,
               color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           ...List.generate(_kriteria.length, (i) {
             final bobotPercent = (h.bobot[i] * 100);
             return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -639,33 +843,40 @@ class _AhpScreenState extends State<AhpScreen> {
                       Expanded(
                         child: Text(
                           _kriteria[i].nama,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary,
                           ),
                         ),
                       ),
-                      Text(
-                        '${bobotPercent.toStringAsFixed(2)}%',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${bobotPercent.toStringAsFixed(2)}%',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(6),
                     child: LinearProgressIndicator(
                       value: h.bobot[i].clamp(0.0, 1.0),
-                      backgroundColor: AppColors.border.withValues(alpha: 0.5),
+                      backgroundColor: const Color(0xFFF1F5F9),
                       valueColor: AlwaysStoppedAnimation<Color>(
                         konsisten ? AppColors.primary : AppColors.warningDark,
                       ),
-                      minHeight: 6,
+                      minHeight: 7,
                     ),
                   ),
                 ],
@@ -681,33 +892,41 @@ class _AhpScreenState extends State<AhpScreen> {
 class _ResultRow extends StatelessWidget {
   final String label;
   final String value;
+  final bool isHighlight;
+  final Color? highlightColor;
 
-  const _ResultRow(this.label, this.value);
+  const _ResultRow(
+    this.label,
+    this.value, {
+    this.isHighlight = false,
+    this.highlightColor,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Text(
             label,
-            style: const TextStyle(
-              fontSize: 12.5,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
               color: AppColors.textSecondary,
             ),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 12.5,
-              color: AppColors.textPrimary,
-            ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.plusJakartaSans(
+            fontWeight: isHighlight ? FontWeight.w800 : FontWeight.w700,
+            fontSize: 12.5,
+            color: isHighlight && highlightColor != null
+                ? highlightColor
+                : AppColors.textPrimary,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

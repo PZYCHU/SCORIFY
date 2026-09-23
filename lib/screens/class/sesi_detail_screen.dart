@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../providers/app_provider.dart';
@@ -62,8 +63,18 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
 
         if (sesi.id.isEmpty) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Sesi Tidak Ditemukan')),
-            body: const Center(child: Text('Sesi telah dihapus atau tidak ditemukan.')),
+            appBar: AppBar(
+              title: Text(
+                'Sesi Tidak Ditemukan',
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+              ),
+            ),
+            body: Center(
+              child: Text(
+                'Sesi telah dihapus atau tidak ditemukan.',
+                style: GoogleFonts.plusJakartaSans(color: AppColors.textSecondary),
+              ),
+            ),
           );
         }
 
@@ -95,38 +106,63 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
         final bool semuaSelesai = muridTerisi == kelas.muridList.length && kelas.muridList.isNotEmpty;
 
         return Scaffold(
-          body: SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(context, kelas, kriteria, sesi),
-                Expanded(
-                  child: Column(
-                    children: [
-                      // Summary Card Sesi
-                      _buildSummaryCard(
-                        context,
-                        kelas,
-                        kriteria,
-                        sesi,
-                        muridTerisi,
-                        kelas.muridList.length,
-                        avgNilai,
-                        semuaSelesai,
-                        provider,
-                      ),
+          backgroundColor: const Color(0xFFF8FAF9),
+          body: Column(
+            children: [
+              _buildHeroHeader(context, kelas, kriteria, sesi),
+              Expanded(
+                child: Column(
+                  children: [
+                    // Summary Card Sesi
+                    _buildSummaryCard(
+                      context,
+                      kelas,
+                      kriteria,
+                      sesi,
+                      muridTerisi,
+                      kelas.muridList.length,
+                      avgNilai,
+                      semuaSelesai,
+                      provider,
+                    ),
 
-                      // Search Bar Siswa dalam Sesi
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    // Search Bar Siswa dalam Sesi
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.02),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
                         child: TextField(
                           controller: _searchCtrl,
                           onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13.5,
+                            color: AppColors.textPrimary,
+                          ),
                           decoration: InputDecoration(
                             hintText: 'Cari nama atau NIS siswa...',
-                            prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.primary),
+                            hintStyle: GoogleFonts.plusJakartaSans(
+                              fontSize: 13.5,
+                              color: AppColors.textHint,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.search_rounded,
+                              size: 20,
+                              color: AppColors.primary,
+                            ),
                             suffixIcon: _searchQuery.isNotEmpty
                                 ? IconButton(
-                                    icon: const Icon(Icons.close, size: 18),
+                                    icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary),
                                     onPressed: () {
                                       setState(() {
                                         _searchCtrl.clear();
@@ -135,76 +171,91 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
                                     },
                                   )
                                 : null,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            fillColor: AppColors.surfaceWhite,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppColors.border),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppColors.border),
-                            ),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           ),
                         ),
                       ),
+                    ),
 
-                      // List Murid & Nilai
-                      Expanded(
-                        child: filteredMuridList.isEmpty
-                            ? Center(
-                                child: Text(
-                                  _searchQuery.isNotEmpty
-                                      ? 'Tidak ada siswa yang cocok dengan "$_searchQuery"'
-                                      : 'Belum ada data siswa di kelas ini.',
-                                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                                ),
-                              )
-                            : ListView.builder(
-                                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                                itemCount: filteredMuridList.length,
-                                itemBuilder: (ctx, index) {
-                                  final murid = filteredMuridList[index];
-                                  final existing = murid.nilaiList.where(
-                                    (n) => n.kriteriaId == kriteria.id && n.sesiId == sesi.id,
-                                  ).toList();
-
-                                  Nilai? bestNilai;
-                                  if (existing.isNotEmpty) {
-                                    existing.sort((a, b) => b.attempt.compareTo(a.attempt));
-                                    bestNilai = existing.first;
-                                  }
-
-                                  return _MuridNilaiCard(
-                                    index: index + 1,
-                                    murid: murid,
-                                    nilaiHasil: bestNilai,
-                                    onTapEdit: () => _showSingleNilaiDialog(
-                                      context,
-                                      kelas,
-                                      kriteria,
-                                      sesi,
-                                      murid,
-                                      bestNilai,
+                    // List Murid & Nilai
+                    Expanded(
+                      child: filteredMuridList.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.school_outlined,
+                                    size: 48,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    _searchQuery.isNotEmpty
+                                        ? 'Tidak ada siswa yang cocok dengan "$_searchQuery"'
+                                        : 'Belum ada data siswa di kelas ini.',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                  );
-                                },
+                                  ),
+                                ],
                               ),
-                      ),
-                    ],
-                  ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(16, 6, 16, 80),
+                              itemCount: filteredMuridList.length,
+                              itemBuilder: (ctx, index) {
+                                final murid = filteredMuridList[index];
+                                final existing = murid.nilaiList.where(
+                                  (n) => n.kriteriaId == kriteria.id && n.sesiId == sesi.id,
+                                ).toList();
+
+                                Nilai? bestNilai;
+                                if (existing.isNotEmpty) {
+                                  existing.sort((a, b) => b.attempt.compareTo(a.attempt));
+                                  bestNilai = existing.first;
+                                }
+
+                                return _MuridNilaiCard(
+                                  index: index + 1,
+                                  murid: murid,
+                                  nilaiHasil: bestNilai,
+                                  onTapEdit: () => _showSingleNilaiDialog(
+                                    context,
+                                    kelas,
+                                    kriteria,
+                                    sesi,
+                                    murid,
+                                    bestNilai,
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _showInputAllSheet(context, kelas, kriteria, sesi),
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
-            icon: const Icon(Icons.edit_note, size: 20),
+            elevation: 4,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            icon: const Icon(Icons.edit_note_rounded, size: 22),
             label: Text(
               semuaSelesai ? 'Edit Nilai Sekaligus' : 'Input Nilai Sekaligus',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
+                letterSpacing: 0.2,
+              ),
             ),
           ),
         );
@@ -212,34 +263,104 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, Kelas kelas, Kriteria kriteria, Sesi sesi) {
+  // ─── Hero Header Scorify ──────────────────────────────────────────────────
+  Widget _buildHeroHeader(BuildContext context, Kelas kelas, Kriteria kriteria, Sesi sesi) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       decoration: const BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0D252B),
+            Color(0xFF163842),
+            Color(0xFF1B4B5A),
+          ],
+        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
       ),
-      child: Row(
+      child: Stack(
         children: [
-          const AppBackButton(),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  sesi.nama,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
+          // Ambient Glow Circle
+          Positioned(
+            right: -30,
+            top: -20,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF2DD4BF).withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Back Button & Navigation
+                  Row(
+                    children: [
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
                       ),
-                ),
-                Text(
-                  'Kriteria: ${kriteria.nama} • ${kelas.nama}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-              ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              sesi.nama,
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 19,
+                                letterSpacing: -0.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${kriteria.nama} • ${kelas.nama}',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white.withValues(alpha: 0.75),
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -247,6 +368,7 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
     );
   }
 
+  // ─── Summary Card Sesi ────────────────────────────────────────────────────
   Widget _buildSummaryCard(
     BuildContext context,
     Kelas kelas,
@@ -262,9 +384,9 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
       margin: const EdgeInsets.fromLTRB(16, 14, 16, 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceWhite,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border, width: 0.5),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -278,12 +400,20 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(13),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.18),
+                  ),
                 ),
-                child: const Icon(Icons.assignment_turned_in, color: AppColors.primary, size: 24),
+                child: const Icon(
+                  Icons.assignment_turned_in_rounded,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -295,66 +425,106 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
                         Flexible(
                           child: Text(
                             sesi.nama,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.w800,
                               color: AppColors.textPrimary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: semuaSelesai ? AppColors.benefitChip : AppColors.warningBg,
+                            color: semuaSelesai
+                                ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                : const Color(0xFFF59E0B).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: semuaSelesai
+                                  ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                                  : const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                            ),
                           ),
                           child: Text(
                             semuaSelesai ? 'Selesai' : 'Belum Lengkap',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: semuaSelesai ? AppColors.benefitChipText : AppColors.warningDark,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: semuaSelesai
+                                  ? const Color(0xFF047857)
+                                  : const Color(0xFFB45309),
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
-                      'Kategori Kriteria: ${kriteria.nama}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      'Kategori: ${kriteria.nama}',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, color: AppColors.danger, size: 20),
-                tooltip: 'Hapus Sesi',
-                onPressed: () async {
-                  final confirm = await showConfirmDialog(
-                    context,
-                    title: 'Hapus Sesi Penilaian',
-                    content: 'Apakah Anda yakin ingin menghapus sesi "${sesi.nama}" beserta seluruh nilainya?',
-                  );
-                  if (confirm && context.mounted) {
-                    await provider.hapusSesi(widget.kelasId, sesi.id);
-                    if (context.mounted) Navigator.of(context).pop();
-                  }
-                },
+              // Delete Button with Centered Reaffirmation Dialog
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () async {
+                    final confirm = await showConfirmDialog(
+                      context,
+                      title: 'Hapus Sesi Penilaian',
+                      content:
+                          'Yakin ingin menghapus sesi "${sesi.nama}"?\nSeluruh riwayat nilai tugas pada sesi ini akan ikut terhapus secara permanen.',
+                    );
+                    if (confirm && context.mounted) {
+                      await provider.hapusSesi(widget.kelasId, sesi.id);
+                      if (context.mounted) Navigator.of(context).pop();
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: Color(0xFFEF4444),
+                      size: 18,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
-          const Divider(height: 20, color: AppColors.border),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStatItem('Progres Nilai', '$muridTerisi / $totalMurid Murid'),
-              Container(width: 1, height: 30, color: AppColors.border),
-              _buildStatItem('Rata-Rata Nilai', muridTerisi > 0 ? avgNilai.toStringAsFixed(1) : '-'),
-            ],
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAF9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatItem('Progres Nilai', '$muridTerisi / $totalMurid Murid'),
+                Container(width: 1, height: 28, color: const Color(0xFFCBD5E1)),
+                _buildStatItem(
+                  'Rata-Rata Nilai',
+                  muridTerisi > 0 ? avgNilai.toStringAsFixed(1) : '-',
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -366,21 +536,26 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
       children: [
         Text(
           value,
-          style: const TextStyle(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 15,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
             color: AppColors.primary,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondary,
+          ),
         ),
       ],
     );
   }
 
+  // ─── Modal Dialog Input Nilai Tunggal ─────────────────────────────────────
   void _showSingleNilaiDialog(
     BuildContext context,
     Kelas kelas,
@@ -397,7 +572,7 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: AppColors.textPrimary.withValues(alpha: 0.6),
+      barrierColor: Colors.black.withValues(alpha: 0.5),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) {
           return Container(
@@ -405,8 +580,8 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
               bottom: MediaQuery.of(ctx).viewInsets.bottom,
             ),
             decoration: const BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -415,29 +590,34 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
                 // Drag handle
                 Center(
                   child: Container(
-                    width: 40,
+                    width: 44,
                     height: 4,
-                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    margin: const EdgeInsets.only(top: 12, bottom: 10),
                     decoration: BoxDecoration(
-                      color: AppColors.border,
+                      color: const Color(0xFFCBD5E1),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
 
-                // Header
+                // Header Info Siswa
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
                         child: Text(
                           murid.nama.isNotEmpty ? murid.nama[0].toUpperCase() : '?',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
                             color: AppColors.primary,
                           ),
                         ),
@@ -449,16 +629,16 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
                           children: [
                             Text(
                               murid.nama,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
                                 color: AppColors.textPrimary,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               'NIS: ${murid.nis ?? '-'} • Sesi: ${sesi.nama}',
-                              style: const TextStyle(
+                              style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
                                 color: AppColors.textSecondary,
                                 fontWeight: FontWeight.w500,
@@ -473,7 +653,7 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: AppColors.border.withValues(alpha: 0.3),
+                            color: const Color(0xFFF1F5F9),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -487,77 +667,73 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
                   ),
                 ),
 
-                const Divider(height: 16, thickness: 0.8, indent: 20, endIndent: 20),
+                const Divider(height: 20, thickness: 1, color: Color(0xFFF1F5F9)),
 
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Nilai Murid (0 - 100)',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.textSecondary,
                             ),
                           ),
                           if (existing != null)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 color: AppColors.primary.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 'Saat ini: ${existing.nilai.toStringAsFixed(0)}',
-                                style: const TextStyle(
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w700,
                                   color: AppColors.primary,
                                 ),
                               ),
                             ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       TextField(
                         controller: ctrl,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         autofocus: true,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
                           color: AppColors.textPrimary,
                         ),
                         decoration: InputDecoration(
                           hintText: '0 - 100',
-                          hintStyle: const TextStyle(
-                            fontSize: 16,
+                          hintStyle: GoogleFonts.plusJakartaSans(
+                            fontSize: 18,
                             color: AppColors.textHint,
                             fontWeight: FontWeight.normal,
                           ),
                           filled: true,
-                          fillColor: AppColors.surfaceWhite,
+                          fillColor: const Color(0xFFF8FAF9),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 14,
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(
-                              color: AppColors.border.withValues(alpha: 0.8),
-                            ),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(
-                              color: AppColors.border.withValues(alpha: 0.8),
-                            ),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -568,7 +744,7 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
 
                       // Quick preset buttons for convenience
                       Wrap(
@@ -579,22 +755,22 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
                             onTap: () {
                               ctrl.text = val.toString();
                             },
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(10),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                               decoration: BoxDecoration(
-                                color: AppColors.surfaceWhite,
-                                borderRadius: BorderRadius.circular(8),
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: AppColors.border.withValues(alpha: 0.8),
+                                  color: const Color(0xFFE2E8F0),
                                 ),
                               ),
                               child: Text(
                                 '$val',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
                             ),
@@ -602,16 +778,16 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
                         }).toList(),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 22),
                       SizedBox(
                         width: double.infinity,
-                        height: 48,
+                        height: 50,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
                             elevation: 0,
-                            shape: const StadiumBorder(),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
                           onPressed: () async {
                             final text = ctrl.text.trim();
@@ -629,17 +805,17 @@ class _SesiDetailScreenState extends State<SesiDetailScreen> {
                             }
                             if (ctx.mounted) Navigator.of(ctx).pop();
                           },
-                          child: const Text(
+                          child: Text(
                             'Simpan Nilai',
-                            style: TextStyle(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 15,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w800,
                               letterSpacing: 0.3,
                             ),
                           ),
                         ),
                       ),
-                      SizedBox(height: MediaQuery.of(ctx).padding.bottom),
+                      SizedBox(height: MediaQuery.of(ctx).padding.bottom + 8),
                     ],
                   ),
                 ),
@@ -690,60 +866,94 @@ class _MuridNilaiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasNilai = nilaiHasil != null;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 0,
-      color: AppColors.surfaceWhite,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: hasNilai ? const Color(0xFFE2E8F0) : const Color(0xFFF1F5F9),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        leading: CircleAvatar(
-          radius: 16,
-          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+        leading: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
           child: Text(
             '$index',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
               color: AppColors.primary,
             ),
           ),
         ),
         title: Text(
           murid.nama,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          style: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            color: AppColors.textPrimary,
+          ),
         ),
         subtitle: Text(
           'NIS: ${murid.nis ?? '-'}',
-          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            color: AppColors.textSecondary,
+          ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: hasNilai
-                    ? AppColors.primary.withValues(alpha: 0.1)
-                    : AppColors.background,
+                    ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                    : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: hasNilai ? AppColors.primary.withValues(alpha: 0.3) : AppColors.border,
+                  color: hasNilai
+                      ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                      : const Color(0xFFE2E8F0),
                 ),
               ),
               child: Text(
-                hasNilai ? nilaiHasil!.nilai.toStringAsFixed(0) : 'Belum diisi',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: hasNilai ? AppColors.primary : AppColors.textSecondary,
+                hasNilai ? nilaiHasil!.nilai.toStringAsFixed(0) : 'Belum dinilai',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: hasNilai ? const Color(0xFF047857) : AppColors.textSecondary,
                 ),
               ),
             ),
-            const SizedBox(width: 4),
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textSecondary),
-              onPressed: onTapEdit,
+            const SizedBox(width: 6),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAF9),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.primary),
+                onPressed: onTapEdit,
+                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                padding: EdgeInsets.zero,
+              ),
             ),
           ],
         ),
@@ -840,40 +1050,49 @@ class _InputNilaiPerSesiSheetState extends State<_InputNilaiPerSesiSheet> {
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.8,
+      initialChildSize: 0.82,
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (_, controller) => Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: Column(
           children: [
             Container(
-              margin: const EdgeInsets.only(top: 10, bottom: 6),
-              width: 40,
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 44,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: const Color(0xFFCBD5E1),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
               child: Row(
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Input Nilai Sekaligus',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
                         Text(
-                          '${widget.sesi.nama} — Kriteria: ${widget.kriteria.nama}',
-                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          'Input Nilai Sekaligus',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16.5,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${widget.sesi.nama} • ${widget.kriteria.nama}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12.5,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
@@ -883,8 +1102,9 @@ class _InputNilaiPerSesiSheetState extends State<_InputNilaiPerSesiSheet> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: _saving
                         ? const SizedBox(
@@ -892,12 +1112,18 @@ class _InputNilaiPerSesiSheetState extends State<_InputNilaiPerSesiSheet> {
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text('Simpan All', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        : Text(
+                            'Simpan Semua',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                            ),
+                          ),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
             Expanded(
               child: ListView.separated(
                 controller: controller,
@@ -906,39 +1132,95 @@ class _InputNilaiPerSesiSheetState extends State<_InputNilaiPerSesiSheet> {
                 separatorBuilder: (ctx, index) => const SizedBox(height: 8),
                 itemBuilder: (ctx, i) {
                   final murid = widget.kelas.muridList[i];
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              murid.nama,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAF9),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '${i + 1}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
                             ),
-                            Text(
-                              'NIS: ${murid.nis ?? '-'}',
-                              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      SizedBox(
-                        width: 90,
-                        child: TextField(
-                          controller: _ctrls[murid.id],
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          textAlign: TextAlign.center,
-                          decoration: InputDecoration(
-                            hintText: '0-100',
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                murid.nama,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13.5,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              Text(
+                                'NIS: ${murid.nis ?? '-'}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11.5,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: 85,
+                          child: TextField(
+                            controller: _ctrls[murid.id],
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                              color: AppColors.textPrimary,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: '0-100',
+                              hintStyle: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                color: AppColors.textHint,
+                                fontWeight: FontWeight.normal,
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 },
               ),

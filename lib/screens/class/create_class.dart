@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/models.dart';
@@ -195,39 +196,16 @@ class _BuatKelasScreenState extends State<BuatKelasScreen> {
       kriteriaBerubah = idLama.length != idBaru.length || !idLama.containsAll(idBaru);
 
       if (kriteriaBerubah) {
-        final setuju = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Row(
-              children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Perubahan Kriteria',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            content: const Text(
+        final setuju = await AppFeedback.showConfirmDialog(
+          context,
+          title: 'Perubahan Kriteria',
+          message:
               'Menambah atau mengubah kriteria penilaian akan mereset bobot AHP kelas ini.\n\n'
               'Anda perlu menghitung ulang (re-calculate) bobot AHP agar proses perankingan SAW tetap valid. Lanjutkan?',
-              style: TextStyle(fontSize: 14),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Batal'),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Ya, Lanjutkan'),
-              ),
-            ],
-          ),
+          confirmText: 'Ya, Lanjutkan',
+          cancelText: 'Batal',
+          isDanger: true,
+          icon: Icons.warning_amber_rounded,
         );
         if (setuju != true) return;
       }
@@ -289,196 +267,430 @@ class _BuatKelasScreenState extends State<BuatKelasScreen> {
     }
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0D252B), Color(0xFF163842), Color(0xFF1B4B5A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+      ),
+      child: Stack(
+        clipBehavior: Clip.antiAlias,
+        children: [
+          Positioned(
+            top: -40,
+            right: -30,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -20,
+            left: -20,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isEdit ? 'Edit Kelas' : 'Buat Kelas Baru',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isEdit
+                                  ? 'Perbarui data kelas & konfigurasi kriteria SPK'
+                                  : 'Konfigurasi parameter penilaian AHP-SAW',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12.5,
+                                color: Colors.white.withValues(alpha: 0.75),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: Padding(
-          padding: const EdgeInsets.all(10),
-          child: const AppBackButton(),
-        ),
-        title: Text(isEdit ? 'Edit Kelas' : 'Buat Kelas Baru'),
-      ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── Nama Kelas ──
-                const SectionLabel('Nama Kelas :'),
-                TextFormField(
-                  controller: _namaKelasCtrl,
-                  decoration: InputDecoration(
-                    hintText: 'Masukkan nama kelas',
-                    suffixIcon: Icon(
-                      Icons.edit_outlined,
-                      color: AppColors.textHint,
-                      size: 18,
-                    ),
-                  ),
-                  validator: (v) => v == null || v.trim().isEmpty
-                      ? 'Nama kelas wajib diisi'
-                      : null,
-                ),
-                const SizedBox(height: 24),
-
-                // ── Tambah Kriteria ──
-                SectionLabel(
-                  'Kriteria Penilaian :',
-                  subtitle: '(Min. $_minKriteria, maks. $_maxKriteria)',
-                ),
-                _KriteriaCounter(
-                  current: _kriteriaList.length,
-                  min: _minKriteria,
-                  max: _maxKriteria,
-                ),
-                const SizedBox(height: 12),
-
-                // Tombol aksi kriteria
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: OutlinedButton.icon(
-                        onPressed: _tambahKriteria,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.accent,
-                          side: BorderSide(
-                            color: AppColors.accent.withValues(alpha: 0.5),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+      backgroundColor: AppColors.background,
+      body: Column(
+        children: [
+          _buildHeader(context),
+          Expanded(
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+                children: [
+                  // ── Card 1: Nama Kelas ──
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceWhite,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
                         ),
-                        icon: const Icon(Icons.add_circle_outline, size: 18),
-                        label: const Text(
-                          'Tambah Manual',
-                          style: TextStyle(
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.school_outlined,
+                                color: AppColors.primary,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Nama Kelas',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _namaKelasCtrl,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            fontSize: 13,
+                            color: AppColors.textPrimary,
                           ),
+                          decoration: InputDecoration(
+                            hintText: 'Contoh: Kelas XII IPA 1',
+                            hintStyle: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              color: AppColors.textHint,
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.8)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.8)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
+                            ),
+                            prefixIcon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.textSecondary),
+                          ),
+                          validator: (v) => v == null || v.trim().isEmpty
+                              ? 'Nama kelas wajib diisi'
+                              : null,
                         ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 3,
-                      child: ElevatedButton.icon(
-                        onPressed: _muatKriteriaDefault,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        icon: const Icon(Icons.auto_awesome, size: 18),
-                        label: const Text(
-                          'Muat Default',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 18),
 
-                // ── Daftar Kriteria ──
-                if (_kriteriaList.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    'Kriteria yang tersimpan:',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.primaryLight,
-                      fontWeight: FontWeight.w600,
+                  // ── Card 2: Kriteria Penilaian ──
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceWhite,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.tune_rounded,
+                                color: Color(0xFF10B981),
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Kriteria Penilaian',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Min. $_minKriteria, maks. $_maxKriteria kriteria',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _kriteriaList.length >= _minKriteria
+                                    ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                                    : Colors.orange.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                '${_kriteriaList.length}/$_minKriteria kriteria',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: _kriteriaList.length >= _minKriteria
+                                      ? const Color(0xFF059669)
+                                      : Colors.orange.shade800,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Action buttons: Tambah Manual & Muat Default
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _tambahKriteria,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.primary,
+                                  side: BorderSide(
+                                    color: AppColors.primary.withValues(alpha: 0.3),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: 13),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  backgroundColor: const Color(0xFFF8FAFC),
+                                ),
+                                icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                                label: Text(
+                                  'Tambah Manual',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _muatKriteriaDefault,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(vertical: 13),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                                label: Text(
+                                  'Muat Default',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+
+                        // Kriteria list
+                        if (_kriteriaList.isNotEmpty) ...[
+                          Text(
+                            'Daftar Kriteria Terpilih (${_kriteriaList.length})',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          ...List.generate(
+                            _kriteriaList.length,
+                            (i) => KriteriaRow(
+                              kriteria: _kriteriaList[i],
+                              onDelete: () => _hapusKriteria(i),
+                              onToggleArah: () => _toggleArah(i),
+                              onEdit: () => _editKriteria(i),
+                              showEdit: true,
+                            ),
+                          ),
+                        ] else ...[
+                          const SizedBox(height: 16),
+                          const Center(
+                            child: EmptyState(
+                              icon: '📋',
+                              title: 'Belum ada kriteria',
+                              subtitle: 'Tap tombol di atas untuk menambahkan',
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  ...List.generate(
-                    _kriteriaList.length,
-                    (i) => KriteriaRow(
-                      kriteria: _kriteriaList[i],
-                      onDelete: () => _hapusKriteria(i),
-                      onToggleArah: () => _toggleArah(i),
-                      onEdit: () => _editKriteria(i),
-                      showEdit: true,
+                  const SizedBox(height: 24),
+
+                  // Simpan Button
+                  ElevatedButton(
+                    onPressed: _kriteriaList.length >= _minKriteria && !_saving
+                        ? _simpan
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      disabledBackgroundColor: AppColors.border,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      shadowColor: AppColors.primary.withValues(alpha: 0.35),
                     ),
+                    child: _saving
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.check_circle_outline_rounded, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                isEdit ? 'Simpan Perubahan' : 'Simpan Kelas',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
                   ),
-                ] else ...[
-                  const SizedBox(height: 32),
-                  const Center(
-                    child: EmptyState(
-                      icon: '📋',
-                      title: 'Belum ada kriteria',
-                      subtitle: 'Tap tombol di atas untuk menambahkan',
-                    ),
-                  ),
-                  const SizedBox(height: 32),
                 ],
-
-                BottomSaveButton(
-                  label: isEdit ? 'Simpan Perubahan' : 'Simpan Kelas',
-                  onPressed: _kriteriaList.length >= _minKriteria
-                      ? _simpan
-                      : null,
-                  isLoading: _saving,
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-// ─── Kriteria Counter ─────────────────────────────────────────────────────────
 
-class _KriteriaCounter extends StatelessWidget {
-  final int current, min, max;
-
-  const _KriteriaCounter({
-    required this.current,
-    required this.min,
-    required this.max,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cukup = current >= min;
-    return Row(
-      children: [
-        Icon(
-          cukup ? Icons.check_circle : Icons.info_outline,
-          size: 14,
-          color: cukup ? AppColors.accent : AppColors.textSecondary,
-        ),
-        const SizedBox(width: 4),
-        Text(
-          '$current/$min kriteria minimum${current >= min ? " ✓" : ""}',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: cukup ? AppColors.accent : AppColors.textSecondary,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 // ─── Dialog Tambah/Edit Kriteria ──────────────────────────────────────────────
 
@@ -616,217 +828,384 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
             k.id != widget.criterion?.id)
         .toList();
 
-    return AlertDialog(
-      title: Text(
-        widget.criterion == null ? 'Tambah Kriteria' : 'Edit Kriteria',
-      ),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Nama
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nama kriteria',
-                  hintText: 'cth: Keaktifan, Nilai Tugas',
-                ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Nama wajib diisi' : null,
-              ),
-              const SizedBox(height: 8),
-
-              // Banner Text Hint Petunjuk Kehadiran
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.lightbulb_outline_rounded, size: 18, color: AppColors.primary),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            height: 1.4,
-                            color: AppColors.textPrimary,
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 16,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.2),
+                            width: 1.5,
                           ),
+                        ),
+                        child: const Icon(
+                          Icons.tune_rounded,
+                          color: AppColors.primary,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            TextSpan(
-                              text: 'Petunjuk: ',
-                              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
+                            Text(
+                              widget.criterion == null ? 'Tambah Kriteria' : 'Edit Kriteria',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                                letterSpacing: -0.2,
+                              ),
                             ),
-                            const TextSpan(
-                              text: 'Sertakan kata ',
-                            ),
-                            const TextSpan(
-                              text: '"Kehadiran"',
-                              style: TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                            const TextSpan(
-                              text: ' atau ',
-                            ),
-                            const TextSpan(
-                              text: '"Presensi"',
-                              style: TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                            const TextSpan(
-                              text: ' pada nama kriteria agar otomatis mengaktifkan pencatatan presensi harian (Maks 100).',
+                            const SizedBox(height: 2),
+                            Text(
+                              'Konfigurasi parameter penilaian',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12.5,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ],
                         ),
                       ),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              size: 20,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Nama
+                  Text(
+                    'Nama Kriteria',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _nameController,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'cth: Keaktifan, Nilai Tugas',
+                      hintStyle: GoogleFonts.plusJakartaSans(
+                        fontSize: 13.5,
+                        color: AppColors.textHint,
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.8)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.8)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
+                      ),
+                    ),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Nama wajib diisi' : null,
+                  ),
+                  const SizedBox(height: 10),
 
-              // Jenis
-              const Text(
-                'Jenis',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              _SegmentedRow<JenisKriteria>(
-                options: const [
-                  (JenisKriteria.performa, 'Performa'),
-                  (JenisKriteria.hasil, 'Hasil'),
-                  (JenisKriteria.derived, 'Perhitungan Remedi'),
-                ],
-                selected: _jenis,
-                onChanged: _onJenisChanged,
-              ),
-              const SizedBox(height: 6),
-              _JenisHint(jenis: _jenis),
-              const SizedBox(height: 20),
-
-              // Checklist kriteria sumber jika derived
-              if (isDerived) ...[
-                const Text(
-                  'Hitung remedi dari kriteria nilai:',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 6),
-                if (kandidatList.isEmpty)
+                  // Banner Text Hint Petunjuk Kehadiran
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.amber.shade300),
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                     ),
-                    child: const Row(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.info_outline, size: 16, color: Colors.amber),
-                        SizedBox(width: 8),
+                        const Icon(Icons.lightbulb_outline_rounded, size: 18, color: AppColors.primary),
+                        const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
-                            'Belum ada kriteria bertipe Nilai Angka (Tugas/Ujian). Kriteria ini akan memantau nilai yang ditambahkan nanti.',
-                            style: TextStyle(fontSize: 12, color: Colors.black87),
+                          child: RichText(
+                            text: TextSpan(
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                height: 1.45,
+                                color: AppColors.textPrimary,
+                              ),
+                              children: const [
+                                TextSpan(
+                                  text: 'Petunjuk: ',
+                                  style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
+                                ),
+                                TextSpan(
+                                  text: 'Sertakan kata ',
+                                ),
+                                TextSpan(
+                                  text: '"Kehadiran"',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                                TextSpan(
+                                  text: ' atau ',
+                                ),
+                                TextSpan(
+                                  text: '"Presensi"',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                                TextSpan(
+                                  text: ' pada nama kriteria agar otomatis mengaktifkan pencatatan presensi harian (Maks 100).',
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  )
-                else
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: kandidatList.map((k) {
-                      final isSelected = _targetKriteriaIds.contains(k.id);
-                      return FilterChip(
-                        label: Text(k.nama),
-                        selected: isSelected,
-                        selectedColor: Colors.orange.shade100,
-                        checkmarkColor: Colors.deepOrange,
-                        labelStyle: TextStyle(
-                          fontSize: 12,
-                          color: isSelected ? Colors.deepOrange.shade900 : Colors.black87,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              _targetKriteriaIds.add(k.id);
-                            } else {
-                              _targetKriteriaIds.remove(k.id);
-                            }
-                          });
-                        },
-                      );
-                    }).toList(),
                   ),
-                const SizedBox(height: 20),
-              ],
+                  const SizedBox(height: 18),
 
-              // Input Type
-              if (!isDerived) ...[
-                const Text(
-                  'Cara input',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                _SegmentedRow<InputType>(
-                  options: _availableInputTypes
-                      .map((t) => (t, _inputLabel(t)))
-                      .toList(),
-                  selected: _inputType,
-                  onChanged: (v) => setState(() => _inputType = v),
-                ),
-                const SizedBox(height: 20),
+                  // Jenis
+                  Text(
+                    'Jenis Kriteria',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _SegmentedRow<JenisKriteria>(
+                    options: const [
+                      (JenisKriteria.performa, 'Performa'),
+                      (JenisKriteria.hasil, 'Hasil'),
+                      (JenisKriteria.derived, 'Perhitungan Remedi'),
+                    ],
+                    selected: _jenis,
+                    onChanged: _onJenisChanged,
+                  ),
+                  const SizedBox(height: 8),
+                  _JenisHint(jenis: _jenis),
+                  const SizedBox(height: 18),
 
-                // Arah
-                const Text(
-                  'Arah',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                _SegmentedRow<ArahKriteria>(
-                  options: const [
-                    (ArahKriteria.benefit, 'Benefit ↑'),
-                    (ArahKriteria.cost, 'Cost ↓'),
+                  // Checklist kriteria sumber jika derived
+                  if (isDerived) ...[
+                    Text(
+                      'Hitung remedi dari kriteria nilai:',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (kandidatList.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.amber.shade300),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline, size: 16, color: Colors.amber),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Belum ada kriteria bertipe Nilai Angka (Tugas/Ujian). Kriteria ini akan memantau nilai yang ditambahkan nanti.',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.black87),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: kandidatList.map((k) {
+                          final isSelected = _targetKriteriaIds.contains(k.id);
+                          return FilterChip(
+                            label: Text(k.nama),
+                            selected: isSelected,
+                            selectedColor: Colors.orange.shade100,
+                            checkmarkColor: Colors.deepOrange,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(
+                                color: isSelected ? Colors.deepOrange : AppColors.border,
+                              ),
+                            ),
+                            labelStyle: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              color: isSelected ? Colors.deepOrange.shade900 : Colors.black87,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
+                            ),
+                            onSelected: (selected) {
+                              setState(() {
+                                if (selected) {
+                                  _targetKriteriaIds.add(k.id);
+                                } else {
+                                  _targetKriteriaIds.remove(k.id);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    const SizedBox(height: 18),
                   ],
-                  selected: _arah,
-                  onChanged: (v) => setState(() => _arah = v ?? _arah),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _arah == ArahKriteria.benefit
-                      ? 'Semakin besar nilainya, semakin baik'
-                      : 'Semakin kecil nilainya, semakin baik',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ] else ...[
-                Text(
-                  'Arah: Cost ↓ (otomatis — semakin banyak remedi, semakin berkurang skornya)',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ],
-            ],
+
+                  // Input Type
+                  if (!isDerived) ...[
+                    Text(
+                      'Cara Input',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _SegmentedRow<InputType>(
+                      options: _availableInputTypes
+                          .map((t) => (t, _inputLabel(t)))
+                          .toList(),
+                      selected: _inputType,
+                      onChanged: (v) => setState(() => _inputType = v),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Arah
+                    Text(
+                      'Arah Optimasi',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _SegmentedRow<ArahKriteria>(
+                      options: const [
+                        (ArahKriteria.benefit, 'Benefit ↑'),
+                        (ArahKriteria.cost, 'Cost ↓'),
+                      ],
+                      selected: _arah,
+                      onChanged: (v) => setState(() => _arah = v ?? _arah),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _arah == ArahKriteria.benefit
+                          ? 'Semakin besar nilainya, semakin baik peringkatnya'
+                          : 'Semakin kecil nilainya, semakin baik peringkatnya',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ] else ...[
+                    Text(
+                      'Arah: Cost ↓ (otomatis — semakin banyak remedi, semakin berkurang skornya)',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+
+                  // Actions
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Material(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(14),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Batal',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _submit,
+                          style: ElevatedButton.styleFrom(
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            shadowColor: AppColors.primary.withValues(alpha: 0.35),
+                          ),
+                          child: Text(
+                            widget.criterion == null ? 'Tambah Kriteria' : 'Simpan Perubahan',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Batal'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(widget.criterion == null ? 'Tambah' : 'Simpan'),
-        ),
-      ],
     );
   }
 
@@ -886,10 +1265,9 @@ class _SegmentedRow<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
     return Wrap(
-      spacing: 6,
-      runSpacing: 6,
+      spacing: 8,
+      runSpacing: 8,
       children: options.map((opt) {
         final (value, label) = opt;
         final isSelected = selected == value;
@@ -897,21 +1275,28 @@ class _SegmentedRow<T> extends StatelessWidget {
           onTap: () => onChanged(value),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isSelected ? color : Colors.grey.withValues(alpha: 0.4),
-                width: isSelected ? 1.5 : 1,
-              ),
+              color: isSelected
+                  ? AppColors.primary
+                  : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
             ),
             child: Text(
               label,
-              style: TextStyle(
-                fontSize: 13,
-                color: isSelected ? color : Colors.grey[700],
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12.5,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ),

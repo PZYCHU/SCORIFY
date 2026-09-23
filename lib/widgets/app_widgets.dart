@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:open_filex/open_filex.dart';
 import '../models/models.dart';
@@ -210,14 +211,22 @@ class KriteriaRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: AppColors.surfaceWhite,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
@@ -227,14 +236,13 @@ class KriteriaRow extends StatelessWidget {
                   kriteria.nama,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyLarge?.copyWith(
+                  style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w700,
-                    fontSize: 15.5,
+                    fontSize: 15,
+                    color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Wrap(
                   spacing: 6,
                   runSpacing: 4,
@@ -242,26 +250,65 @@ class KriteriaRow extends StatelessWidget {
                     JenisChip(kriteria.jenis),
                     if (kriteria.inputType != null)
                       InputTypeChip(kriteria.inputType),
-                    ArahChip(kriteria.arah),
+                    if (onToggleArah != null)
+                      GestureDetector(
+                        onTap: onToggleArah,
+                        child: Tooltip(
+                          message: 'Ketuk untuk beralih Benefit / Cost',
+                          child: ArahChip(kriteria.arah),
+                        ),
+                      )
+                    else
+                      ArahChip(kriteria.arah),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           if (showEdit && onEdit != null) ...[
-            ActionIconBtn(
-              icon: Icons.edit_outlined,
-              color: AppColors.primary,
-              onTap: onEdit!,
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: onEdit,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.edit_outlined,
+                    color: AppColors.primary,
+                    size: 18,
+                  ),
+                ),
+              ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
           ],
           // Hapus
-          ActionIconBtn(
-            icon: Icons.delete_outline,
-            color: AppColors.danger,
-            onTap: onDelete,
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: onDelete,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: AppColors.danger,
+                  size: 18,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -342,16 +389,33 @@ class BottomSaveButton extends StatelessWidget {
         width: double.infinity,
         child: ElevatedButton(
           onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            disabledBackgroundColor: AppColors.border,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            shadowColor: AppColors.primary.withValues(alpha: 0.35),
+          ),
           child: isLoading
               ? const SizedBox(
-                  width: 20,
-                  height: 20,
+                  width: 22,
+                  height: 22,
                   child: CircularProgressIndicator(
                     color: Colors.white,
-                    strokeWidth: 2,
+                    strokeWidth: 2.5,
                   ),
                 )
-              : Text(label),
+              : Text(
+                  label,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
         ),
       ),
     );
@@ -399,30 +463,227 @@ class EmptyState extends StatelessWidget {
 
 // ─── Confirm Dialog ───────────────────────────────────────────────────────────
 
+Widget _buildCenteredConfirmContent(
+  String title,
+  String bodyText, {
+  IconData? icon,
+  required Color iconColor,
+  required Color iconBg,
+}) {
+  final newlineIndex = bodyText.indexOf('\n');
+  final questionIndex = bodyText.indexOf('?');
+
+  String boldPart = '';
+  String regularPart = '';
+  bool regularFirst = false;
+
+  if (newlineIndex != -1) {
+    boldPart = bodyText.substring(0, newlineIndex).trim();
+    regularPart = bodyText.substring(newlineIndex + 1).trim();
+  } else if (questionIndex != -1) {
+    final periodIndex = bodyText.lastIndexOf('.', questionIndex);
+    if (periodIndex != -1 && periodIndex < questionIndex) {
+      regularPart = bodyText.substring(0, periodIndex + 1).trim();
+      boldPart = bodyText.substring(periodIndex + 1).trim();
+      regularFirst = true;
+    } else {
+      boldPart = bodyText.substring(0, questionIndex + 1).trim();
+      regularPart = bodyText.substring(questionIndex + 1).trim();
+    }
+  } else {
+    boldPart = bodyText.trim();
+  }
+
+  final Widget boldWidget = Text(
+    boldPart,
+    textAlign: TextAlign.center,
+    style: GoogleFonts.plusJakartaSans(
+      fontSize: 14.5,
+      fontWeight: FontWeight.w700,
+      height: 1.45,
+      color: AppColors.textPrimary,
+    ),
+  );
+
+  final Widget regularWidget = regularPart.isNotEmpty
+      ? Text(
+          regularPart,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            height: 1.45,
+            color: AppColors.textSecondary,
+          ),
+        )
+      : const SizedBox.shrink();
+
+  Widget contentWidget;
+  if (regularPart.isEmpty) {
+    contentWidget = boldWidget;
+  } else if (regularFirst) {
+    contentWidget = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        regularWidget,
+        const SizedBox(height: 8),
+        boldWidget,
+      ],
+    );
+  } else {
+    contentWidget = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        boldWidget,
+        const SizedBox(height: 8),
+        regularWidget,
+      ],
+    );
+  }
+
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      if (icon != null) ...[
+        Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: iconBg,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: iconColor.withValues(alpha: 0.25),
+              width: 1.5,
+            ),
+          ),
+          child: Icon(icon, color: iconColor, size: 26),
+        ),
+        const SizedBox(height: 16),
+      ],
+      Text(
+        title,
+        textAlign: TextAlign.center,
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textPrimary,
+          letterSpacing: -0.2,
+        ),
+      ),
+      const SizedBox(height: 10),
+      contentWidget,
+    ],
+  );
+}
+
 Future<bool> showConfirmDialog(
   BuildContext context, {
   required String title,
   required String content,
   String confirmLabel = 'Hapus',
   Color confirmColor = AppColors.danger,
+  IconData? icon,
 }) async {
+  final lowerTitle = title.toLowerCase();
+  final lowerConfirm = confirmLabel.toLowerCase();
+  final isLogout = lowerTitle.contains('keluar') || lowerTitle.contains('logout');
+  final isDanger = confirmColor == AppColors.danger ||
+      lowerTitle.contains('hapus') ||
+      lowerConfirm.contains('hapus') ||
+      lowerTitle.contains('delete');
+
+  final IconData effectiveIcon = icon ??
+      (isLogout
+          ? Icons.logout_rounded
+          : (isDanger
+              ? Icons.delete_outline_rounded
+              : (lowerTitle.contains('reset')
+                  ? Icons.restart_alt_rounded
+                  : Icons.help_outline_rounded)));
+
+  final Color iconColor = isLogout
+      ? const Color(0xFFEF4444)
+      : (isDanger ? AppColors.danger : AppColors.primary);
+  final Color iconBg = isLogout
+      ? const Color(0xFFFEE2E2)
+      : (isDanger
+          ? const Color(0xFFFEE2E2)
+          : AppColors.primary.withValues(alpha: 0.12));
+
   final result = await showDialog<bool>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(title),
-      content: Text(content),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(false),
-          child: const Text('Batal'),
+    builder: (ctx) => Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 16,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _buildCenteredConfirmContent(
+              title,
+              content,
+              icon: effectiveIcon,
+              iconColor: iconColor,
+              iconBg: iconBg,
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: Material(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => Navigator.of(ctx).pop(false),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Batal',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    style: ElevatedButton.styleFrom(
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      backgroundColor: confirmColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      shadowColor: confirmColor.withValues(alpha: 0.35),
+                    ),
+                    child: Text(
+                      confirmLabel,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(true),
-          style: TextButton.styleFrom(foregroundColor: confirmColor),
-          child: Text(confirmLabel),
-        ),
-      ],
+      ),
     ),
   );
   return result ?? false;
@@ -486,60 +747,85 @@ class AppFeedback {
     final confirmBtn = confirmText ?? confirmLabel ?? 'Lanjutkan';
     final cancelBtn = cancelText ?? cancelLabel ?? 'Batal';
 
+    final effectiveColor = isDanger ? AppColors.danger : AppColors.primary;
+    final effectiveBg = isDanger
+        ? const Color(0xFFFEE2E2)
+        : AppColors.primary.withValues(alpha: 0.12);
+
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: (isDanger ? AppColors.danger : AppColors.primary).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                icon,
-                color: isDanger ? AppColors.danger : AppColors.primary,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 16,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildCenteredConfirmContent(
                 title,
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                bodyText,
+                icon: icon,
+                iconColor: effectiveColor,
+                iconBg: effectiveBg,
               ),
-            ),
-          ],
-        ),
-        content: Text(
-          bodyText,
-          style: const TextStyle(fontSize: 14, height: 1.4, color: AppColors.textPrimary),
-        ),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              cancelBtn,
-              style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-            ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: Material(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(14),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => Navigator.of(ctx).pop(false),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          alignment: Alignment.center,
+                          child: Text(
+                            cancelBtn,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        backgroundColor: effectiveColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        shadowColor: effectiveColor.withValues(alpha: 0.35),
+                      ),
+                      child: Text(
+                        confirmBtn,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isDanger ? AppColors.danger : AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: Text(
-              confirmBtn,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
+        ),
       ),
     );
     return result ?? false;
@@ -553,42 +839,51 @@ class AppFeedback {
   }) async {
     await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.warningBg,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.warning_amber_rounded, color: AppColors.warningDark, size: 24),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 16,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildCenteredConfirmContent(
                 title,
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                content,
+                icon: Icons.warning_amber_rounded,
+                iconColor: AppColors.warningDark,
+                iconBg: const Color(0xFFFEF3C7),
               ),
-            ),
-          ],
-        ),
-        content: Text(
-          content,
-          style: const TextStyle(fontSize: 14, height: 1.4, color: AppColors.textPrimary),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('Mengerti'),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: Text(
+                    'Mengerti',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

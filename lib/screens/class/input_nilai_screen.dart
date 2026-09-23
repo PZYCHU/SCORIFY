@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../providers/app_provider.dart';
@@ -16,6 +17,7 @@ void showInputNilaiSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withValues(alpha: 0.5),
     builder: (_) => InputNilaiSheet(kelas: kelas, murid: murid),
   );
 }
@@ -103,7 +105,7 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
           context,
           title: 'Konfirmasi Presensi',
           message:
-              'Presensi ${widget.murid.nama} untuk hari ini sudah pernah dicatat pada pukul $jam:$mnt WIB (Nilai: $prevVal).\n\nApakah Anda ingin memperbarui nilai presensi ini?',
+              'Presensi ${widget.murid.nama} untuk hari ini sudah pernah dicatat pada pukul $jam:$mnt WIB (Nilai: $prevVal).\n\nApakah Anda yakin ingin memperbarui nilai presensi ini?',
           confirmText: 'Ya, Perbarui',
           cancelText: 'Batal',
         );
@@ -127,75 +129,126 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.65,
-      minChildSize: 0.4,
-      maxChildSize: 0.92,
+      initialChildSize: 0.72,
+      minChildSize: 0.45,
+      maxChildSize: 0.94,
       builder: (_, controller) => Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: Column(
           children: [
-            // Handle
+            // Handle Bar
             const SizedBox(height: 12),
             Container(
-              width: 40,
+              width: 44,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.border,
+                color: const Color(0xFFCBD5E1),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // Header
+            // Header Info Siswa
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      widget.murid.nama.isNotEmpty
+                          ? widget.murid.nama[0].toUpperCase()
+                          : '?',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           widget.murid.nama,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Penilaian KBM (Tersimpan otomatis per kriteria)',
-                          style: TextStyle(
+                          'Penilaian KBM • Tersimpan otomatis per kriteria',
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF1F5F9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
 
-            const Divider(height: 24),
+            const Divider(height: 20, thickness: 1, color: Color(0xFFF1F5F9)),
 
             // List kriteria
             Expanded(
               child: _kriteriaPerforma.isEmpty
                   ? Center(
-                      child: Text(
-                        'Tidak ada kriteria performa\ndi kelas ini',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textSecondary),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.rule_folder_outlined,
+                              size: 44, color: Colors.grey.shade400),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Tidak ada kriteria performa\ndi kelas ini',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.plusJakartaSans(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     )
                   : ListView(
                       controller: controller,
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
                       children: _kriteriaPerforma
                           .map((k) => _buildKriteriaItem(k))
                           .toList(),
@@ -209,22 +262,23 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                 child: SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
+                  height: 48,
+                  child: ElevatedButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary, width: 1.5),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    icon: const Icon(Icons.check_circle_outline, size: 18),
-                    label: const Text(
+                    child: Text(
                       'Selesai Menilai',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
                         fontSize: 15,
+                        letterSpacing: 0.2,
                       ),
                     ),
                   ),
@@ -242,9 +296,9 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border, width: 0.5),
+        color: const Color(0xFFF8FAF9),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -254,16 +308,17 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
               Expanded(
                 child: Text(
                   k.nama,
-                  style: const TextStyle(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
               _inputTypeChip(k.inputType),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           _buildInputWidget(k),
         ],
       ),
@@ -284,6 +339,13 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
         );
 
       case InputType.attendance:
+        return _AttendanceWidget(
+          currentNilai: nilai,
+          onSaveNilai: (nilaiBaru) async {
+            await _simpanKriteria(k.id, nilaiBaru);
+          },
+        );
+
       case InputType.number:
         return _NumberWidget(
           initialValue: nilai,
@@ -300,24 +362,191 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
   Widget _inputTypeChip(InputType? t) {
     final label = switch (t) {
       InputType.counter => 'Poin Tambahan (+)',
-      InputType.attendance => 'Presensi/Kehadiran',
+      InputType.attendance => 'Presensi / Kehadiran',
       InputType.number => 'Nilai Angka',
       null => 'Penilaian',
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.18),
+        ),
       ),
       child: Text(
         label,
-        style: const TextStyle(
+        style: GoogleFonts.plusJakartaSans(
           fontSize: 11,
           color: AppColors.primary,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w700,
         ),
       ),
+    );
+  }
+}
+
+// ─── Attendance Widget (Presensi dengan Preset) ───────────────────────────────
+
+class _AttendanceWidget extends StatefulWidget {
+  final double currentNilai;
+  final Future<void> Function(double nilai) onSaveNilai;
+
+  const _AttendanceWidget({
+    required this.currentNilai,
+    required this.onSaveNilai,
+  });
+
+  @override
+  State<_AttendanceWidget> createState() => _AttendanceWidgetState();
+}
+
+class _AttendanceWidgetState extends State<_AttendanceWidget> {
+  late TextEditingController _ctrl;
+  bool _isSaving = false;
+  bool _showSuccess = false;
+  Timer? _successTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(
+      text: widget.currentNilai > 0
+          ? widget.currentNilai.toStringAsFixed(0)
+          : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _successTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _simpan([double? overrideVal]) async {
+    final val = overrideVal ?? double.tryParse(_ctrl.text.trim());
+    if (val == null) return;
+
+    if (overrideVal != null) {
+      _ctrl.text = overrideVal.toStringAsFixed(0);
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      await widget.onSaveNilai(val);
+      if (!mounted) return;
+      FocusScope.of(context).unfocus();
+      setState(() {
+        _showSuccess = true;
+        _isSaving = false;
+      });
+      _successTimer?.cancel();
+      _successTimer = Timer(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _showSuccess = false);
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _ctrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _simpan(),
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Nilai kehadiran (misal 0–100 atau poin)',
+                  hintStyle: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    color: AppColors.textHint,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  isDense: true,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: _isSaving ? null : () => _simpan(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      'Simpan',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                      ),
+                    ),
+            ),
+          ],
+        ),
+        if (_showSuccess) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.check_circle_rounded,
+                  color: Color(0xFF059669), size: 14),
+              const SizedBox(width: 4),
+              Text(
+                'Presensi berhasil disimpan!',
+                style: GoogleFonts.plusJakartaSans(
+                  color: const Color(0xFF059669),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }
@@ -350,11 +579,8 @@ class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
     super.dispose();
   }
 
-  Future<void> _kirimPoin() async {
-    final input = _poinCtrl.text.trim();
-    if (input.isEmpty) return;
-
-    final poin = double.tryParse(input);
+  Future<void> _kirimPoin([double? presetPoin]) async {
+    final poin = presetPoin ?? double.tryParse(_poinCtrl.text.trim());
     if (poin != null && poin > 0) {
       setState(() => _isSaving = true);
       try {
@@ -382,27 +608,56 @@ class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Preset Poin Cepat
+        Wrap(
+          spacing: 7,
+          runSpacing: 6,
+          children: [1, 2, 5, 10].map((val) {
+            return InkWell(
+              onTap: () => _kirimPoin(val.toDouble()),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Text(
+                  '+$val Poin',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFD97706),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 8),
+
         // Tampilkan total poin terakumulasi
         if (total > 0)
           Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.1),
+              color: const Color(0xFFFFFBEB),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+              border: Border.all(color: const Color(0xFFFDE68A)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.functions, size: 14, color: AppColors.accent),
-                const SizedBox(width: 6),
+                const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFFD97706)),
+                const SizedBox(width: 4),
                 Text(
-                  'Total nilai hari ini: ${total.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.accent,
+                  'Total poin hari ini: ${total.toStringAsFixed(0)}',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFB45309),
                   ),
                 ),
               ],
@@ -417,39 +672,51 @@ class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
                     const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _kirimPoin(),
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
                 decoration: InputDecoration(
-                  hintText: 'Tambah poin (mis. 10 atau 80)',
+                  hintText: 'Tambah poin custom (cth: 5)',
+                  hintStyle: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    color: AppColors.textHint,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  isDense: true,
                   contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.border),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.border),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide:
-                        const BorderSide(color: AppColors.accent, width: 2),
+                        const BorderSide(color: Color(0xFFD97706), width: 1.5),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
-            ElevatedButton.icon(
-              onPressed: _isSaving ? null : _kirimPoin,
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: _isSaving ? null : () => _kirimPoin(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
+                backgroundColor: const Color(0xFFD97706),
                 foregroundColor: Colors.white,
+                elevation: 0,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              icon: _isSaving
+              child: _isSaving
                   ? const SizedBox(
                       width: 14,
                       height: 14,
@@ -458,26 +725,29 @@ class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.add, size: 18),
-              label: Text(
-                _isSaving ? '...' : 'Tambah',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
+                  : Text(
+                      '+ Tambah',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                      ),
+                    ),
             ),
           ],
         ),
         if (_showSuccess) ...[
           const SizedBox(height: 6),
-          const Row(
+          Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 14),
-              SizedBox(width: 4),
+              const Icon(Icons.check_circle_rounded,
+                  color: Color(0xFF059669), size: 14),
+              const SizedBox(width: 4),
               Text(
-                'Poin berhasil ditambahkan & tersimpan!',
-                style: TextStyle(
-                  color: Colors.green,
+                'Poin berhasil ditambahkan!',
+                style: GoogleFonts.plusJakartaSans(
+                  color: const Color(0xFF059669),
                   fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -526,9 +796,13 @@ class _NumberWidgetState extends State<_NumberWidget> {
     super.dispose();
   }
 
-  Future<void> _simpan() async {
-    final val = double.tryParse(_ctrl.text.trim());
+  Future<void> _simpan([double? presetVal]) async {
+    final val = presetVal ?? double.tryParse(_ctrl.text.trim());
     if (val == null) return;
+
+    if (presetVal != null) {
+      _ctrl.text = presetVal.toStringAsFixed(0);
+    }
 
     setState(() => _isSaving = true);
     try {
@@ -553,6 +827,37 @@ class _NumberWidgetState extends State<_NumberWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Quick presets
+        Wrap(
+          spacing: 7,
+          runSpacing: 6,
+          children: [100, 90, 85, 80, 75].map((val) {
+            final isSel = _ctrl.text == val.toString();
+            return InkWell(
+              onTap: () => _simpan(val.toDouble()),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isSel ? AppColors.primary : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isSel ? AppColors.primary : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Text(
+                  '$val',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: isSel ? Colors.white : AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
@@ -562,39 +867,51 @@ class _NumberWidgetState extends State<_NumberWidget> {
                     const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _simpan(),
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
                 decoration: InputDecoration(
-                  hintText: 'Masukkan nilai (0–100)',
+                  hintText: 'Ketik nilai (0–100)',
+                  hintStyle: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    color: AppColors.textHint,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  isDense: true,
                   contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.border),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.border),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide:
-                        const BorderSide(color: AppColors.primary, width: 2),
+                        const BorderSide(color: AppColors.primary, width: 1.5),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
-            ElevatedButton.icon(
-              onPressed: _isSaving ? null : _simpan,
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: _isSaving ? null : () => _simpan(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
+                elevation: 0,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              icon: _isSaving
+              child: _isSaving
                   ? const SizedBox(
                       width: 14,
                       height: 14,
@@ -603,26 +920,29 @@ class _NumberWidgetState extends State<_NumberWidget> {
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.check, size: 18),
-              label: Text(
-                _isSaving ? '...' : 'Simpan',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
+                  : Text(
+                      'Simpan',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                      ),
+                    ),
             ),
           ],
         ),
         if (_showSuccess) ...[
           const SizedBox(height: 6),
-          const Row(
+          Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 14),
-              SizedBox(width: 4),
+              const Icon(Icons.check_circle_rounded,
+                  color: Color(0xFF059669), size: 14),
+              const SizedBox(width: 4),
               Text(
                 'Nilai berhasil disimpan!',
-                style: TextStyle(
-                  color: Colors.green,
+                style: GoogleFonts.plusJakartaSans(
+                  color: const Color(0xFF059669),
                   fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],

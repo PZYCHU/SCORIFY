@@ -322,7 +322,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             context,
                             title: 'Keluar Akun',
                             content:
-                                'Apakah Anda yakin ingin keluar dari akun ini?',
+                                'Yakin ingin keluar dari akun ini?\nAnda harus masuk kembali untuk mengelola kelas dan data penilaian.',
                           );
                           if (confirm && context.mounted) {
                             context.read<AppProvider>().listenToUser(null);
