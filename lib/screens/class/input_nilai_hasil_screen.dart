@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../providers/app_provider.dart';
@@ -118,15 +119,26 @@ class _KriteriaHasilCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: AppColors.surfaceWhite,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border, width: 0.5),
+        borderRadius: BorderRadius.circular(20), // Selaras Pairwise Card
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header kriteria
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 8, 10),
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
             child: Row(
               children: [
                 Expanded(
@@ -135,27 +147,40 @@ class _KriteriaHasilCard extends StatelessWidget {
                     children: [
                       Text(
                         kriteria.nama,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${sesiList.length} sesi',
-                        style: const TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary),
+                        '${sesiList.length} sesi penilaian',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                TextButton.icon(
-                  onPressed: () => _showTambahSesiDialog(context),
-                  icon: const Icon(Icons.add_task_rounded, size: 16),
-                  label: const Text('+ Tambah Sesi',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
+                // Tombol Plus (+) Tambah Sesi yang bersih & elegan
+                Material(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    onTap: () => _showTambahSesiDialog(context),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.add_rounded,
+                        color: AppColors.primary,
+                        size: 22,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -164,19 +189,32 @@ class _KriteriaHasilCard extends StatelessWidget {
 
           if (sesiList.isEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(10),
+                  color: const Color(0xFFF1F5F9), // Pale gray soft surface
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  'Belum ada sesi penilaian. Tap "+ Tambah Sesi" untuk menambahkan.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontSize: 13, color: AppColors.textSecondary),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: AppColors.primary.withValues(alpha: 0.6),
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Belum ada sesi penilaian. Tap tombol "+" untuk menambahkan.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             )
@@ -443,27 +481,30 @@ class _SesiTileState extends State<_SesiTile> {
           ),
         );
       },
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: selesai ? AppColors.benefitChip : AppColors.background,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selesai
-                ? AppColors.benefitChipText.withValues(alpha: 0.3)
-                : AppColors.border,
-          ),
+          color: selesai ? AppColors.benefitChip : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
           children: [
-            Icon(
-              selesai ? Icons.check_circle : Icons.edit_note,
-              color: selesai
-                  ? AppColors.benefitChipText
-                  : AppColors.primary,
-              size: 18,
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: selesai
+                    ? AppColors.benefitChipText.withValues(alpha: 0.12)
+                    : AppColors.primary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                selesai ? Icons.check_rounded : Icons.edit_note_rounded,
+                color: selesai ? AppColors.benefitChipText : AppColors.primary,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -472,15 +513,19 @@ class _SesiTileState extends State<_SesiTile> {
                 children: [
                   Text(
                     widget.sesi.nama,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 13),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13.5,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                   Text(
                     selesai
                         ? 'Selesai — $terisi/$total murid'
                         : '$terisi / $total murid sudah diisi',
-                    style: TextStyle(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
+                      fontWeight: FontWeight.w500,
                       color: selesai
                           ? AppColors.benefitChipText
                           : AppColors.textSecondary,
@@ -490,7 +535,7 @@ class _SesiTileState extends State<_SesiTile> {
               ),
             ),
             const Icon(
-              Icons.chevron_right,
+              Icons.chevron_right_rounded,
               size: 20,
               color: AppColors.textSecondary,
             ),

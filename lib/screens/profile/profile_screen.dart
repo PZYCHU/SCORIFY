@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_widgets.dart';
@@ -177,7 +178,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final isGoogle = _isGoogleUser;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF3F5F1),
       appBar: AppBar(
         title: const Text(
           'Profil Guru',
@@ -647,45 +648,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0D252B), // Deep teal dark
+            Color(0xFF163842),
+            Color(0xFF1B4B5A), // AppColors.primary
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.28),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 36,
-            backgroundColor: AppColors.primary,
-            backgroundImage: photoUrl != null && photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-            child: photoUrl == null || photoUrl.isEmpty
-                ? Text(
-                    displayName.isNotEmpty ? displayName[0].toUpperCase() : 'G',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
-                : null,
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.85),
+                width: 2.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: CircleAvatar(
+              radius: 36,
+              backgroundColor: AppColors.primaryLight,
+              backgroundImage:
+                  photoUrl != null && photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+              child: photoUrl == null || photoUrl.isEmpty
+                  ? Text(
+                      displayName.isNotEmpty ? displayName[0].toUpperCase() : 'G',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    )
+                  : null,
+            ),
           ),
           const SizedBox(height: 14),
           Text(
             displayName,
-            style: const TextStyle(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
           Text(
             email,
-            style: const TextStyle(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
-              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+              color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
           const SizedBox(height: 12),
@@ -695,20 +728,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.benefitChip,
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.school_rounded, size: 14, color: AppColors.benefitChipText),
+                    Icon(Icons.school_rounded, size: 14, color: AppColors.accent),
                     SizedBox(width: 5),
                     Text(
                       'Guru',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.benefitChipText,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
                       ),
                     ),
                   ],
@@ -718,7 +751,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isGoogle ? const Color(0xFFE8F0FE) : const Color(0xFFF1F5F9),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -727,15 +760,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Icon(
                       isGoogle ? Icons.g_mobiledata_rounded : Icons.email_rounded,
                       size: isGoogle ? 18 : 13,
-                      color: isGoogle ? const Color(0xFF1A73E8) : AppColors.textSecondary,
+                      color: isGoogle ? const Color(0xFF93C5FD) : Colors.white70,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       isGoogle ? 'Google' : 'Email/Password',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: isGoogle ? const Color(0xFF1A73E8) : AppColors.textSecondary,
+                        color: Colors.white,
                       ),
                     ),
                   ],
@@ -758,9 +791,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceWhite,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -782,7 +826,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
@@ -790,7 +834,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
