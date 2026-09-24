@@ -13,6 +13,8 @@
 migrate_working_dir/
 
 # IntelliJ related
+.agents/
+SKILL.md
 *.iml
 *.ipr
 *.iws
