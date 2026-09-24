@@ -471,15 +471,9 @@ class ExcelService {
       final bytes = excel.save();
       if (bytes == null) return null;
 
-      final dir = await _getExportDir();
       final safeName = kelas.nama.replaceAll(RegExp(r'[^\w\s-]'), '_');
       final fileName = 'Laporan_Nilai_${safeName}_${DateTime.now().millisecondsSinceEpoch}.xlsx';
-      final filePath = '${dir.path}/$fileName';
-
-      final file = File(filePath);
-      await file.writeAsBytes(bytes);
-
-      return filePath;
+      return await _saveFile(bytes, fileName);
     } catch (e) {
       debugPrint('ExcelService.exportSiswa error: $e');
       return null;
@@ -518,22 +512,70 @@ class ExcelService {
     return total / semuaNilai.length;
   }
 
-  /// Mendapatkan direktori tujuan export yang paling tepat per platform.
-  static Future<Directory> _getExportDir() async {
+  /// Menyimpan bytes file dengan fallback kandidat direktori berurutan:
+  /// 1. Public Download Android (jika OS mengizinkan)
+  /// 2. External Storage App Downloads (bebas permission di Android)
+  /// 3. External Storage App Files
+  /// 4. getDownloadsDirectory() (Desktop / OS umum)
+  /// 5. getApplicationDocumentsDirectory() (Internal app)
+  static Future<String?> _saveFile(List<int> bytes, String fileName) async {
+    final List<Directory> candidates = [];
+
     if (Platform.isAndroid) {
-      final publicDownload = Directory('/storage/emulated/0/Download');
-      if (await publicDownload.exists()) {
-        return publicDownload;
-      }
+      // 1. Coba public Download jika didukung OS (Android <= 9 atau izin khusus)
+      candidates.add(Directory('/storage/emulated/0/Download'));
+
+      // 2. Coba Android App External Downloads (tidak butuh permission khusus di Android 10+)
+      try {
+        final extDownloads = await getExternalStorageDirectories(type: StorageDirectory.downloads);
+        if (extDownloads != null && extDownloads.isNotEmpty) {
+          candidates.addAll(extDownloads);
+        }
+      } catch (_) {}
+
+      // 3. Coba Android App External Storage
+      try {
+        final extDir = await getExternalStorageDirectory();
+        if (extDir != null) {
+          candidates.add(extDir);
+        }
+      } catch (_) {}
     }
+
+    // 4. Desktop / generic Downloads directory
     try {
-      // Android / iOS → Downloads
       final downloads = await getDownloadsDirectory();
-      if (downloads != null) return downloads;
+      if (downloads != null) {
+        candidates.add(downloads);
+      }
     } catch (_) {}
 
-    // Fallback → Application Documents
-    return await getApplicationDocumentsDirectory();
+    // 5. Fallback ke App Documents (selalu bisa diakses di semua platform)
+    try {
+      final docs = await getApplicationDocumentsDirectory();
+      candidates.add(docs);
+    } catch (_) {}
+
+    // Coba simpan berurutan ke kandidat direktori yang bisa ditulis
+    for (final dir in candidates) {
+      try {
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
+        }
+        final filePath = '${dir.path}/$fileName';
+        final file = File(filePath);
+        await file.writeAsBytes(bytes, flush: true);
+
+        // Pastikan file berhasil tertulis
+        if (await file.exists() && await file.length() > 0) {
+          return filePath;
+        }
+      } catch (e) {
+        debugPrint('ExcelService._saveFile: gagal menulis di ${dir.path} ($e), mencoba opsi berikutnya...');
+      }
+    }
+
+    return null;
   }
 
   // ─── Template ──────────────────────────────────────────────────────────────
@@ -577,12 +619,8 @@ class ExcelService {
       final bytes = excel.save();
       if (bytes == null) return null;
 
-      final dir = await _getExportDir();
       const fileName = 'Template_Import_Siswa.xlsx';
-      final filePath = '${dir.path}/$fileName';
-
-      await File(filePath).writeAsBytes(bytes);
-      return filePath;
+      return await _saveFile(bytes, fileName);
     } catch (e) {
       debugPrint('ExcelService.downloadTemplate error: $e');
       return null;

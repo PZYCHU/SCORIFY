@@ -208,6 +208,31 @@ class AuthService {
     }
   }
 
+  // ── Buat Kata Sandi Baru untuk Akun Google (Account Linking) ───────────────
+  Future<void> linkPassword(String newPassword) async {
+    final user = _auth.currentUser;
+    if (user == null || user.email == null) throw 'Pengguna tidak ditemukan.';
+    try {
+      final cred = EmailAuthProvider.credential(
+        email: user.email!,
+        password: newPassword,
+      );
+      await user.linkWithCredential(cred);
+      await user.reload();
+      await _firestore.collection('users').doc(user.uid).update({
+        'provider': 'google_and_password',
+      });
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        await _auth.sendPasswordResetEmail(email: user.email!);
+        throw 'Demi keamanan, tautan pembuatan kata sandi telah dikirim ke inbox ${user.email}. Silakan buka email Anda untuk mengatur kata sandi.';
+      }
+      throw _handleAuthException(e);
+    } catch (e) {
+      throw 'Gagal membuat kata sandi: $e';
+    }
+  }
+
   // ─── Private helpers ───────────────────────────────────────────────────────
   Future<void> _saveUserToFirestore({
     required String uid,

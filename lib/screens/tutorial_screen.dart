@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import 'assistant/scorify_assistant_screen.dart';
 
 class TutorialScreen extends StatefulWidget {
   const TutorialScreen({super.key});
@@ -20,13 +21,30 @@ class _TutorialScreenState extends State<TutorialScreen> {
     'AHP Saaty',
     'Input Nilai',
     'Excel',
-    'Tanya Jawab (Q&A)',
+    'FAQ (Tanya Jawab)',
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F1), // Sage surface Scorify
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'scorify_assistant_fab',
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const ScorifyAssistantScreen(),
+            ),
+          );
+        },
+        backgroundColor: const Color(0xFF0D9488),
+        foregroundColor: Colors.white,
+        elevation: 4,
+        tooltip: 'Asisten Scorify',
+        shape: const CircleBorder(),
+        child: const Icon(Icons.smart_toy_rounded, size: 26),
+      ),
       body: Column(
         children: [
           _buildHeroHeader(context),
@@ -113,12 +131,12 @@ class _TutorialScreenState extends State<TutorialScreen> {
                     const SizedBox(height: 24),
                   ],
 
-                  // 6. Tanya Jawab & Mekanisme Penilaian (Q&A)
+                  // 6. Tanya Jawab & Mekanisme Penilaian (FAQ)
                   if (_selectedCategoryIndex == 0 ||
                       _selectedCategoryIndex == 6) ...[
                     _buildSectionHeader(
                       badgeNumber: '06',
-                      title: 'Tanya Jawab & Mekanisme (Q&A)',
+                      title: 'Tanya Jawab & Mekanisme (FAQ)',
                       subtitle: 'Pertanyaan umum seputar mekanisme kehadiran, benefit/cost, dan pembobotan',
                       icon: Icons.help_outline_rounded,
                       accentColor: const Color(0xFF7C3AED),
@@ -1191,7 +1209,95 @@ class _TutorialScreenState extends State<TutorialScreen> {
           ),
           const SizedBox(height: 16),
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
+
+          // Banner Chatbot Asisten Scorify (Offline)
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F766E), Color(0xFF134E4A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0F766E).withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.smart_toy_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Punya Pertanyaan Lain?',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13.5,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Tanya langsung ke Asisten Scorify (Offline & Cepat)',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ScorifyAssistantScreen(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF0F766E),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  child: Text(
+                    'Tanya Bot',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
 
           // Q1: Kehadiran
           _buildQnaItem(
@@ -1251,6 +1357,34 @@ class _TutorialScreenState extends State<TutorialScreen> {
             question: 'Apakah nilai yang sudah tersimpan bisa diubah jika terjadi kesalahan input?',
             answer:
                 'Bisa, nilai siswa sangat fleksibel dan dapat diubah kapan saja:\n• Melalui kartu siswa di halaman Detail Kelas (ketuk nilai atau tombol edit).\n• Melalui fitur Input Kolektif.\n• Melalui halaman Detail Sesi Tugas.\n\nSetiap kali ada nilai yang diperbarui, Anda cukup menekan tombol "Hitung Perangkingan" untuk mendapatkan hasil kalkulasi terbaru secara instan.',
+          ),
+
+          // Q7: Login Google vs Password Manual
+          _buildQnaItem(
+            index: 6,
+            tag: 'Akun & Password',
+            tagColor: const Color(0xFF4F46E5),
+            question:
+                'Saya mendaftar via tombol "Login with Google", apakah bisa masuk manual lewat Email & Kata Sandi?',
+            answer:
+                'Bisa! Akun Anda dapat ditautkan dengan kata sandi secara instan tanpa merusak data akun:\n\n'
+                '1. Masuk ke aplikasi menggunakan tombol "Login with Google" (sekali klik).\n'
+                '2. Buka menu Profil di pojok atas, lalu gulir ke bagian "Buat Kata Sandi Akun".\n'
+                '3. Masukkan kata sandi baru Anda dan ketuk "Simpan & Buat Kata Sandi".\n\n'
+                'Setelah selesai, akun Anda memiliki 2 pintu masuk: Anda bisa masuk instan lewat tombol "Login with Google", ataupun mengetikkan email & kata sandi secara manual.',
+          ),
+
+          // Q8: Keamanan Data saat Ganti Email
+          _buildQnaItem(
+            index: 7,
+            tag: 'Keamanan Data Akun',
+            tagColor: const Color(0xFF0284C7),
+            question:
+                'Apakah data kelas, siswa, dan nilai saya tetap aman jika email akun diubah?',
+            answer:
+                'Ya, 100% aman!\n\n'
+                'Seluruh data kelas, kriteria bobot, murid, dan riwayat nilai Anda di Scorify tersimpan berdasarkan ID Pengguna (User ID) unik akun Anda, bukan semata-mata pada teks emailnya.\n\n'
+                'Saat Anda memperbarui email atau menambahkan kata sandi pada akun yang sama, ID Pengguna Anda tidak berubah sama sekali. Seluruh data kelas dan nilai tetap utuh dan langsung muncul seperti semula.',
           ),
         ],
       ),

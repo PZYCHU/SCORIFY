@@ -35,6 +35,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _obscureNewPwd = true;
   bool _obscureConfirmPwd = true;
 
+  // Controllers Buat Password Baru (untuk akun Google)
+  final _createPwdFormKey = GlobalKey<FormState>();
+  final _createPasswordController = TextEditingController();
+  final _confirmCreatePasswordController = TextEditingController();
+  bool _obscureCreatePwd = true;
+  bool _obscureConfirmCreatePwd = true;
+  final GlobalKey _passwordSectionKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -59,12 +67,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
+    _createPasswordController.dispose();
+    _confirmCreatePasswordController.dispose();
     super.dispose();
   }
 
   bool get _isGoogleUser {
     final user = _authService.currentUser;
     return user?.providerData.any((p) => p.providerId == 'google.com') ?? false;
+  }
+
+  bool get _hasPasswordProvider {
+    final user = _authService.currentUser;
+    return user?.providerData.any((p) => p.providerId == 'password') ?? false;
+  }
+
+  void _scrollToPasswordSection() {
+    final ctx = _passwordSectionKey.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
@@ -144,6 +170,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _newPasswordController.clear();
       _confirmPasswordController.clear();
       _showSnackBar('Kata sandi berhasil diubah!');
+    } catch (e) {
+      _showSnackBar(e.toString(), isError: true);
+    } finally {
+      if (mounted) setState(() => _isSavingPassword = false);
+    }
+  }
+
+  Future<void> _createPassword() async {
+    if (!_createPwdFormKey.currentState!.validate()) return;
+
+    final newPassword = _createPasswordController.text;
+
+    setState(() => _isSavingPassword = true);
+    try {
+      await _authService.linkPassword(newPassword);
+      _createPasswordController.clear();
+      _confirmCreatePasswordController.clear();
+      _showSnackBar('Kata sandi akun berhasil dibuat! Sekarang Anda dapat mengganti email akun atau masuk secara manual.');
+      await _reloadUser();
     } catch (e) {
       _showSnackBar(e.toString(), isError: true);
     } finally {
@@ -269,370 +314,125 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 20),
 
             // ── Bagian 2: Ubah Email ──
-            if (!isGoogle) ...[
-              _buildSectionCard(
-                title: 'Ganti Email Akun',
-                subtitle: 'Email baru memerlukan verifikasi sebelum aktif',
-                icon: Icons.email_outlined,
-                child: Form(
-                  key: _emailFormKey,
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        controller: _newEmailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: InputDecoration(
-                          hintText: 'Email Baru',
-                          prefixIcon: const Icon(Icons.alternate_email_rounded, color: AppColors.primary, size: 20),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.border),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.border),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                          ),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Email baru wajib diisi';
-                          if (!v.contains('@')) return 'Format email tidak valid';
-                          if (v.trim().toLowerCase() == email.toLowerCase()) {
-                            return 'Email baru tidak boleh sama dengan email lama';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _emailPasswordController,
-                        obscureText: _obscureEmailPassword,
-                        decoration: InputDecoration(
-                          hintText: 'Konfirmasi Sandi Saat Ini',
-                          prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.primary, size: 20),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureEmailPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                              color: AppColors.textSecondary,
-                              size: 20,
-                            ),
-                            onPressed: () => setState(() => _obscureEmailPassword = !_obscureEmailPassword),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.border),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.border),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                          ),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Kata sandi saat ini diperlukan';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: OutlinedButton.icon(
-                          onPressed: _isSavingEmail ? null : _updateEmail,
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: AppColors.primary, width: 1.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          ),
-                          icon: _isSavingEmail
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
-                                )
-                              : const Icon(Icons.send_rounded, color: AppColors.primary, size: 18),
-                          label: const Text(
-                            'Kirim Verifikasi Email Baru',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // ── Bagian 3: Ganti Password ──
-              _buildSectionCard(
-                title: 'Ganti Kata Sandi',
-                subtitle: 'Pastikan kata sandi baru minimal 6 karakter',
-                icon: Icons.security_rounded,
-                child: Form(
-                  key: _pwdFormKey,
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        controller: _currentPasswordController,
-                        obscureText: _obscureCurrentPwd,
-                        decoration: InputDecoration(
-                          hintText: 'Kata Sandi Saat Ini',
-                          prefixIcon: const Icon(Icons.lock_open_rounded, color: AppColors.primary, size: 20),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureCurrentPwd ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                              color: AppColors.textSecondary,
-                              size: 20,
-                            ),
-                            onPressed: () => setState(() => _obscureCurrentPwd = !_obscureCurrentPwd),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.border),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.border),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                          ),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Kata sandi saat ini wajib diisi';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _newPasswordController,
-                        obscureText: _obscureNewPwd,
-                        decoration: InputDecoration(
-                          hintText: 'Kata Sandi Baru (min. 6 karakter)',
-                          prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.primary, size: 20),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureNewPwd ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                              color: AppColors.textSecondary,
-                              size: 20,
-                            ),
-                            onPressed: () => setState(() => _obscureNewPwd = !_obscureNewPwd),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.border),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.border),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                          ),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Kata sandi baru wajib diisi';
-                          if (v.length < 6) return 'Kata sandi minimal 6 karakter';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _confirmPasswordController,
-                        obscureText: _obscureConfirmPwd,
-                        decoration: InputDecoration(
-                          hintText: 'Ulangi Kata Sandi Baru',
-                          prefixIcon: const Icon(Icons.lock_reset_rounded, color: AppColors.primary, size: 20),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureConfirmPwd ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                              color: AppColors.textSecondary,
-                              size: 20,
-                            ),
-                            onPressed: () => setState(() => _obscureConfirmPwd = !_obscureConfirmPwd),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.border),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.border),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                          ),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Konfirmasi kata sandi wajib diisi';
-                          if (v != _newPasswordController.text) return 'Kata sandi baru tidak cocok';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton.icon(
-                          onPressed: _isSavingPassword ? null : _updatePassword,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          ),
-                          icon: _isSavingPassword
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                )
-                              : const Icon(Icons.vpn_key_rounded, color: Colors.white, size: 20),
-                          label: const Text(
-                            'Ubah Kata Sandi',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ] else ...[
-              // Card Informasi Keamanan & Opsi Reset Password untuk Pengguna Google (Point 6)
-              _buildSectionCard(
-                title: 'Email, Sandi & Keamanan',
-                subtitle: 'Informasi kredensial login Google OAuth',
-                icon: Icons.security_rounded,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Kotak Penjelasan Resmi Google Auth
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0FDF4),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFBBF7D0)),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+            _buildSectionCard(
+              title: 'Ganti Email Akun',
+              subtitle: 'Email baru memerlukan verifikasi sebelum aktif',
+              icon: Icons.email_outlined,
+              child: (isGoogle && !_hasPasswordProvider)
+                  ? _buildGoogleEmailNoticeCard()
+                  : Form(
+                      key: _emailFormKey,
+                      child: Column(
                         children: [
-                          const Icon(Icons.verified_user_rounded, color: Color(0xFF16A34A), size: 22),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Terkoneksi Akun Google',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF166534),
-                                  ),
+                          TextFormField(
+                            controller: _newEmailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              hintText: 'Email Baru',
+                              prefixIcon: const Icon(Icons.alternate_email_rounded, color: AppColors.primary, size: 20),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.border),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.border),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                              ),
+                            ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return 'Email baru wajib diisi';
+                              if (!v.contains('@')) return 'Format email tidak valid';
+                              if (v.trim().toLowerCase() == email.toLowerCase()) {
+                                return 'Email baru tidak boleh sama dengan email lama';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _emailPasswordController,
+                            obscureText: _obscureEmailPassword,
+                            decoration: InputDecoration(
+                              hintText: isGoogle ? 'Kata Sandi Akun Scorify Anda' : 'Konfirmasi Sandi Saat Ini',
+                              prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.primary, size: 20),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscureEmailPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                  color: AppColors.textSecondary,
+                                  size: 20,
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Akun Anda terotentikasi secara aman melalui Google Sign-In ($email). '
-                                  'Oleh karena itu, pengelolaan alamat email utama dan kata sandi dilindungi langsung oleh Google sehingga tidak dapat diubah dari dalam aplikasi Scorify.',
-                                  style: const TextStyle(
-                                    fontSize: 12.5,
-                                    height: 1.45,
-                                    color: Color(0xFF14532D),
-                                  ),
+                                onPressed: () => setState(() => _obscureEmailPassword = !_obscureEmailPassword),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.border),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.border),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                              ),
+                            ),
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Kata sandi saat ini diperlukan';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: OutlinedButton.icon(
+                              onPressed: _isSavingEmail ? null : _updateEmail,
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: AppColors.primary, width: 1.5),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              ),
+                              icon: _isSavingEmail
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.send_rounded, color: AppColors.primary, size: 18),
+                              label: const Text(
+                                'Kirim Verifikasi Email Baru',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.2,
                                 ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  '💡 Untuk mengganti email atau sandi akun Google Anda, silakan buka menu keamanan di myaccount.google.com.',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontStyle: FontStyle.italic,
-                                    color: Color(0xFF166534),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Ingin bisa login dengan kata sandi manual juga? Anda dapat menyetel kata sandi lokal untuk akun ini via email pemulihan:',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textSecondary,
-                            height: 1.4,
-                            fontSize: 13,
-                          ),
-                    ),
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: OutlinedButton.icon(
-                        onPressed: _isSavingPassword ? null : _sendPasswordResetEmail,
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: AppColors.primary, width: 1.5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
-                        icon: _isSavingPassword
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
-                              )
-                            : const Icon(Icons.mark_email_read_outlined, color: AppColors.primary, size: 20),
-                        label: const Text(
-                          'Kirim Tautan Setel Kata Sandi Baru',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
+            const SizedBox(height: 20),
+
+            // ── Bagian 3: Kata Sandi ──
+            KeyedSubtree(
+              key: _passwordSectionKey,
+              child: (isGoogle && !_hasPasswordProvider)
+                  ? _buildCreatePasswordCard(email)
+                  : _buildChangePasswordCard(isGoogle),
+            ),
             const SizedBox(height: 32),
           ],
         ),
@@ -847,6 +647,406 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 16),
           child,
         ],
+      ),
+    );
+  }
+
+  Widget _buildGoogleEmailNoticeCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB), // Soft warm amber
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_reset_rounded,
+                  color: Color(0xFFD97706),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Perlu Kata Sandi Akun Terlebih Dahulu',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF92400E),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Karena Anda saat ini masuk via tombol "Login with Google", akun Anda belum memiliki kata sandi di Scorify. '
+                      'Silakan buat kata sandi akun terlebih dahulu agar Anda tetap bisa masuk dan data kelas tidak terkunci setelah email diperbarui.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12.5,
+                        height: 1.45,
+                        color: const Color(0xFFB45309),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton.icon(
+              onPressed: _scrollToPasswordSection,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD97706),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.vpn_key_rounded, size: 18),
+              label: Text(
+                'Buat Kata Sandi Akun Sekarang',
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCreatePasswordCard(String email) {
+    return _buildSectionCard(
+      title: 'Buat Kata Sandi Akun',
+      subtitle: 'Atur kata sandi agar bisa masuk manual & mengganti email',
+      icon: Icons.vpn_key_rounded,
+      child: Form(
+        key: _createPwdFormKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.verified_user_rounded, color: Color(0xFF16A34A), size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Akun Anda terhubung dengan tombol "Login with Google" ($email). Buat kata sandi akun di bawah ini agar Anda bisa masuk secara manual atau mengganti email akun.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12.5,
+                        color: const Color(0xFF166534),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _createPasswordController,
+              obscureText: _obscureCreatePwd,
+              decoration: InputDecoration(
+                hintText: 'Kata Sandi Baru (min. 6 karakter)',
+                prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.primary, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureCreatePwd ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _obscureCreatePwd = !_obscureCreatePwd),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Kata sandi baru wajib diisi';
+                if (v.length < 6) return 'Kata sandi minimal 6 karakter';
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _confirmCreatePasswordController,
+              obscureText: _obscureConfirmCreatePwd,
+              decoration: InputDecoration(
+                hintText: 'Konfirmasi Kata Sandi Baru',
+                prefixIcon: const Icon(Icons.lock_reset_rounded, color: AppColors.primary, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirmCreatePwd ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _obscureConfirmCreatePwd = !_obscureConfirmCreatePwd),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Konfirmasi kata sandi wajib diisi';
+                if (v != _createPasswordController.text) return 'Kata sandi tidak cocok';
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: _isSavingPassword ? null : _createPassword,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                icon: _isSavingPassword
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                label: const Text(
+                  'Simpan & Buat Kata Sandi',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: TextButton.icon(
+                onPressed: _isSavingPassword ? null : _sendPasswordResetEmail,
+                icon: const Icon(Icons.mark_email_read_outlined, size: 16, color: AppColors.primary),
+                label: const Text(
+                  'Atau kirim tautan buat sandi ke email Anda',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChangePasswordCard(bool isGoogle) {
+    return _buildSectionCard(
+      title: isGoogle ? 'Ganti Kata Sandi Akun' : 'Ganti Kata Sandi',
+      subtitle: isGoogle
+          ? 'Akun terhubung ke Google & memiliki kata sandi manual'
+          : 'Pastikan kata sandi baru minimal 6 karakter',
+      icon: Icons.security_rounded,
+      child: Form(
+        key: _pwdFormKey,
+        child: Column(
+          children: [
+            TextFormField(
+              controller: _currentPasswordController,
+              obscureText: _obscureCurrentPwd,
+              decoration: InputDecoration(
+                hintText: 'Kata Sandi Saat Ini',
+                prefixIcon: const Icon(Icons.lock_open_rounded, color: AppColors.primary, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureCurrentPwd ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _obscureCurrentPwd = !_obscureCurrentPwd),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Kata sandi saat ini wajib diisi';
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _newPasswordController,
+              obscureText: _obscureNewPwd,
+              decoration: InputDecoration(
+                hintText: 'Kata Sandi Baru (min. 6 karakter)',
+                prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.primary, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureNewPwd ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _obscureNewPwd = !_obscureNewPwd),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Kata sandi baru wajib diisi';
+                if (v.length < 6) return 'Kata sandi minimal 6 karakter';
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _confirmPasswordController,
+              obscureText: _obscureConfirmPwd,
+              decoration: InputDecoration(
+                hintText: 'Ulangi Kata Sandi Baru',
+                prefixIcon: const Icon(Icons.lock_reset_rounded, color: AppColors.primary, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirmPwd ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _obscureConfirmPwd = !_obscureConfirmPwd),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Konfirmasi kata sandi wajib diisi';
+                if (v != _newPasswordController.text) return 'Kata sandi baru tidak cocok';
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: _isSavingPassword ? null : _updatePassword,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                icon: _isSavingPassword
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.vpn_key_rounded, color: Colors.white, size: 20),
+                label: const Text(
+                  'Ubah Kata Sandi',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

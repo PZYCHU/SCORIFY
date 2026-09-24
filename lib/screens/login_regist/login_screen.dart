@@ -699,28 +699,60 @@ class _LoginScreenState extends State<LoginScreen>
 
               // Info Banner
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAF9),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.mail_outline_rounded,
-                      size: 18,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Masukkan alamat email terdaftar untuk menerima tautan pembuatan kata sandi baru.',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                          height: 1.4,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.mail_outline_rounded,
+                          size: 18,
+                          color: AppColors.primary,
                         ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Masukkan alamat email terdaftar untuk menerima tautan pembuatan kata sandi baru.',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFFD97706)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Khusus akun yang mendaftar via tombol "Login with Google": Silakan masuk menggunakan tombol Google terlebih dahulu, lalu atur kata sandi akun di menu Profil.',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: const Color(0xFF92400E),
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -730,7 +762,7 @@ class _LoginScreenState extends State<LoginScreen>
               const SizedBox(height: 18),
 
               Text(
-                'Alamat Email Guru',
+                'Alamat Email',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -741,7 +773,7 @@ class _LoginScreenState extends State<LoginScreen>
 
               _buildTextField(
                 controller: emailCtrl,
-                hint: 'nama@sekolah.sch.id',
+                hint: 'contoh: guru@gmail.com',
                 icon: Icons.alternate_email_rounded,
                 keyboardType: TextInputType.emailAddress,
               ),
