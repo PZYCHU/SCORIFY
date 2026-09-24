@@ -172,11 +172,11 @@ scorify/
 
 ## 👨‍💻 Pengembang
 
-* **Malika Pradnya** ([@PZYCHU](https://github.com/PZYCHU))  
+* **Malika Pradnya Hapsari** ([@PZYCHU](https://github.com/PZYCHU))  
   *Program Studi Sistem Informasi / Ilmu Komputer — Skripsi / Tugas Akhir*
 
 ---
 
 <div align="center">
-  <sub>Dibangun dengan ❤️ menggunakan Flutter & Firebase</sub>
+  <sub>Dibangun dengan haha ape jir menggunakan Flutter & Firebase</sub>
 </div>
