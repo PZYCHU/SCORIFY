@@ -96,28 +96,30 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const BuatKelasScreen()),
-              );
-            },
-            backgroundColor: AppColors.primary,
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-            ),
-            icon: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
-            label: Text(
-              'Kelas Baru',
-              style: GoogleFonts.plusJakartaSans(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-              ),
-            ),
-          ),
+          floatingActionButton: provider.kelasList.isEmpty
+              ? null
+              : FloatingActionButton.extended(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const BuatKelasScreen()),
+                    );
+                  },
+                  backgroundColor: AppColors.primary,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  icon: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+                  label: Text(
+                    'Kelas Baru',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
         );
       },
     );
@@ -314,15 +316,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
                       // Tombol Keluar Akun
                       _buildHeaderIconButton(
-                        icon: Icons.logout_rounded,
+                        icon: Icons.exit_to_app_rounded,
                         tooltip: 'Keluar Akun',
                         iconColor: const Color(0xFFFCA5A5),
                         onTap: () async {
                           final confirm = await showConfirmDialog(
                             context,
-                            title: 'Keluar Akun',
+                            title: 'Keluar dari Akun',
                             content:
-                                'Yakin ingin keluar dari akun ini?\nAnda harus masuk kembali untuk mengelola kelas dan data penilaian.',
+                                'Apakah Anda yakin ingin keluar dari akun ini?\nAnda dapat masuk kembali kapan saja untuk mengelola kelas dan data penilaian.',
+                            confirmLabel: 'Keluar',
+                            confirmColor: const Color(0xFFEF4444),
+                            icon: Icons.exit_to_app_rounded,
                           );
                           if (confirm && context.mounted) {
                             context.read<AppProvider>().listenToUser(null);
@@ -660,8 +665,8 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           // ── Glowing icon container ──
           Container(
-            width: 72,
-            height: 72,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: const LinearGradient(
@@ -676,7 +681,7 @@ class _HomeScreenState extends State<HomeScreen> {
               boxShadow: [
                 BoxShadow(
                   color: AppColors.primary.withValues(alpha: 0.12),
-                  blurRadius: 16,
+                  blurRadius: 18,
                   offset: const Offset(0, 6),
                 ),
               ],
@@ -684,32 +689,33 @@ class _HomeScreenState extends State<HomeScreen> {
             child: const Icon(
               Icons.school_rounded,
               color: AppColors.primary,
-              size: 34,
+              size: 40,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
 
           Text(
             'Belum Ada Kelas Terdaftar',
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 18,
+              fontSize: 22,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
+              letterSpacing: -0.3,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
-            'Mulai buat kelas pertamamu untuk mengelola data murid, menetapkan kriteria evaluasi, dan menghitung pembobotan AHP-SAW secara otomatis.',
+            'Mulai buat kelas pertamamu untuk mengelola data murid, menetapkan kriteria evaluasi, dan menghitung perankingan penilaian secara otomatis.',
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
+              fontSize: 15,
               fontWeight: FontWeight.w500,
               color: AppColors.textSecondary,
-              height: 1.45,
+              height: 1.5,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
 
           // ── Feature Highlights (Pills) ──
           Wrap(
@@ -717,23 +723,23 @@ class _HomeScreenState extends State<HomeScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildFeaturePill(Icons.tune_rounded, 'Pembobotan AHP'),
-              _buildFeaturePill(Icons.compare_arrows_rounded, 'Pairwise Card'),
-              _buildFeaturePill(Icons.leaderboard_rounded, 'Perankingan SAW'),
+              _buildFeaturePill(Icons.tune_rounded, 'Parameter Penilaian'),
+              _buildFeaturePill(Icons.compare_arrows_rounded, 'Perbandingan Kriteria'),
+              _buildFeaturePill(Icons.leaderboard_rounded, 'Perankingan Siswa'),
             ],
           ),
-          const SizedBox(height: 26),
+          const SizedBox(height: 28),
 
           // ── CTA Button (+ Buat Kelas Sekarang) ──
           Container(
             width: double.infinity,
-            height: 48,
+            height: 56,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.32),
-                  blurRadius: 14,
+                  color: AppColors.primary.withValues(alpha: 0.35),
+                  blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
               ],
@@ -748,20 +754,21 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: const Icon(
                 Icons.add_rounded,
                 color: Colors.white,
-                size: 20,
+                size: 22,
               ),
               label: Text(
                 'Buat Kelas Sekarang',
                 style: GoogleFonts.plusJakartaSans(
                   color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  letterSpacing: 0.1,
                 ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(28),
                 ),
                 elevation: 0,
               ),
@@ -774,7 +781,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildFeaturePill(IconData icon, String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
       decoration: BoxDecoration(
         color: const Color(
           0xFFF1F5F9,
@@ -784,12 +791,12 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: AppColors.primaryLight),
-          const SizedBox(width: 5),
+          Icon(icon, size: 15, color: AppColors.primaryLight),
+          const SizedBox(width: 6),
           Text(
             text,
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
+              fontSize: 12.5,
               fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
             ),

@@ -26,14 +26,14 @@ class InputNilaiHasilScreen extends StatelessWidget {
         }
 
         final kriteriaHasil = kelas.kriteria
-            .where((k) => k.jenis == JenisKriteria.hasil)
+            .where((k) => k.jenis == JenisKriteria.byProduct)
             .toList();
 
         final content = kriteriaHasil.isEmpty
             ? const EmptyState(
                 icon: '📝',
                 title: 'Tidak ada kriteria nilai',
-                subtitle: 'Belum ada kriteria jenis "hasil"\ndi kelas ini',
+                subtitle: 'Belum ada kriteria jenis "By Product"\ndi kelas ini',
               )
             : ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -155,7 +155,7 @@ class _KriteriaHasilCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${sesiList.length} sesi penilaian',
+                        '${sesiList.length} penugasan / evaluasi',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           color: AppColors.textSecondary,
@@ -164,7 +164,7 @@ class _KriteriaHasilCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Tombol Plus (+) Tambah Sesi yang bersih & elegan
+                // Tombol Plus (+) Tambah Tugas/Evaluasi
                 Material(
                   color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -192,25 +192,92 @@ class _KriteriaHasilCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9), // Pale gray soft surface
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      size: 16,
-                      color: AppColors.primary.withValues(alpha: 0.6),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.task_alt_rounded,
+                          size: 18,
+                          color: Color(0xFF16A34A),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Penilaian ${kriteria.nama}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF16A34A),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'Belum ada sesi penilaian. Tap tombol "+" untuk menambahkan.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
+                    const SizedBox(height: 6),
+                    Text(
+                      'Belum ada data nilai. Ketuk tombol di bawah untuk langsung menilai siswa pada tugas ini.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11.5,
+                        color: const Color(0xFF14532D),
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 46),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.edit_note_rounded, size: 20),
+                          label: Text(
+                            'Mulai Input Nilai ${kriteria.nama}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                          onPressed: () async {
+                            final provider = context.read<AppProvider>();
+                            final sesi = await provider.tambahSesi(
+                              kelasId,
+                              kriteria.id,
+                              kriteria.nama,
+                            );
+                            if (context.mounted) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => SesiDetailScreen(
+                                    kelasId: kelasId,
+                                    kriteriaId: kriteria.id,
+                                    sesiId: sesi.id,
+                                  ),
+                                ),
+                              );
+                            }
+                          },
                         ),
                       ),
                     ),
@@ -227,7 +294,34 @@ class _KriteriaHasilCard extends StatelessWidget {
                       sesi: sesi,
                       kelasId: kelasId,
                     )),
-                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showTambahSesiDialog(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: BorderSide(
+                          color: AppColors.primary.withValues(alpha: 0.35),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                      ),
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: Text(
+                        'Tambah Sesi ${kriteria.nama} Baru',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
               ],
             ),
         ],
@@ -289,9 +383,9 @@ class _KriteriaHasilCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Tambah Sesi Penilaian',
-                          style: TextStyle(
+                        Text(
+                          'Tambah ${kriteria.nama} Baru',
+                          style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
@@ -299,7 +393,7 @@ class _KriteriaHasilCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Kategori: ${kriteria.nama}',
+                          'Kategori Kriteria: ${kriteria.nama}',
                           style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,
@@ -336,9 +430,9 @@ class _KriteriaHasilCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Nama Sesi Tugas / Ujian',
-                    style: TextStyle(
+                  Text(
+                    'Nama ${kriteria.nama} (Penugasan)',
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary,
@@ -356,7 +450,7 @@ class _KriteriaHasilCard extends StatelessWidget {
                     ),
                     decoration: InputDecoration(
                       hintText:
-                          'Contoh: ${kriteria.nama.toLowerCase().contains('uts') ? 'UTS Semester 1, UTS Susulan' : 'Tugas 1, Quiz 2, Latihan 3'}',
+                          'Contoh: ${kriteria.nama} 1, Latihan 2, Kuis 3',
                       hintStyle: const TextStyle(
                         fontSize: 13,
                         color: AppColors.textHint,
@@ -417,7 +511,7 @@ class _KriteriaHasilCard extends StatelessWidget {
                         if (ctx.mounted) Navigator.of(ctx).pop();
                       },
                       child: const Text(
-                        'Tambah Sesi',
+                        'Simpan & Mulai Penilaian',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,

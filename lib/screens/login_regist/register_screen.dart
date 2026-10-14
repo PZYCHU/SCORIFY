@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import 'package:scorify/providers/app_provider.dart';
 import 'package:scorify/services/auth_service.dart';
 import 'package:scorify/theme/app_theme.dart';
-import 'package:scorify/screens/home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  final String? initialEmail;
+  const RegisterScreen({super.key, this.initialEmail});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -17,6 +15,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _schoolController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -34,6 +33,9 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   void initState() {
     super.initState();
+    if (widget.initialEmail != null && widget.initialEmail!.isNotEmpty) {
+      _emailController.text = widget.initialEmail!;
+    }
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
@@ -52,6 +54,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   void dispose() {
     _animController.dispose();
     _nameController.dispose();
+    _schoolController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -61,38 +64,238 @@ class _RegisterScreenState extends State<RegisterScreen>
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
+    final email = _emailController.text.trim();
     try {
-      final credential = await _authService.registerWithEmail(
+      await _authService.registerWithEmail(
         name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
+        email: email,
+        school: _schoolController.text.trim(),
         password: _passwordController.text,
       );
       if (mounted) {
-        context.read<AppProvider>().listenToUser(credential.user?.uid);
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (_) => false,
-        );
+        _showVerificationSentDialog(email);
       }
     } catch (e) {
-      if (mounted) _showError('Error (${e.runtimeType}): ${e.toString()}');
+      if (mounted) _showError(e.toString());
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _signInWithGoogle() async {
+  void _showVerificationSentDialog(String email) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFA7F3D0), width: 1.5),
+              ),
+              child: const Icon(
+                Icons.mark_email_read_rounded,
+                color: Color(0xFF059669),
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Verifikasi Email Terkirim!',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 21,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Kami telah mengirimkan tautan verifikasi ke:\n',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 15,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                email,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Silakan buka aplikasi email Anda (periksa Inbox atau folder Spam), klik tautan untuk mengaktifkan akun, lalu silakan masuk.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14.5,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                Navigator.of(context).pop(); // Kembali ke halaman Login
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Menuju Halaman Masuk',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showGoogleRegisteredDialog(String email) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFBFDBFE), width: 1.5),
+              ),
+              child: const Icon(
+                Icons.verified_user_rounded,
+                color: Color(0xFF2563EB),
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Pendaftaran Google Berhasil!',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Akun Google Anda telah terverifikasi secara otomatis oleh Google:\n',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14.5,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                email,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Akun Anda sudah aktif dan terdaftar di database. Silakan masuk melalui halaman login.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                Navigator.of(context).pop(); // Kembali ke halaman Login
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Menuju Halaman Masuk',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _registerWithGoogle() async {
     setState(() => _isGoogleLoading = true);
     try {
-      final credential = await _authService.signInWithGoogle();
+      final email = await _authService.registerWithGoogle(
+        school: _schoolController.text.trim(),
+      );
       if (mounted) {
-        context.read<AppProvider>().listenToUser(credential.user?.uid);
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (_) => false,
-        );
+        _showGoogleRegisteredDialog(email);
       }
     } catch (e) {
       if (mounted) _showError(e.toString());
@@ -245,7 +448,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 Text(
                                   'Create Account',
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 24,
+                                    fontSize: 28,
                                     fontWeight: FontWeight.w800,
                                     color: AppColors.textPrimary,
                                   ),
@@ -254,7 +457,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 Text(
                                   'Daftar untuk mulai mengelola nilai & kriteria',
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13,
+                                    fontSize: 15.5,
                                     fontWeight: FontWeight.w500,
                                     color: AppColors.textSecondary,
                                   ),
@@ -264,11 +467,25 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 // Full Name
                                 _buildTextField(
                                   controller: _nameController,
-                                  hint: 'Full Name',
+                                  hint: 'Nama Lengkap',
                                   icon: Icons.person_outline_rounded,
                                   validator: (v) {
-                                    if (v == null || v.isEmpty) {
+                                    if (v == null || v.trim().isEmpty) {
                                       return 'Nama tidak boleh kosong';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 14),
+
+                                // Asal Sekolah
+                                _buildTextField(
+                                  controller: _schoolController,
+                                  hint: 'Asal Sekolah (cth: SMAN 1 Jakarta)',
+                                  icon: Icons.school_outlined,
+                                  validator: (v) {
+                                    if (v == null || v.trim().isEmpty) {
+                                      return 'Asal sekolah tidak boleh kosong';
                                     }
                                     return null;
                                   },
@@ -278,15 +495,26 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 // Email ID
                                 _buildTextField(
                                   controller: _emailController,
-                                  hint: 'Email ID',
+                                  hint: 'Email (cth: nama@email.com)',
                                   icon: Icons.alternate_email_rounded,
                                   keyboardType: TextInputType.emailAddress,
                                   validator: (v) {
-                                    if (v == null || v.isEmpty) {
+                                    if (v == null || v.trim().isEmpty) {
                                       return 'Email tidak boleh kosong';
                                     }
-                                    if (!v.contains('@')) {
-                                      return 'Format email tidak valid';
+                                    final email = v.trim();
+                                    final emailRegex = RegExp(
+                                      r'^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$',
+                                    );
+                                    if (!email.contains('@')) {
+                                      return 'Email harus memiliki tanda @';
+                                    }
+                                    if (!emailRegex.hasMatch(email) || !email.contains('.')) {
+                                      return 'Format email tidak valid (cth: nama@email.com)';
+                                    }
+                                    final domainPart = email.split('@').last;
+                                    if (!domainPart.contains('.') || domainPart.split('.').last.length < 2) {
+                                      return 'Domain email tidak valid (cth: .com, .id)';
                                     }
                                     return null;
                                   },
@@ -357,7 +585,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 // Primary Register Button (Floating pill, solid dark teal)
                                 Container(
                                   width: double.infinity,
-                                  height: 52,
+                                  height: 54,
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(28),
                                     boxShadow: [
@@ -391,7 +619,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                             'Create Account',
                                             style: GoogleFonts.plusJakartaSans(
                                               color: Colors.white,
-                                              fontSize: 15.5,
+                                              fontSize: 17.5,
                                               fontWeight: FontWeight.w700,
                                             ),
                                           ),
@@ -416,7 +644,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                         'atau',
                                         style: GoogleFonts.plusJakartaSans(
                                           color: AppColors.textHint,
-                                          fontSize: 12.5,
+                                          fontSize: 14,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -435,7 +663,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 // Secondary Google Sign-up button (Clean elevated white card)
                                 Container(
                                   width: double.infinity,
-                                  height: 52,
+                                  height: 54,
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(28),
@@ -453,7 +681,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                     child: InkWell(
                                       onTap: _isGoogleLoading
                                           ? null
-                                          : _signInWithGoogle,
+                                          : _registerWithGoogle,
                                       borderRadius: BorderRadius.circular(28),
                                       child: Row(
                                         mainAxisAlignment:
@@ -476,7 +704,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                               style:
                                                   GoogleFonts.plusJakartaSans(
                                                 color: AppColors.textPrimary,
-                                                fontSize: 14.5,
+                                                fontSize: 16.5,
                                                 fontWeight: FontWeight.w700,
                                               ),
                                             ),
@@ -497,7 +725,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                         'Already have an account? ',
                                         style: GoogleFonts.plusJakartaSans(
                                           color: AppColors.textSecondary,
-                                          fontSize: 13,
+                                          fontSize: 15,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -507,7 +735,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                           'Sign In',
                                           style: GoogleFonts.plusJakartaSans(
                                             color: AppColors.accent, // Mint green #10B981
-                                            fontSize: 13,
+                                            fontSize: 15,
                                             fontWeight: FontWeight.w800,
                                           ),
                                         ),
@@ -559,7 +787,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         keyboardType: keyboardType,
         validator: validator,
         style: GoogleFonts.plusJakartaSans(
-          fontSize: 14,
+          fontSize: 16.5,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
         ),
@@ -567,10 +795,10 @@ class _RegisterScreenState extends State<RegisterScreen>
           hintText: hint,
           hintStyle: GoogleFonts.plusJakartaSans(
             color: AppColors.textHint,
-            fontSize: 13.5,
-            fontWeight: FontWeight.w700,
+            fontSize: 15.5,
+            fontWeight: FontWeight.w600,
           ),
-          prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
+          prefixIcon: Icon(icon, color: AppColors.primary, size: 22),
           suffixIcon: suffixIcon,
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
@@ -578,9 +806,9 @@ class _RegisterScreenState extends State<RegisterScreen>
           errorBorder: InputBorder.none,
           focusedErrorBorder: InputBorder.none,
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+              const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           errorStyle: GoogleFonts.plusJakartaSans(
-            fontSize: 11,
+            fontSize: 13,
             color: AppColors.danger,
             fontWeight: FontWeight.w600,
           ),

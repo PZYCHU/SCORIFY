@@ -68,20 +68,15 @@ class JenisChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, bg, fg) = switch (jenis) {
-      JenisKriteria.performa => (
-        'Performa',
+      JenisKriteria.byProcess => (
+        'Proses KBM',
         const Color(0xFFE0F2F1),
         const Color(0xFF00695C),
       ),
-      JenisKriteria.hasil => (
-        'Hasil',
+      JenisKriteria.byProduct => (
+        'Hasil / Produk',
         const Color(0xFFE8EAF6),
         const Color(0xFF283593),
-      ),
-      JenisKriteria.derived => (
-        'Perhitungan Remedi',
-        const Color(0xFFFFF3E0),
-        const Color(0xFFE65100),
       ),
     };
     return Container(
@@ -114,7 +109,7 @@ class ArahChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        isBenefit ? 'Benefit ↑' : 'Cost ↓',
+        isBenefit ? 'Menguntungkan ↑' : 'Merugikan ↓',
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
@@ -135,9 +130,9 @@ class InputTypeChip extends StatelessWidget {
   Widget build(BuildContext context) {
     if (inputType == null) return const SizedBox.shrink();
     final label = switch (inputType!) {
-      InputType.counter => 'Poin Tambahan (+)',
-      InputType.attendance => 'Presensi/Kehadiran (0–100)',
-      InputType.number => 'Nilai Angka (0–100)',
+      InputType.counter => 'Penilaian Berulang',
+      InputType.attendance => 'Presensi / Kehadiran',
+      InputType.number => 'Sekali Catat',
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -190,12 +185,41 @@ class ActionIconBtn extends StatelessWidget {
   }
 }
 
+// ─── Aggregation Chip ─────────────────────────────────────────────────────────
+
+class AggregationChip extends StatelessWidget {
+  final AggregationRule rule;
+  const AggregationChip(this.rule, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF3C7),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      child: Text(
+        rule == AggregationRule.max
+            ? 'Nilai Max'
+            : (rule == AggregationRule.average ? 'Rata-rata' : 'Nilai Min'),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFFB45309),
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Kriteria Row (di form) ────────────────────────────────────────────────────
 
 class KriteriaRow extends StatelessWidget {
   final Kriteria kriteria;
   final VoidCallback onDelete;
-  final VoidCallback? onToggleArah; // null = tidak bisa di-toggle (derived)
+  final VoidCallback? onToggleArah; // null = tidak bisa di-toggle
   final VoidCallback? onEdit;
   final bool showEdit;
 
@@ -247,9 +271,35 @@ class KriteriaRow extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 4,
                   children: [
-                    JenisChip(kriteria.jenis),
-                    if (kriteria.inputType != null)
+                    if (kriteria.inputType != null &&
+                        kriteria.jenis == JenisKriteria.byProcess)
                       InputTypeChip(kriteria.inputType),
+                    if (kriteria.isPenilaianBerulang)
+                      AggregationChip(kriteria.aggregationRule),
+                    if (kriteria.hasSubKriteria)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                        ),
+                        child: Text(
+                          kriteria.jenis == JenisKriteria.byProduct
+                              ? '${kriteria.subKriteria!.length} Sub-Kriteria ${kriteria.nama}'
+                              : (kriteria.inputType == InputType.attendance ||
+                                      kriteria.nama.toLowerCase().contains('presensi') ||
+                                      kriteria.nama.toLowerCase().contains('kehadiran')
+                                  ? '${kriteria.subKriteria!.length} Kategori Presensi/Kehadiran'
+                                  : '${kriteria.subKriteria!.length} Kategori ${kriteria.nama}'),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF15803D),
+                          ),
+                        ),
+                      ),
                     if (onToggleArah != null)
                       GestureDetector(
                         onTap: onToggleArah,
@@ -342,8 +392,6 @@ class NilaiInputRow extends StatelessWidget {
               ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 8),
-            JenisChip(kriteria.jenis),
-            const SizedBox(width: 4),
             ArahChip(kriteria.arah),
           ],
         ),
@@ -580,7 +628,7 @@ Future<bool> showConfirmDialog(
   BuildContext context, {
   required String title,
   required String content,
-  String confirmLabel = 'Hapus',
+  String confirmLabel = 'Lanjutkan',
   Color confirmColor = AppColors.danger,
   IconData? icon,
 }) async {
@@ -592,9 +640,13 @@ Future<bool> showConfirmDialog(
       lowerConfirm.contains('hapus') ||
       lowerTitle.contains('delete');
 
+  final effectiveConfirmLabel = (isLogout && (confirmLabel == 'Hapus' || confirmLabel == 'Lanjutkan'))
+      ? 'Keluar'
+      : (confirmLabel == 'Lanjutkan' && isDanger ? 'Hapus' : confirmLabel);
+
   final IconData effectiveIcon = icon ??
       (isLogout
-          ? Icons.logout_rounded
+          ? Icons.exit_to_app_rounded
           : (isDanger
               ? Icons.delete_outline_rounded
               : (lowerTitle.contains('reset')
@@ -671,7 +723,7 @@ Future<bool> showConfirmDialog(
                       shadowColor: confirmColor.withValues(alpha: 0.35),
                     ),
                     child: Text(
-                      confirmLabel,
+                      effectiveConfirmLabel,
                       style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,

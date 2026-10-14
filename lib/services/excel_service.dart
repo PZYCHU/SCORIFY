@@ -194,12 +194,7 @@ class ExcelService {
         // Nilai per kriteria
         for (int kIdx = 0; kIdx < kelas.kriteria.length; kIdx++) {
           final k = kelas.kriteria[kIdx];
-          final val = _hitungNilaiRingkasan(m, k);
-          final valStr = k.jenis == JenisKriteria.derived
-              ? '${val.toInt()}x'
-              : (val == val.roundToDouble()
-                  ? val.toInt().toString()
-                  : val.toStringAsFixed(1));
+          final valStr = _formatNilaiSheet1(m, k);
 
           sheet1.cell(CellIndex.indexByColumnRow(columnIndex: 3 + kIdx, rowIndex: rowIdx))
             ..value = TextCellValue(valStr)
@@ -271,7 +266,7 @@ class ExcelService {
       for (final m in sortedMurid) {
         // Cari sesi yang memiliki attempt > 1
         for (final k in kelas.kriteria) {
-          if (k.jenis != JenisKriteria.hasil) continue;
+          if (k.jenis != JenisKriteria.byProduct) continue;
           final sesiList = kelas.getSesiByKriteria(k.id);
 
           for (final s in sesiList) {
@@ -351,7 +346,138 @@ class ExcelService {
       }
 
       // ────────────────────────────────────────────────────────────────────────
-      // SHEET 3: Riwayat Kriteria yang Sudah Dihapus
+      // SHEET 3: Log Proses KBM (Audit Log Dinamis untuk Kriteria By Process)
+      // Menampung histori akumulasi semua kriteria proses: keaktifan, sikap, partisipasi kelompok, dll.
+      // ────────────────────────────────────────────────────────────────────────
+      final sheet3Name = 'Log Proses KBM';
+      final sheet3 = excel[sheet3Name];
+
+      final header3Style = CellStyle(
+        bold: true,
+        backgroundColorHex: ExcelColor.fromHexString('#1E6B52'), // Emerald Green
+        fontColorHex: ExcelColor.fromHexString('#FFFFFF'),
+        horizontalAlign: HorizontalAlign.Center,
+      );
+
+      final headers3 = [
+        'No',
+        'NIS',
+        'Nama Siswa',
+        'Kriteria',
+        'Catatan / Aksi Ke-',
+        'Nilai / Poin',
+        'Total Akumulasi',
+        'Tanggal & Waktu',
+        'Keterangan',
+      ];
+
+      for (int c = 0; c < headers3.length; c++) {
+        sheet3.cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: 0))
+          ..value = TextCellValue(headers3[c])
+          ..cellStyle = header3Style;
+      }
+
+      sheet3.setColumnWidth(0, 8);   // No
+      sheet3.setColumnWidth(1, 16);  // NIS
+      sheet3.setColumnWidth(2, 28);  // Nama Siswa
+      sheet3.setColumnWidth(3, 24);  // Kriteria
+      sheet3.setColumnWidth(4, 20);  // Catatan / Aksi Ke-
+      sheet3.setColumnWidth(5, 14);  // Nilai / Poin
+      sheet3.setColumnWidth(6, 16);  // Total Akumulasi
+      sheet3.setColumnWidth(7, 20);  // Tanggal & Waktu
+      sheet3.setColumnWidth(8, 30);  // Keterangan
+
+      int pRow = 1;
+      for (final m in sortedMurid) {
+        for (final k in kelas.kriteria) {
+          if (k.jenis != JenisKriteria.byProcess) continue;
+          final entries = m.nilaiList.where((n) => n.kriteriaId == k.id).toList();
+          if (entries.isEmpty) continue;
+
+          // Urutkan berdasarkan kronologi waktu
+          entries.sort((a, b) => a.tanggal.compareTo(b.tanggal));
+
+          double runningTotal = 0.0;
+          for (int idx = 0; idx < entries.length; idx++) {
+            final n = entries[idx];
+            runningTotal += n.nilai;
+            final aksiKe = idx + 1;
+            final isLast = aksiKe == entries.length;
+
+            final pBg = pRow.isEven
+                ? ExcelColor.fromHexString('#F2FBF6')
+                : ExcelColor.fromHexString('#FFFFFF');
+            final pStyle = CellStyle(
+              backgroundColorHex: pBg,
+              horizontalAlign: HorizontalAlign.Left,
+            );
+            final pCenter = CellStyle(
+              backgroundColorHex: pBg,
+              horizontalAlign: HorizontalAlign.Center,
+            );
+
+            final tglStr =
+                '${n.tanggal.day.toString().padLeft(2, '0')}/${n.tanggal.month.toString().padLeft(2, '0')}/${n.tanggal.year} '
+                '${n.tanggal.hour.toString().padLeft(2, '0')}:${n.tanggal.minute.toString().padLeft(2, '0')}';
+            final poinStr = n.nilai % 1 == 0
+                ? n.nilai.toInt().toString()
+                : n.nilai.toStringAsFixed(1);
+            final poinDisplay = n.nilai > 0 ? '+$poinStr' : poinStr;
+            final totalStr = runningTotal % 1 == 0
+                ? runningTotal.toInt().toString()
+                : runningTotal.toStringAsFixed(1);
+
+            final ketStr = entries.length == 1
+                ? 'Input tunggal'
+                : (isLast
+                    ? 'Total akhir: $totalStr ($aksiKe kali catatan)'
+                    : 'Catatan ke-$aksiKe dari ${entries.length}');
+
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: pRow))
+              ..value = IntCellValue(pRow)
+              ..cellStyle = pCenter;
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: pRow))
+              ..value = TextCellValue(m.nis ?? '-')
+              ..cellStyle = pCenter;
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: pRow))
+              ..value = TextCellValue(m.nama)
+              ..cellStyle = pStyle;
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: pRow))
+              ..value = TextCellValue(k.nama)
+              ..cellStyle = pStyle;
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: pRow))
+              ..value = TextCellValue('Catatan #$aksiKe')
+              ..cellStyle = pCenter;
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: pRow))
+              ..value = TextCellValue(poinDisplay)
+              ..cellStyle = pCenter;
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: pRow))
+              ..value = TextCellValue(totalStr)
+              ..cellStyle = pCenter;
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: pRow))
+              ..value = TextCellValue(tglStr)
+              ..cellStyle = pCenter;
+            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 8, rowIndex: pRow))
+              ..value = TextCellValue(ketStr)
+              ..cellStyle = pStyle;
+
+            pRow++;
+          }
+        }
+      }
+
+      if (pRow == 1) {
+        final infoStyle = CellStyle(
+          italic: true,
+          fontColorHex: ExcelColor.fromHexString('#718096'),
+        );
+        sheet3.cell(CellIndex.indexByString('A2'))
+          ..value = TextCellValue('Belum ada log catatan proses KBM pada kelas ini.')
+          ..cellStyle = infoStyle;
+      }
+
+      // ────────────────────────────────────────────────────────────────────────
+      // SHEET 4: Riwayat Kriteria yang Sudah Dihapus
       // Scan semua nilaiList murid → cari kriteriaId yang tidak ada di kelas.kriteria aktif
       // ────────────────────────────────────────────────────────────────────────
       final activeKriteriaIds = kelas.kriteria.map((k) => k.id).toSet();
@@ -376,17 +502,17 @@ class ExcelService {
       }
 
       if (orphanedData.isNotEmpty) {
-        final sheet3Name = 'Kriteria Dihapus';
-        final sheet3 = excel[sheet3Name];
+        final sheet4Name = 'Kriteria Dihapus';
+        final sheet4 = excel[sheet4Name];
 
-        final header3Style = CellStyle(
+        final header4Style = CellStyle(
           bold: true,
           backgroundColorHex: ExcelColor.fromHexString('#4A1942'),
           fontColorHex: ExcelColor.fromHexString('#FFFFFF'),
           horizontalAlign: HorizontalAlign.Center,
         );
 
-        final headers3 = [
+        final headers4 = [
           'No',
           'NIS',
           'Nama Siswa',
@@ -396,21 +522,21 @@ class ExcelService {
           'Keterangan',
         ];
 
-        for (int c = 0; c < headers3.length; c++) {
-          sheet3.cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: 0))
-            ..value = TextCellValue(headers3[c])
-            ..cellStyle = header3Style;
+        for (int c = 0; c < headers4.length; c++) {
+          sheet4.cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: 0))
+            ..value = TextCellValue(headers4[c])
+            ..cellStyle = header4Style;
         }
 
-        sheet3.setColumnWidth(0, 8);
-        sheet3.setColumnWidth(1, 16);
-        sheet3.setColumnWidth(2, 28);
-        sheet3.setColumnWidth(3, 32);
-        sheet3.setColumnWidth(4, 12);
-        sheet3.setColumnWidth(5, 18);
-        sheet3.setColumnWidth(6, 30);
+        sheet4.setColumnWidth(0, 8);
+        sheet4.setColumnWidth(1, 16);
+        sheet4.setColumnWidth(2, 28);
+        sheet4.setColumnWidth(3, 32);
+        sheet4.setColumnWidth(4, 12);
+        sheet4.setColumnWidth(5, 18);
+        sheet4.setColumnWidth(6, 30);
 
-        int s3Row = 1;
+        int s4Row = 1;
         for (final entry in orphanedData.entries) {
           final kriteriaIdLabel = entry.key;
           final entries = entry.value['entries'] as List<Map<String, dynamic>>;
@@ -427,11 +553,11 @@ class ExcelService {
             final murid = e['murid'] as Murid;
             final n = e['nilai'] as Nilai;
 
-            final rowBg = s3Row.isEven
+            final rowBg = s4Row.isEven
                 ? ExcelColor.fromHexString('#FAF0FF')
                 : ExcelColor.fromHexString('#FFFFFF');
-            final s3Style = CellStyle(backgroundColorHex: rowBg, horizontalAlign: HorizontalAlign.Left);
-            final s3Center = CellStyle(backgroundColorHex: rowBg, horizontalAlign: HorizontalAlign.Center);
+            final s4Style = CellStyle(backgroundColorHex: rowBg, horizontalAlign: HorizontalAlign.Left);
+            final s4Center = CellStyle(backgroundColorHex: rowBg, horizontalAlign: HorizontalAlign.Center);
 
             final tglStr = '${n.tanggal.day.toString().padLeft(2, '0')}/'
                 '${n.tanggal.month.toString().padLeft(2, '0')}/'
@@ -440,29 +566,29 @@ class ExcelService {
                 ? n.nilai.toInt().toString()
                 : n.nilai.toStringAsFixed(2);
 
-            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: s3Row))
-              ..value = IntCellValue(s3Row)
-              ..cellStyle = s3Center;
-            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: s3Row))
+            sheet4.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: s4Row))
+              ..value = IntCellValue(s4Row)
+              ..cellStyle = s4Center;
+            sheet4.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: s4Row))
               ..value = TextCellValue(murid.nis ?? '-')
-              ..cellStyle = s3Center;
-            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: s3Row))
+              ..cellStyle = s4Center;
+            sheet4.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: s4Row))
               ..value = TextCellValue(murid.nama)
-              ..cellStyle = s3Style;
-            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: s3Row))
+              ..cellStyle = s4Style;
+            sheet4.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: s4Row))
               ..value = TextCellValue(kriteriaIdLabel)
-              ..cellStyle = s3Style;
-            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: s3Row))
+              ..cellStyle = s4Style;
+            sheet4.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: s4Row))
               ..value = TextCellValue(nilaiStr)
-              ..cellStyle = s3Center;
-            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: s3Row))
+              ..cellStyle = s4Center;
+            sheet4.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: s4Row))
               ..value = TextCellValue(tglStr)
-              ..cellStyle = s3Center;
-            sheet3.cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: s3Row))
+              ..cellStyle = s4Center;
+            sheet4.cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: s4Row))
               ..value = TextCellValue('Kriteria ini sudah dihapus dari kelas — data nilai tetap tercatat')
-              ..cellStyle = s3Style;
+              ..cellStyle = s4Style;
 
-            s3Row++;
+            s4Row++;
           }
         }
       }
@@ -480,36 +606,117 @@ class ExcelService {
     }
   }
 
-  /// Helper kalkulasi nilai ringkasan per kriteria untuk diekspor
-  static double _hitungNilaiRingkasan(Murid murid, Kriteria k) {
-    if (k.jenis == JenisKriteria.derived) {
-      return murid.getFrekuensiNgulang(k.targetKriteriaIds).toDouble();
+  /// Format nilai ringkasan untuk tampilan Sheet 1 (Rekap & Ranking)
+  /// Menampilkan total poin dan frekuensi (X kali) jika kriteria By Process diinput berulang
+  static String _formatNilaiSheet1(Murid murid, Kriteria k) {
+    final semuaNilai = murid.getNilaiByKriteria(k.id);
+    if (semuaNilai.isEmpty) return '0';
+
+    if (k.jenis == JenisKriteria.byProcess) {
+      final activeEntries = semuaNilai.where((n) => n.nilai > 0).toList();
+      final count = activeEntries.length;
+
+      double poinAgregasi = 0.0;
+      if (k.aggregationRule == AggregationRule.average) {
+        poinAgregasi = activeEntries.isEmpty
+            ? 0.0
+            : activeEntries.fold(0.0, (sum, n) => sum + n.nilai) / activeEntries.length;
+      } else if (k.aggregationRule == AggregationRule.min) {
+        poinAgregasi = activeEntries.isEmpty
+            ? 0.0
+            : activeEntries.map((n) => n.nilai).reduce((a, b) => a < b ? a : b);
+      } else {
+        // Default Max / Counter Sum
+        if (k.inputType == InputType.counter) {
+          poinAgregasi = semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
+        } else {
+          poinAgregasi = semuaNilai.map((n) => n.nilai).reduce((a, b) => a > b ? a : b);
+        }
+      }
+
+      final poinStr = poinAgregasi % 1 == 0
+          ? poinAgregasi.toInt().toString()
+          : poinAgregasi.toStringAsFixed(1);
+
+      // Jika ada lebih dari 1 aksi/catatan, atau bertipe counter/keaktifan, sertakan info frekuensi
+      final isMultiProcess = k.inputType == InputType.counter ||
+          k.nama.toLowerCase().contains('aktif') ||
+          semuaNilai.length > 1;
+
+      if (isMultiProcess && count > 0) {
+        return '$poinStr (${count}x)';
+      }
+      return poinStr;
     }
 
+    // Untuk byProduct (tugas, kuis, ujian)
+    final val = _hitungNilaiRingkasan(murid, k);
+    return val == val.roundToDouble()
+        ? val.toInt().toString()
+        : val.toStringAsFixed(1);
+  }
+
+  /// Helper kalkulasi nilai ringkasan per kriteria untuk diekspor
+  static double _hitungNilaiRingkasan(Murid murid, Kriteria k) {
     final semuaNilai = murid.getNilaiByKriteria(k.id);
     if (semuaNilai.isEmpty) return 0;
 
-    if (k.jenis == JenisKriteria.hasil && k.perSesi) {
-      // Ambil nilai terbaik (attempt tertinggi) per sesi, lalu rata-rata antar sesi
-      final Map<String, double> bestPerSesi = {};
-      for (final n in semuaNilai) {
-        final key = n.sesiId ?? 'no_sesi';
-        if (!bestPerSesi.containsKey(key) || n.nilai > bestPerSesi[key]!) {
-          bestPerSesi[key] = n.nilai;
-        }
+    final isKeaktifan = k.jenis == JenisKriteria.byProcess &&
+        (k.inputType == InputType.counter ||
+            k.nama.toLowerCase().contains('aktif'));
+
+    if (isKeaktifan) {
+      if (k.aggregationRule == AggregationRule.average) {
+        final active = semuaNilai.where((n) => n.nilai > 0).toList();
+        return active.isEmpty
+            ? 0.0
+            : active.fold(0.0, (sum, n) => sum + n.nilai) / active.length;
+      } else if (k.aggregationRule == AggregationRule.min) {
+        final active = semuaNilai.where((n) => n.nilai > 0).toList();
+        return active.isEmpty
+            ? 0.0
+            : active.map((n) => n.nilai).reduce((a, b) => a < b ? a : b);
+      } else {
+        return semuaNilai.map((n) => n.nilai).reduce((a, b) => a > b ? a : b);
       }
-      if (bestPerSesi.isEmpty) return 0;
-      final total = bestPerSesi.values.fold(0.0, (sum, val) => sum + val);
-      return total / bestPerSesi.length;
     }
 
-    if (k.jenis == JenisKriteria.performa &&
-        (k.inputType == InputType.counter || k.inputType == InputType.attendance)) {
+    if (k.jenis == JenisKriteria.byProduct) {
+      final Map<String, List<Nilai>> perSesi = {};
+      for (final n in semuaNilai) {
+        final key = n.sesiId ?? 'no_sesi';
+        perSesi.putIfAbsent(key, () => []).add(n);
+      }
+      if (perSesi.isEmpty) return 0;
+
+      double totalSesi = 0.0;
+      for (final list in perSesi.values) {
+        if (k.aggregationRule == AggregationRule.average) {
+          totalSesi += list.fold(0.0, (s, n) => s + n.nilai) / list.length;
+        } else if (k.aggregationRule == AggregationRule.min) {
+          totalSesi += list
+              .map((e) => e.nilai)
+              .reduce((a, b) => a < b ? a : b);
+        } else {
+          totalSesi += list
+              .map((e) => e.nilai)
+              .reduce((a, b) => a > b ? a : b);
+        }
+      }
+      return totalSesi / perSesi.length;
+    }
+
+    if (k.jenis == JenisKriteria.byProcess &&
+        k.inputType == InputType.attendance) {
       return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
     }
 
-    final total = semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
-    return total / semuaNilai.length;
+    if (k.aggregationRule == AggregationRule.average) {
+      return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai) / semuaNilai.length;
+    } else if (k.aggregationRule == AggregationRule.min) {
+      return semuaNilai.map((n) => n.nilai).reduce((a, b) => a < b ? a : b);
+    }
+    return semuaNilai.map((n) => n.nilai).reduce((a, b) => a > b ? a : b);
   }
 
   /// Menyimpan bytes file dengan fallback kandidat direktori berurutan:

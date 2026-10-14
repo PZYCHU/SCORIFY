@@ -6,6 +6,7 @@ import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/calculate_service.dart';
 import '../../widgets/app_widgets.dart';
+import '../tutorial_screen.dart';
 
 class AhpScreen extends StatefulWidget {
   final String kelasId;
@@ -150,9 +151,9 @@ class _AhpScreenState extends State<AhpScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Pembobotan AHP',
+                              'Konfigurasi Parameter Penilaian',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 20,
+                                fontSize: 18,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
                                 letterSpacing: -0.3,
@@ -160,7 +161,7 @@ class _AhpScreenState extends State<AhpScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              kelas?.nama ?? 'Penetapan Bobot Kriteria',
+                              kelas?.nama ?? 'Penetapan Bobot & Parameter Kriteria',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 13,
                                 color: Colors.white.withValues(alpha: 0.8),
@@ -233,20 +234,40 @@ class _AhpScreenState extends State<AhpScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Panduan Matriks Perbandingan',
+                                'Panduan Pengisian AHP',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13.5,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.textPrimary,
                                 ),
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                'Bandingkan kriteria secara berpasangan dengan Skala Saaty (1–9). Matriks harus konsisten (CR ≤ 0.10) agar bobot valid untuk perankingan SAW.',
+                                'Geser slider ke arah kriteria yang lebih Anda prioritaskan, atau ketuk langsung angka skala Saaty (1–9). Titik tengah (1) berarti kedua kriteria seimbang. Pastikan perbandingan konsisten (CR ≤ 0.10).',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
+                                  fontSize: 13.5,
                                   height: 1.45,
                                   color: AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const TutorialScreen(initialCategoryIndex: 3),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'Pelajari Skenario & Kiat Pembobotan di Panduan Lengkap',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                    decoration: TextDecoration.underline,
+                                  ),
                                 ),
                               ),
                             ],
@@ -264,7 +285,7 @@ class _AhpScreenState extends State<AhpScreen> {
                       Text(
                         'Perbandingan Berpasangan',
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 16,
+                          fontSize: 16.5,
                           fontWeight: FontWeight.w800,
                           color: AppColors.textPrimary,
                           letterSpacing: -0.2,
@@ -284,14 +305,14 @@ class _AhpScreenState extends State<AhpScreen> {
                             children: [
                               const Icon(
                                 Icons.auto_fix_high_rounded,
-                                size: 13,
+                                size: 14,
                                 color: AppColors.danger,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 'Saran Perbaikan',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.danger,
                                 ),
@@ -302,6 +323,9 @@ class _AhpScreenState extends State<AhpScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
+
+                  // ── Referensi Skala Saaty ──
+                  _buildSaatyLegend(),
 
                   // ── Daftar Kartu Perbandingan ──
                   _buildPairwiseCards(context),
@@ -327,7 +351,125 @@ class _AhpScreenState extends State<AhpScreen> {
     );
   }
 
-  /// Membangun daftar kartu perbandingan berpasangan berbentuk kalimat verbal & dropdown
+  /// Widget legenda visual skala fundamental Saaty (1, 3, 5, 7, 9)
+  Widget _buildSaatyLegend() {
+    const scales = [
+      (val: '1', label: 'Seimbang'),
+      (val: '3', label: 'Agak Lebih'),
+      (val: '5', label: 'Jelas Lebih'),
+      (val: '7', label: 'Jauh Lebih'),
+      (val: '9', label: 'Mutlak'),
+    ];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.tune_rounded, size: 16, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                'Referensi Skala Saaty AHP',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: scales.map((s) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          s.val,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          s.label,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Konversi nilai matriks AHP (0.111 s.d. 9.0) ke posisi slider (-8.0 s.d. 8.0)
+  /// Negatif = condong ke Kriteria A, Positif = condong ke Kriteria B, 0 = seimbang (1)
+  double _matriksToSliderValue(double val) {
+    if (val >= 0.95 && val <= 1.05) {
+      return 0.0;
+    } else if (val > 1.05) {
+      final int scale = val.round().clamp(1, 9);
+      return -(scale - 1).toDouble();
+    } else {
+      final int scale = (1.0 / val).round().clamp(1, 9);
+      return (scale - 1).toDouble();
+    }
+  }
+
+  /// Konversi posisi slider (-8.0 s.d. 8.0) ke nilai perbandingan matriks AHP
+  double _sliderValueToMatriks(double sliderVal) {
+    final int rounded = sliderVal.round().clamp(-8, 8);
+    if (rounded == 0) {
+      return 1.0;
+    } else if (rounded < 0) {
+      // Ke kiri = Kriteria A lebih dominan (skala 2 s.d. 9)
+      final int scale = 1 + (-rounded);
+      return scale.toDouble();
+    } else {
+      // Ke kanan = Kriteria B lebih dominan (skala 1/2 s.d. 1/9)
+      final int scale = 1 + rounded;
+      return 1.0 / scale;
+    }
+  }
+
+  /// Membangun daftar kartu perbandingan berpasangan menggunakan Slider Bidirectional Saaty
   Widget _buildPairwiseCards(BuildContext context) {
     final n = _kriteria.length;
     final Map<String, SaranInkonsistensi> saranMap = {};
@@ -341,6 +483,18 @@ class _AhpScreenState extends State<AhpScreen> {
     int pairIndex = 1;
     final totalPairs = (n * (n - 1)) ~/ 2;
 
+    const tickMarks = [
+      (val: -8.0, label: '9'),
+      (val: -6.0, label: '7'),
+      (val: -4.0, label: '5'),
+      (val: -2.0, label: '3'),
+      (val: 0.0, label: '1'),
+      (val: 2.0, label: '3'),
+      (val: 4.0, label: '5'),
+      (val: 6.0, label: '7'),
+      (val: 8.0, label: '9'),
+    ];
+
     for (int i = 0; i < n; i++) {
       for (int j = i + 1; j < n; j++) {
         final val = _matriks[i][j];
@@ -350,12 +504,14 @@ class _AhpScreenState extends State<AhpScreen> {
         final kriteriaA = _kriteria[i];
         final kriteriaB = _kriteria[j];
 
-        final int scaleValue = val.round().clamp(1, 9);
+        final double currentSliderVal = _matriksToSliderValue(val);
+        final bool isADominant = currentSliderVal < -0.5;
+        final bool isBDominant = currentSliderVal > 0.5;
 
         cardList.add(
           Container(
-            margin: const EdgeInsets.only(bottom: 14),
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
             decoration: BoxDecoration(
               color: AppColors.surfaceWhite,
               borderRadius: BorderRadius.circular(20),
@@ -377,12 +533,13 @@ class _AhpScreenState extends State<AhpScreen> {
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Header kartu: Pasangan X dari Y & Indikator Status
+                // Header: Pasangan X dari Y & Badge Inkonsistensi
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(8),
@@ -390,7 +547,7 @@ class _AhpScreenState extends State<AhpScreen> {
                       child: Text(
                         'Pasangan $pairIndex dari $totalPairs',
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textSecondary,
                         ),
@@ -399,66 +556,288 @@ class _AhpScreenState extends State<AhpScreen> {
                     const Spacer(),
                     if (isError)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFEE2E2),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Text(
-                          'Perlu Penyesuaian',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.danger,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, size: 14, color: AppColors.danger),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Perlu Penyesuaian',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.danger,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                   ],
                 ),
                 const SizedBox(height: 14),
 
-                // Baris horizontal 3 elemen: 2 floating pill seragam & 1 center dropdown (1-9)
+                // Nama Kriteria Kiri (A) dan Kanan (B)
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Kiri: Floating pill Kriteria A
+                    // Kriteria A
                     Expanded(
-                      flex: 3,
-                      child: _buildFloatingPill(label: kriteriaA.nama),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Tengah: Minimalist borderless dropdown perbandingan 1-9
-                    Expanded(
-                      flex: 4,
-                      child: _buildCenterDropdown(
-                        scaleValue: scaleValue,
-                        onChanged: (newScale) {
-                          if (newScale == null) return;
-                          _updateNilai(i, j, newScale.toDouble());
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          if (currentSliderVal >= 0) {
+                            _updateNilai(i, j, _sliderValueToMatriks(-2.0));
+                          }
                         },
+                        child: Row(
+                          children: [
+                            if (isADominant) ...[
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            Expanded(
+                              child: Text(
+                                kriteriaA.nama,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 15,
+                                  fontWeight: isADominant ? FontWeight.w800 : FontWeight.w600,
+                                  color: isADominant ? AppColors.primary : AppColors.textPrimary,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-
-                    // Kanan: Floating pill Kriteria B
+                    const SizedBox(width: 12),
+                    // Kriteria B
                     Expanded(
-                      flex: 3,
-                      child: _buildFloatingPill(label: kriteriaB.nama),
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          if (currentSliderVal <= 0) {
+                            _updateNilai(i, j, _sliderValueToMatriks(2.0));
+                          }
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                kriteriaB.nama,
+                                textAlign: TextAlign.right,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 15,
+                                  fontWeight: isBDominant ? FontWeight.w800 : FontWeight.w600,
+                                  color: isBDominant ? AppColors.primary : AppColors.textPrimary,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (isBDominant) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Bidirectional Slider dengan Tombol Panah Presisi
+                Row(
+                  children: [
+                    // Tombol Panah Kiri (Geser ke Kriteria A)
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: currentSliderVal > -8.0
+                            ? () {
+                                final nextVal = (currentSliderVal - 1.0).clamp(-8.0, 8.0);
+                                _updateNilai(i, j, _sliderValueToMatriks(nextVal));
+                              }
+                            : null,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: currentSliderVal > -8.0
+                                ? AppColors.primary.withValues(alpha: 0.08)
+                                : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: currentSliderVal > -8.0
+                                  ? AppColors.primary.withValues(alpha: 0.25)
+                                  : const Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.chevron_left_rounded,
+                            size: 22,
+                            color: currentSliderVal > -8.0
+                                ? AppColors.primary
+                                : const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+
+                    // Slider Track
+                    Expanded(
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          trackShape: const BiDirectionalSliderTrackShape(),
+                          trackHeight: 6.0,
+                          activeTrackColor: AppColors.primary,
+                          inactiveTrackColor: const Color(0xFFE2E8F0),
+                          thumbColor: AppColors.primary,
+                          thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 9.0,
+                            elevation: 2.0,
+                          ),
+                          overlayColor: AppColors.primary.withValues(alpha: 0.12),
+                          overlayShape: const RoundSliderOverlayShape(overlayRadius: 18.0),
+                        ),
+                        child: Slider(
+                          value: currentSliderVal.clamp(-8.0, 8.0),
+                          min: -8.0,
+                          max: 8.0,
+                          divisions: 16,
+                          onChanged: (newSliderVal) {
+                            _updateNilai(i, j, _sliderValueToMatriks(newSliderVal));
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+
+                    // Tombol Panah Kanan (Geser ke Kriteria B)
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: currentSliderVal < 8.0
+                            ? () {
+                                final nextVal = (currentSliderVal + 1.0).clamp(-8.0, 8.0);
+                                _updateNilai(i, j, _sliderValueToMatriks(nextVal));
+                              }
+                            : null,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: currentSliderVal < 8.0
+                                ? AppColors.primary.withValues(alpha: 0.08)
+                                : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: currentSliderVal < 8.0
+                                  ? AppColors.primary.withValues(alpha: 0.25)
+                                  : const Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.chevron_right_rounded,
+                            size: 22,
+                            color: currentSliderVal < 8.0
+                                ? AppColors.primary
+                                : const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
 
-                // Kalimat verbal pembacaan
+                // Baris Angka Skala Saaty (9 7 5 3 1 3 5 7 9)
                 Padding(
-                  padding: const EdgeInsets.only(top: 12, bottom: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 46),
+                  child: Row(
+                    children: tickMarks.map((t) {
+                      final bool isThisTickActive = (currentSliderVal - t.val).abs() < 0.6;
+                      return Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            _updateNilai(i, j, _sliderValueToMatriks(t.val));
+                          },
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                t.label,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: isThisTickActive ? 14 : 12,
+                                  fontWeight: isThisTickActive ? FontWeight.w800 : FontWeight.w600,
+                                  color: isThisTickActive
+                                      ? (t.val == 0.0 ? AppColors.textPrimary : AppColors.primary)
+                                      : const Color(0xFF94A3B8),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Container(
+                                width: isThisTickActive ? 5 : 3,
+                                height: isThisTickActive ? 5 : 3,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isThisTickActive
+                                      ? (t.val == 0.0 ? AppColors.textPrimary : AppColors.primary)
+                                      : Colors.transparent,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Kalimat verbal pembacaan
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
                   child: Center(
                     child: RichText(
                       textAlign: TextAlign.center,
                       text: TextSpan(
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                          height: 1.4,
+                          fontSize: 14.5,
+                          color: AppColors.textPrimary,
+                          height: 1.45,
                         ),
                         children: _buildKalimatVerbalSpan(
                           kriteriaA.nama,
@@ -470,14 +849,14 @@ class _AhpScreenState extends State<AhpScreen> {
                   ),
                 ),
 
-                // Floating alert card in soft red (if inconsistency)
+                // Alert Saran Penyelarasan Otomatis
                 if (isError) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFEF2F2),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: AppColors.danger.withValues(alpha: 0.25),
                       ),
@@ -502,9 +881,9 @@ class _AhpScreenState extends State<AhpScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Saran Penyelarasan AHP',
+                                'Saran Penyelarasan Bobot',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11.5,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.danger,
                                 ),
@@ -512,11 +891,12 @@ class _AhpScreenState extends State<AhpScreen> {
                               const SizedBox(height: 2),
                               Text(
                                 saran.nilaiSaran == 1
-                                    ? 'Ubah ke Sama Penting (1)'
-                                    : 'Disarankan ubah ke Skala ${saran.nilaiSaran}',
+                                    ? 'Agar penilaian selaras, sistem menyarankan: Keduanya sama pentingnya'
+                                    : 'Agar penilaian selaras, sistem menyarankan: ${(saran.lebihPentingA ? kriteriaA.nama : kriteriaB.nama)} ${_getDeskripsiKeutamaan(saran.nilaiSaran)} daripada ${(saran.lebihPentingA ? kriteriaB.nama : kriteriaA.nama)} (${saran.nilaiSaran})',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  color: AppColors.textSecondary,
+                                  fontSize: 13,
+                                  color: const Color(0xFF7F1D1D),
+                                  height: 1.38,
                                 ),
                               ),
                             ],
@@ -524,8 +904,20 @@ class _AhpScreenState extends State<AhpScreen> {
                         ),
                         const SizedBox(width: 8),
                         InkWell(
-                          onTap: () =>
-                              _updateNilai(i, j, saran.nilaiSaran.toDouble()),
+                          onTap: () {
+                            final targetVal = saran.lebihPentingA
+                                ? saran.nilaiSaran.toDouble()
+                                : (1.0 / saran.nilaiSaran);
+                            _updateNilai(i, j, targetVal);
+                            final kDominan = saran.lebihPentingA ? kriteriaA.nama : kriteriaB.nama;
+                            final kLawan = saran.lebihPentingA ? kriteriaB.nama : kriteriaA.nama;
+                            AppFeedback.showSuccess(
+                              context,
+                              saran.nilaiSaran == 1
+                                  ? 'Saran diterapkan: Keduanya sama pentingnya'
+                                  : 'Saran diterapkan: $kDominan ${_getDeskripsiKeutamaan(saran.nilaiSaran)} daripada $kLawan (${saran.nilaiSaran})',
+                            );
+                          },
                           borderRadius: BorderRadius.circular(20),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
@@ -544,10 +936,10 @@ class _AhpScreenState extends State<AhpScreen> {
                               ],
                             ),
                             child: Text(
-                              'Terapkan (${saran.nilaiSaran})',
+                              'Terapkan Saran',
                               style: GoogleFonts.plusJakartaSans(
                                 color: Colors.white,
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -569,129 +961,26 @@ class _AhpScreenState extends State<AhpScreen> {
     return Column(children: cardList);
   }
 
-  /// Floating pill untuk kriteria A / B
-  Widget _buildFloatingPill({
-    required String label,
-  }) {
-    return Container(
-      height: 44,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.plusJakartaSans(
-          fontSize: 12.5,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
-        ),
-        textAlign: TextAlign.center,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-
-  /// Minimalist borderless dropdown resting on an elevated white surface (Skala 1-9)
-  Widget _buildCenterDropdown({
-    required int scaleValue,
-    required ValueChanged<int?> onChanged,
-  }) {
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceWhite,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int>(
-          value: scaleValue,
-          isExpanded: true,
-          dropdownColor: AppColors.surfaceWhite,
-          borderRadius: BorderRadius.circular(16),
-          elevation: 4,
-          icon: const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            size: 18,
-            color: AppColors.primary,
-          ),
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-          items: const [
-            DropdownMenuItem(
-              value: 1,
-              child: Text('Sama Penting (1)', overflow: TextOverflow.ellipsis),
-            ),
-            DropdownMenuItem(
-              value: 2,
-              child: Text('Mendekati Sedikit (2)', overflow: TextOverflow.ellipsis),
-            ),
-            DropdownMenuItem(
-              value: 3,
-              child: Text('Sedikit Lebih Penting (3)', overflow: TextOverflow.ellipsis),
-            ),
-            DropdownMenuItem(
-              value: 4,
-              child: Text('Mendekati Cukup (4)', overflow: TextOverflow.ellipsis),
-            ),
-            DropdownMenuItem(
-              value: 5,
-              child: Text('Cukup Lebih Penting (5)', overflow: TextOverflow.ellipsis),
-            ),
-            DropdownMenuItem(
-              value: 6,
-              child: Text('Mendekati Sangat (6)', overflow: TextOverflow.ellipsis),
-            ),
-            DropdownMenuItem(
-              value: 7,
-              child: Text('Sangat Lebih Penting (7)', overflow: TextOverflow.ellipsis),
-            ),
-            DropdownMenuItem(
-              value: 8,
-              child: Text('Mendekati Mutlak (8)', overflow: TextOverflow.ellipsis),
-            ),
-            DropdownMenuItem(
-              value: 9,
-              child: Text('Mutlak Lebih Penting (9)', overflow: TextOverflow.ellipsis),
-            ),
-          ],
-          onChanged: onChanged,
-        ),
-      ),
-    );
-  }
-
-  /// Formatter kalimat verbal perbandingan (Kriteria A terhadap Kriteria B)
+  /// Formatter kalimat verbal perbandingan dengan indikator angka intensitas Saaty
   List<InlineSpan> _buildKalimatVerbalSpan(String namaA, String namaB, double val) {
-    final v = val.round().clamp(1, 9);
-    if (v == 1) {
+    if (val >= 0.95 && val <= 1.05) {
       return [
         TextSpan(
           text: namaA,
-          style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
+          style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
         ),
         const TextSpan(text: ' sama pentingnya dengan '),
         TextSpan(
           text: namaB,
-          style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
+          style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
         ),
-        const TextSpan(text: ' (Skala 1)', style: TextStyle(color: Colors.grey, fontSize: 11)),
+        const TextSpan(
+          text: ' (1)',
+          style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.textSecondary),
+        ),
       ];
-    } else {
+    } else if (val > 1.05) {
+      final v = val.round().clamp(1, 9);
       final ket = _getDeskripsiKeutamaan(v);
       return [
         TextSpan(
@@ -699,32 +988,58 @@ class _AhpScreenState extends State<AhpScreen> {
           style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
         ),
         TextSpan(text: ' $ket daripada '),
-        TextSpan(text: namaB, style: const TextStyle(fontWeight: FontWeight.w700)),
-        TextSpan(text: ' (Skala $v)', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+        TextSpan(
+          text: namaB,
+          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+        ),
+        TextSpan(
+          text: ' ($v)',
+          style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary),
+        ),
+      ];
+    } else {
+      final v = (1.0 / val).round().clamp(1, 9);
+      final ket = _getDeskripsiKeutamaan(v);
+      return [
+        TextSpan(
+          text: namaB,
+          style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
+        ),
+        TextSpan(text: ' $ket daripada '),
+        TextSpan(
+          text: namaA,
+          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+        ),
+        TextSpan(
+          text: ' ($v)',
+          style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary),
+        ),
       ];
     }
   }
 
   String _getDeskripsiKeutamaan(int v) {
     switch (v) {
+      case 1:
+        return 'sama pentingnya dengan';
       case 2:
-        return 'antara sama & sedikit lebih penting';
-      case 3:
         return 'sedikit lebih penting';
-      case 4:
-        return 'antara sedikit & cukup lebih penting';
-      case 5:
+      case 3:
         return 'cukup lebih penting';
+      case 4:
+        return 'lebih penting';
+      case 5:
+        return 'jauh lebih penting';
       case 6:
-        return 'antara cukup & sangat penting';
-      case 7:
         return 'sangat lebih penting';
+      case 7:
+        return 'sangat jauh lebih penting';
       case 8:
-        return 'antara sangat & mutlak penting';
+        return 'hampir mutlak lebih penting';
       case 9:
-        return 'mutlak lebih penting';
+        return 'mutlak paling penting';
       default:
-        return 'sama penting';
+        return 'lebih penting';
     }
   }
 
@@ -777,7 +1092,7 @@ class _AhpScreenState extends State<AhpScreen> {
                       konsisten ? 'Perbandingan Konsisten ✓' : 'Perbandingan Tidak Konsisten ✗',
                       style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w800,
-                        fontSize: 15.5,
+                        fontSize: 16,
                         color: konsisten ? const Color(0xFF059669) : AppColors.danger,
                       ),
                     ),
@@ -787,7 +1102,7 @@ class _AhpScreenState extends State<AhpScreen> {
                           ? 'Rasio konsistensi memenuhi syarat (CR ≤ 0.10)'
                           : 'CR > 0.10, gunakan saran penyesuaian di atas',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -825,7 +1140,7 @@ class _AhpScreenState extends State<AhpScreen> {
             'Hasil Bobot Prioritas Kriteria:',
             style: GoogleFonts.plusJakartaSans(
               fontWeight: FontWeight.w700,
-              fontSize: 14,
+              fontSize: 15,
               color: AppColors.textPrimary,
             ),
           ),
@@ -844,7 +1159,7 @@ class _AhpScreenState extends State<AhpScreen> {
                         child: Text(
                           _kriteria[i].nama,
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13.5,
+                            fontSize: 14.5,
                             fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary,
                           ),
@@ -859,7 +1174,7 @@ class _AhpScreenState extends State<AhpScreen> {
                         child: Text(
                           '${bobotPercent.toStringAsFixed(2)}%',
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12.5,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w800,
                             color: AppColors.primary,
                           ),
@@ -911,7 +1226,7 @@ class _ResultRow extends StatelessWidget {
           child: Text(
             label,
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
+              fontSize: 13,
               color: AppColors.textSecondary,
             ),
           ),
@@ -920,7 +1235,7 @@ class _ResultRow extends StatelessWidget {
           value,
           style: GoogleFonts.plusJakartaSans(
             fontWeight: isHighlight ? FontWeight.w800 : FontWeight.w700,
-            fontSize: 12.5,
+            fontSize: 13.5,
             color: isHighlight && highlightColor != null
                 ? highlightColor
                 : AppColors.textPrimary,
@@ -930,3 +1245,76 @@ class _ResultRow extends StatelessWidget {
     );
   }
 }
+
+/// Track slider bidirectional kustom yang menggambar highlight dari posisi tengah (0) ke jempol
+class BiDirectionalSliderTrackShape extends RoundedRectSliderTrackShape {
+  const BiDirectionalSliderTrackShape();
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required TextDirection textDirection,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isDiscrete = false,
+    bool isEnabled = false,
+    double additionalActiveTrackHeight = 0,
+  }) {
+    if (sliderTheme.trackHeight == null || sliderTheme.trackHeight! <= 0) {
+      return;
+    }
+
+    final Rect trackRect = getPreferredRect(
+      parentBox: parentBox,
+      offset: offset,
+      sliderTheme: sliderTheme,
+      isEnabled: isEnabled,
+      isDiscrete: isDiscrete,
+    );
+
+    final Paint inactivePaint = Paint()
+      ..color = sliderTheme.inactiveTrackColor ?? const Color(0xFFE2E8F0);
+    final Paint activePaint = Paint()
+      ..color = sliderTheme.activeTrackColor ?? AppColors.primary;
+    final Paint centerMarkPaint = Paint()
+      ..color = const Color(0xFF64748B);
+
+    final double trackRadius = trackRect.height / 2;
+
+    // 1. Gambar latar track netral
+    context.canvas.drawRRect(
+      RRect.fromRectAndRadius(trackRect, Radius.circular(trackRadius)),
+      inactivePaint,
+    );
+
+    // 2. Gambar track aktif yang melebar dari pusat (0) ke arah posisi jempol
+    final double centerX = trackRect.center.dx;
+    final double thumbX = thumbCenter.dx;
+
+    if ((thumbX - centerX).abs() > 1.0) {
+      final double left = thumbX < centerX ? thumbX : centerX;
+      final double right = thumbX > centerX ? thumbX : centerX;
+      final Rect activeRect = Rect.fromLTRB(left, trackRect.top, right, trackRect.bottom);
+      context.canvas.drawRRect(
+        RRect.fromRectAndRadius(activeRect, Radius.circular(trackRadius)),
+        activePaint,
+      );
+    }
+
+    // 3. Gambar penanda garis tengah (Skala 1 = Seimbang)
+    final Rect centerMarkRect = Rect.fromCenter(
+      center: Offset(centerX, trackRect.center.dy),
+      width: 3.5,
+      height: trackRect.height + 6,
+    );
+    context.canvas.drawRRect(
+      RRect.fromRectAndRadius(centerMarkRect, const Radius.circular(2)),
+      centerMarkPaint,
+    );
+  }
+}
+

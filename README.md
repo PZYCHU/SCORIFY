@@ -40,7 +40,7 @@ Mendukung 3 jenis kriteria penilaian terpadu:
 * **Konsultasi Mekanisme Kapan Saja:** Chatbot interaktif lokal yang membantu guru memahami logika SPK, rumus normalisasi, aturan remedial, uji konsistensi AHP, hingga format Excel.
 * **100% Bekerja Tanpa Internet:** Tidak bergantung pada API pihak ketiga, bebas biaya token/kuota, dan respon seketika (bebas *latency* & bebas halusinasi).
 * **Domain Guardrails:** Diprogram khusus untuk menjawab pertanyaan seputar konteks operasional Scorify.
-* **Akses Cepat (Floating Action Button):** Tombol melingkar modern dengan ikon robot di menu Panduan untuk konsultasi instan.
+* **Akses Interaktif Terpadu:** Terintegrasi langsung di dalam menu Panduan & FAQ (*Tanya Bot*) untuk kemudahan konsultasi guru.
 
 ### 5. 📊 Manajemen Data & Ekspor Excel Multi-Sheet
 * **Import Data Siswa:** Unggah daftar siswa secara instan dari file Excel (`.xlsx`) lengkap dengan unduhan template 2 kolom (NIS & Nama Siswa).

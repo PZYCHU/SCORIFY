@@ -38,9 +38,10 @@ class AssistantService {
           '1. Perbandingan Berpasangan: Guru membandingkan kepentingan antar kriteria menggunakan skala 1–9 Saaty (1 = Sama penting, 3 = Sedikit lebih penting, 5 = Lebih penting, hingga 9 = Mutlak lebih penting).\n'
           '2. Model Vertikal: Scorify menyederhanakan input matriks menjadi kartu perbandingan vertikal agar mudah diisi di layar HP tanpa tabel lebar.\n'
           '3. Uji Konsistensi (CR): Sistem otomatis menghitung Consistency Ratio (CR):\n'
-          '   • CR < 0.1 (≤ 10%): Pembobotan dianggap KONSISTEN dan valid digunakan.\n'
-          '   • CR ≥ 0.1: Tidak konsisten secara logika penilaian, sistem akan meminta guru meninjau ulang perbandingan.\n'
-          '4. Kapan Dilakukan? Pembobotan dapat dilakukan kapan saja (di awal atau di akhir semester) karena nilai bobot bersifat independen.',
+          '   • CR ≤ 0.10 (≤ 10%): Pembobotan dianggap KONSISTEN dan valid digunakan.\n'
+          '   • CR > 0.10: Tidak konsisten secara logika penilaian, sistem akan meminta guru meninjau ulang perbandingan.\n'
+          '4. Batasan Kriteria (Maksimal 7): Sesuai kaidah Saaty, jumlah kriteria dibatasi maksimal 7 agar konsistensi rasio AHP mudah dicapai.\n'
+          '5. Kapan Dilakukan? Pembobotan dapat dilakukan kapan saja (di awal atau di akhir semester) karena nilai bobot bersifat independen.',
       suggestions: ['🏆 Perangkingan SAW', '⚖️ Kriteria Benefit vs Cost'],
     ),
 
@@ -86,11 +87,11 @@ class AssistantService {
         'tuntas', 'perbaikan'
       ],
       response:
-          '🔄 Aturan Kriteria Frekuensi Remedial di Scorify:\n\n'
-          '1. Otomatis Dihitung: Guru tidak perlu menginput angka remedial secara manual.\n'
-          '2. Pencatatan Attempt: Setiap kali guru menambahkan nilai perbaikan (Attempt 2, 3, dst.) pada sesi tugas manapun, Scorify otomatis mencatat 1 frekuensi remedial untuk siswa tersebut.\n'
-          '3. Nilai yang Diambil: Nilai akhir siswa pada sesi tersebut adalah nilai tertinggi/terbaru yang diperolehnya, namun frekuensi remedialnya tetap tercatat.\n'
-          '4. Sifat Cost: Kriteria remedial otomatis diperlakukan sebagai kriteria Cost, sehingga frekuensi remedial yang tinggi secara adil mempengaruhi skor SAW siswa.',
+          '🔄 Mekanisme Remedial Implisit di Scorify (Sesuai Revisi Arsitektur):\n\n'
+          '1. Terintegrasi Otomatis: Istilah kriteria remedial terpisah telah dihapus. Remedial melekat langsung pada kriteria By Product (Tugas/Ujian).\n'
+          '2. Pencatatan Attempt: Setiap kali guru menambahkan nilai perbaikan (Attempt 2, 3, dst.), sistem mencatat riwayat percobaannya.\n'
+          '3. Aturan Agregasi: Guru dapat memilih apakah nilai yang diambil adalah Nilai Terbesar (Max) atau Rata-rata (Average).\n'
+          '4. Penalti Cost Matematis: Attempt dinormalisasi dengan rumus Cost (min / attempt). Siswa yang lulus sekali coba (attempt=1) meraih skor penuh (1.0), sedangkan siswa yang berkali-kali remedi otomatis mendapat penalti pengurangan preferensi SAW secara adil.',
       suggestions: ['🏆 Perangkingan SAW', '📝 Cara Input Nilai Siswa'],
     ),
 
@@ -102,12 +103,9 @@ class AssistantService {
       ],
       response:
           '⏱️ Fitur & Mekanisme Kriteria Kehadiran (Presensi):\n\n'
-          '1. Format Fleksibel: Scorify tidak membatasi format presensi secara kaku. Anda bebas memilih:\n'
-          '   • Format Persentase (0–100%)\n'
-          '   • Format Akumulasi Hari (misal 18 kali pertemuan)\n'
-          '   • Format Poin Guru (Hadir = 100, Izin = 75, Sakit = 50)\n'
-          '   Paling penting: Gunakan format yang sama untuk seluruh siswa di kelas.\n'
-          '2. Proteksi Jam & Tanggal KBM:\n'
+          '1. Kategori Terstandar: Scorify menyediakan tombol pilihan kategori (Hadir = 100, Izin = 75, Sakit = 50, Alpha = 0) agar guru terbebas dari kesalahan ketik angka manual.\n'
+          '2. Format Fleksibel: Guru bebas mengubah angka nilai standar sesuai kebijakan sekolah.\n'
+          '3. Proteksi Jam & Tanggal KBM:\n'
           '   Presensi hanya dapat diisi pada hari ini dan sesuai jadwal jam KBM kelas untuk mencegah manipulasi absensi siswa di luar jam belajar.',
       suggestions: ['⚖️ Kriteria Benefit vs Cost', '📝 Cara Input Nilai Siswa'],
     ),
@@ -166,11 +164,11 @@ class AssistantService {
       response:
           '📝 Cara Mengisi & Mengoreksi Nilai Siswa:\n\n'
           '1. Input Individual:\n'
-          '   Ketuk nama siswa pada kartu kelas, pilih kriteria yang ingin dinilai, lalu simpan.\n'
+          '   Ketuk nama siswa pada kartu kelas, pilih kriteria yang ingin dinilai (tersedia tombol cepat kategori nilai untuk presensi), lalu simpan.\n'
           '2. Input Kolektif (Massal):\n'
           '   Gunakan tombol "Input Kolektif" di halaman Detail Kelas untuk mengisi nilai seluruh siswa dalam satu tampilan sekaligus (sangat menghemat waktu).\n'
-          '3. Sesi Tugas Banyak:\n'
-          '   Untuk kriteria jenis Hasil (UTS, UAS, Tugas 1, Tugas 2), Anda dapat membuat banyak sesi. Scorify otomatis menghitung rata-rata seluruh sesi tersebut.\n'
+          '3. Kriteria Hasil / Penugasan (Tugas, UTS, UAS):\n'
+          '   Tugas, UTS, dan UAS wajib dipisah sebagai Kriteria Induk mandiri (karena bobot AHP-nya berbeda). Sub-kriteria di dalamnya hanya untuk rincian sesi sejenis (misal: Tugas 1, Tugas 2, UTS Individu, UTS Kelompok, UTS Bab 1/2).\n'
           '4. Koreksi Nilai:\n'
           '   Nilai dapat diubah kapan saja. Cukup ketuk kembali tombol "Hitung Perangkingan" untuk memperbarui hasil kalkulasi seketika.',
       suggestions: ['🔄 Aturan Remedial Otomatis', '⏱️ Presensi & Kehadiran'],

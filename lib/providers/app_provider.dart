@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
@@ -64,13 +65,33 @@ class AppProvider extends ChangeNotifier {
     required List<Kriteria> kriteria,
   }) async {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final List<Sesi> initialSesi = [];
+    int urutan = 1;
+    for (final k in kriteria) {
+      if (k.jenis == JenisKriteria.byProduct && k.subKriteria != null) {
+        for (final sub in k.subKriteria!) {
+          if (sub.nama.trim().isNotEmpty) {
+            initialSesi.add(
+              Sesi(
+                id: sub.id.isNotEmpty ? sub.id : _uuid.v4(),
+                kriteriaId: k.id,
+                nama: sub.nama.trim(),
+                urutan: urutan++,
+                tanggal: DateTime.now(),
+              ),
+            );
+          }
+        }
+      }
+    }
+
     final kelas = Kelas(
       id: _uuid.v4(),
       userId: uid,
       nama: nama,
       kriteria: kriteria,
       muridList: [],
-      sesiList: [],
+      sesiList: initialSesi,
       matriksAHP: KalkulasiService.matriksAwal(kriteria.length),
       createdAt: DateTime.now(),
     );
@@ -101,9 +122,41 @@ class AppProvider extends ChangeNotifier {
       }
     }
 
+    List<Sesi> updatedSesiList = List.from(kelas.sesiList);
+    if (finalKriteria != null) {
+      int nextUrutan = updatedSesiList.isEmpty
+          ? 1
+          : (updatedSesiList.map((s) => s.urutan).fold(0, max) + 1);
+      for (final k in finalKriteria) {
+        if (k.jenis == JenisKriteria.byProduct && k.subKriteria != null) {
+          for (final sub in k.subKriteria!) {
+            final exists = updatedSesiList.any(
+              (s) =>
+                  s.kriteriaId == k.id &&
+                  (s.id == sub.id ||
+                      s.nama.trim().toLowerCase() ==
+                          sub.nama.trim().toLowerCase()),
+            );
+            if (!exists && sub.nama.trim().isNotEmpty) {
+              updatedSesiList.add(
+                Sesi(
+                  id: sub.id.isNotEmpty ? sub.id : _uuid.v4(),
+                  kriteriaId: k.id,
+                  nama: sub.nama.trim(),
+                  urutan: nextUrutan++,
+                  tanggal: DateTime.now(),
+                ),
+              );
+            }
+          }
+        }
+      }
+    }
+
     final newKelas = kelas.copyWith(
       nama: nama,
       kriteria: finalKriteria,
+      sesiList: updatedSesiList,
       sudahKalkulasi: false,
       matriksAHP: newMatriks,
     );
@@ -232,6 +285,53 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
 
     // Simpan ke Firestore
+    await _firestore.upsertMurid(kelasId, updatedMurid);
+    await _firestore.upsertKelas(_kelasList[kIdx]);
+  }
+
+  /// Menambah poin keaktifan murid (kumulatif per angkat tangan/keaktifan)
+  /// Setiap kali murid aktif/angkat tangan, poin baru dicatat sebagai entri terpisah
+  /// sehingga iterasi (frekuensi aktif) dan total akumulasi poin dihitung secara akurat.
+  Future<void> tambahNilaiKeaktifan({
+    required String kelasId,
+    required String muridId,
+    required String kriteriaId,
+    required double poin,
+  }) async {
+    final kIdx = _kelasList.indexWhere((k) => k.id == kelasId);
+    if (kIdx < 0) return;
+    final kelas = _kelasList[kIdx];
+
+    final mIdx = kelas.muridList.indexWhere((m) => m.id == muridId);
+    if (mIdx < 0) return;
+    final murid = kelas.muridList[mIdx];
+
+    final existingEntries =
+        murid.nilaiList.where((n) => n.kriteriaId == kriteriaId).toList();
+    final nextAttempt = existingEntries.length + 1;
+
+    final now = DateTime.now();
+    final newNilai = Nilai(
+      id: '${muridId}_${kriteriaId}_${now.millisecondsSinceEpoch}',
+      siswaId: muridId,
+      kriteriaId: kriteriaId,
+      nilai: poin,
+      attempt: nextAttempt,
+      tanggal: now,
+    );
+
+    final updatedMurid = murid.copyWith(
+      nilaiList: [...murid.nilaiList, newNilai],
+    );
+
+    final updatedMuridList = List<Murid>.from(kelas.muridList);
+    updatedMuridList[mIdx] = updatedMurid;
+    _kelasList[kIdx] = kelas.copyWith(
+      muridList: updatedMuridList,
+      sudahKalkulasi: false,
+    );
+    notifyListeners();
+
     await _firestore.upsertMurid(kelasId, updatedMurid);
     await _firestore.upsertKelas(_kelasList[kIdx]);
   }
@@ -380,6 +480,32 @@ class AppProvider extends ChangeNotifier {
       sesiList: kelas.sesiList.where((s) => s.id != sesiId).toList(),
       sudahKalkulasi: false,
     );
+    _kelasList[idx] = updated;
+    notifyListeners();
+    await _firestore.upsertKelas(updated);
+  }
+
+  Future<void> updateSesiNama(String kelasId, String sesiId, String namaBaru) async {
+    final idx = _kelasList.indexWhere((k) => k.id == kelasId);
+    if (idx < 0) return;
+    final kelas = _kelasList[idx];
+    final updatedSesiList = kelas.sesiList.map((s) {
+      if (s.id == sesiId) {
+        return Sesi(
+          id: s.id,
+          kriteriaId: s.kriteriaId,
+          nama: namaBaru.trim(),
+          urutan: s.urutan,
+          tanggal: s.tanggal,
+        );
+      }
+      return s;
+    }).toList();
+    final updated = kelas.copyWith(
+      sesiList: updatedSesiList,
+    );
+    _kelasList[idx] = updated;
+    notifyListeners();
     await _firestore.upsertKelas(updated);
   }
 
@@ -391,6 +517,7 @@ class AppProvider extends ChangeNotifier {
     required String kriteriaId,
     required String sesiId,
     required double nilai,
+    bool isKoreksi = false,
   }) async {
     final kIdx = _kelasList.indexWhere((k) => k.id == kelasId);
     if (kIdx < 0) return;
@@ -404,25 +531,74 @@ class AppProvider extends ChangeNotifier {
         .where((n) => n.kriteriaId == kriteriaId && n.sesiId == sesiId)
         .toList();
 
-    final attempt = existing.isEmpty ? 1 : existing.length + 1;
-
-    final newNilai = Nilai(
-      id: '${muridId}_${kriteriaId}_${sesiId}_$attempt',
-      siswaId: muridId,
-      kriteriaId: kriteriaId,
-      sesiId: sesiId,
-      nilai: nilai,
-      attempt: attempt,
-      tanggal: DateTime.now(),
-    );
+    List<Nilai> updatedNilaiList;
+    if (isKoreksi && existing.isNotEmpty) {
+      existing.sort((a, b) => b.attempt.compareTo(a.attempt));
+      final lastNilai = existing.first;
+      updatedNilaiList = murid.nilaiList.map((n) {
+        if (n.id == lastNilai.id) {
+          return n.copyWith(nilai: nilai, tanggal: DateTime.now());
+        }
+        return n;
+      }).toList();
+    } else {
+      final attempt = existing.isEmpty ? 1 : existing.length + 1;
+      final newNilai = Nilai(
+        id: '${muridId}_${kriteriaId}_${sesiId}_$attempt',
+        siswaId: muridId,
+        kriteriaId: kriteriaId,
+        sesiId: sesiId,
+        nilai: nilai,
+        attempt: attempt,
+        tanggal: DateTime.now(),
+      );
+      updatedNilaiList = [...murid.nilaiList, newNilai];
+    }
 
     final updatedMurid = murid.copyWith(
-      nilaiList: [...murid.nilaiList, newNilai],
+      nilaiList: updatedNilaiList,
     );
-    await _firestore.upsertMurid(kelasId, updatedMurid);
 
-    final updatedKelas = kelas.copyWith(sudahKalkulasi: false);
-    await _firestore.upsertKelas(updatedKelas);
+    // Update in-memory state seketika agar kalkulasi SAW langsung mendeteksi attempt terbaru
+    final updatedMuridList = List<Murid>.from(kelas.muridList);
+    updatedMuridList[mIdx] = updatedMurid;
+    _kelasList[kIdx] = kelas.copyWith(
+      muridList: updatedMuridList,
+      sudahKalkulasi: false,
+    );
+    notifyListeners();
+
+    await _firestore.upsertMurid(kelasId, updatedMurid);
+    await _firestore.upsertKelas(_kelasList[kIdx]);
+  }
+
+  Future<void> hapusNilaiAttempt({
+    required String kelasId,
+    required String muridId,
+    required String nilaiId,
+  }) async {
+    final kIdx = _kelasList.indexWhere((k) => k.id == kelasId);
+    if (kIdx < 0) return;
+    final kelas = _kelasList[kIdx];
+
+    final mIdx = kelas.muridList.indexWhere((m) => m.id == muridId);
+    if (mIdx < 0) return;
+    final murid = kelas.muridList[mIdx];
+
+    final updatedMurid = murid.copyWith(
+      nilaiList: murid.nilaiList.where((n) => n.id != nilaiId).toList(),
+    );
+
+    final updatedMuridList = List<Murid>.from(kelas.muridList);
+    updatedMuridList[mIdx] = updatedMurid;
+    _kelasList[kIdx] = kelas.copyWith(
+      muridList: updatedMuridList,
+      sudahKalkulasi: false,
+    );
+    notifyListeners();
+
+    await _firestore.upsertMurid(kelasId, updatedMurid);
+    await _firestore.upsertKelas(_kelasList[kIdx]);
   }
 
   // ─── AHP ────────────────────────────────────────────────────────────────
@@ -458,8 +634,7 @@ class AppProvider extends ChangeNotifier {
     if (kelas == null) return {};
 
     final kriteriaWajib = kelas.kriteria
-        .where((k) => k.jenis == JenisKriteria.hasil)
-        .where((k) => kelas.sesiList.any((s) => s.kriteriaId == k.id))
+        .where((k) => k.jenis == JenisKriteria.byProduct)
         .toList();
 
     if (kriteriaWajib.isEmpty) return {};

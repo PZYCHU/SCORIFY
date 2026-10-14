@@ -29,6 +29,7 @@ class AuthService {
     required String name,
     required String email,
     required String password,
+    String? school,
   }) async {
     await _ensureFirebaseInitialized();
     try {
@@ -44,11 +45,17 @@ class AuthService {
         uid: credential.user!.uid,
         name: name,
         email: email,
+        school: school,
         photoUrl: null,
         provider: 'email',
       );
+      // Kirim email verifikasi ke pengguna
+      await credential.user!.sendEmailVerification();
+      // Sign out agar tidak langsung masuk sebelum email diverifikasi
+      await _auth.signOut();
+
       if (kDebugMode) {
-        debugPrint('✅ Registration successful for user: ${credential.user?.email}');
+        debugPrint('✅ Registration & verification email sent for user: ${credential.user?.email}');
       }
       return credential;
     } on FirebaseAuthException catch (e) {
@@ -70,6 +77,27 @@ class AuthService {
         email: email,
         password: password,
       );
+
+      final user = credential.user;
+      if (user != null) {
+        try {
+          await user.reload();
+        } catch (_) {}
+      }
+      final freshUser = _auth.currentUser ?? user;
+      if (freshUser != null && !freshUser.emailVerified) {
+        // Keluarkan kembali jika email belum diverifikasi
+        await _auth.signOut();
+        throw EmailNotVerifiedException(freshUser.email ?? email);
+      }
+
+      if (user != null) {
+        await _firestore.collection('users').doc(user.uid).update({
+          'lastLoginAt': FieldValue.serverTimestamp(),
+          'isVerified': true,
+        });
+      }
+
       if (kDebugMode) {
         debugPrint('✅ Login successful for user: ${credential.user?.email}');
       }
@@ -78,12 +106,152 @@ class AuthService {
       if (kDebugMode) {
         debugPrint('❌ Login failed: ${e.code} - ${e.message}');
       }
+
+      // 1. Akun pasti belum terdaftar di Firebase Auth
+      if (e.code == 'user-not-found') {
+        throw UserNotFoundException(email.trim());
+      }
+
+      // 2. Kredensial akun ada, tetapi password salah
+      if (e.code == 'wrong-password') {
+        throw 'Password yang Anda masukkan salah. Silakan periksa kembali kata sandi Anda.';
+      }
+
+      // 3. invalid-credential: di Firebase modern kode ini mewakili password salah atau kombinasi kredensial tidak cocok
+      if (e.code == 'invalid-credential') {
+        final exists = await checkEmailExistsInDatabase(email.trim());
+        if (exists) {
+          throw 'Password yang Anda masukkan salah. Silakan periksa kembali kata sandi Anda.';
+        } else {
+          // Karena Firebase mengaktifkan Email Enumeration Protection, jangan langsung memvonis akun belum terdaftar
+          // agar pengguna yang hanya salah ketik password tidak kebingungan
+          throw 'Email atau kata sandi tidak valid. Silakan periksa kembali kata sandi Anda, atau klik Daftar jika belum memiliki akun.';
+        }
+      }
+
+      throw _handleAuthException(e);
+    }
+  }
+
+  // ── Cek Apakah Email Terdaftar di Database (Firestore / Auth) ─────────────
+  Future<bool> checkEmailExistsInDatabase(String email) async {
+    final clean = email.trim();
+    if (clean.isEmpty) return false;
+
+    // 1. Cek query Firestore users collection (case-sensitive & lowercase)
+    try {
+      final q1 = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: clean)
+          .limit(1)
+          .get();
+      if (q1.docs.isNotEmpty) return true;
+
+      final lower = clean.toLowerCase();
+      if (lower != clean) {
+        final q2 = await _firestore
+            .collection('users')
+            .where('email', isEqualTo: lower)
+            .limit(1)
+            .get();
+        if (q2.docs.isNotEmpty) return true;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Firestore checkEmailExistsInDatabase error: $e');
+      }
+    }
+
+    // 2. Cek via Firebase Auth fetchSignInMethodsForEmail
+    try {
+      // ignore: deprecated_member_use
+      final methods = await _auth.fetchSignInMethodsForEmail(clean);
+      if (methods.isNotEmpty) return true;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('fetchSignInMethodsForEmail error: $e');
+      }
+    }
+
+    return false;
+  }
+
+  // ── Kirim Ulang Email Verifikasi ──────────────────────────────────────────
+  Future<void> resendVerificationEmail(String email, [String? password]) async {
+    if (password != null && password.isNotEmpty) {
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      await credential.user?.sendEmailVerification();
+      await _auth.signOut();
+    } else {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser != null) {
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        final userCredential = await _auth.signInWithCredential(credential);
+        await userCredential.user?.sendEmailVerification();
+        await _auth.signOut();
+        await _googleSignIn.signOut();
+      }
+    }
+  }
+
+  // ── Register dengan Google ────────────────────────────────────────────────
+  Future<String> registerWithGoogle({String? school}) async {
+    await _ensureFirebaseInitialized();
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) throw Exception('Pendaftaran Google dibatalkan');
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      final user = userCredential.user!;
+      final email = user.email ?? '';
+
+      final docRef = _firestore.collection('users').doc(user.uid);
+      final docSnap = await docRef.get();
+
+      if (docSnap.exists) {
+        await _auth.signOut();
+        await _googleSignIn.signOut();
+        throw 'Akun Google ($email) sudah terdaftar di sistem. Silakan langsung masuk melalui halaman Login.';
+      }
+
+      await _saveUserToFirestore(
+        uid: user.uid,
+        name: user.displayName ?? 'Guru',
+        email: email,
+        school: school,
+        photoUrl: user.photoURL,
+        provider: 'google',
+        isVerified: true,
+      );
+
+      await _auth.signOut();
+      await _googleSignIn.signOut();
+
+      return email;
+    } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     }
   }
 
   // ── Login dengan Google ──────────────────────────────────────────────────
   Future<UserCredential> signInWithGoogle() async {
+    await _ensureFirebaseInitialized();
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) throw Exception('Login Google dibatalkan');
@@ -98,21 +266,78 @@ class AuthService {
 
       final userCredential = await _auth.signInWithCredential(credential);
       final user = userCredential.user!;
+      final email = (user.email ?? '').trim();
 
       final docRef = _firestore.collection('users').doc(user.uid);
-      final docSnap = await docRef.get();
+      var docSnap = await docRef.get();
 
-      if (!docSnap.exists) {
-        await _saveUserToFirestore(
-          uid: user.uid,
-          name: user.displayName ?? 'Guru',
-          email: user.email ?? '',
-          photoUrl: user.photoURL,
-          provider: 'google',
-        );
-      } else {
-        await docRef.update({'lastLoginAt': FieldValue.serverTimestamp()});
+      // Fallback 1: Cek apakah data user ada di Firestore dengan email yang cocok (misal case atau doc ID lama)
+      if (!docSnap.exists && email.isNotEmpty) {
+        try {
+          final q = await _firestore
+              .collection('users')
+              .where('email', isEqualTo: email.toLowerCase())
+              .limit(1)
+              .get();
+          if (q.docs.isNotEmpty) {
+            final oldData = q.docs.first.data();
+            await docRef.set({
+              ...oldData,
+              'uid': user.uid,
+              'email': email,
+              'isVerified': true,
+              'lastLoginAt': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true));
+            docSnap = await docRef.get();
+          }
+        } catch (e) {
+          if (kDebugMode) debugPrint('Query fallback email error: $e');
+        }
       }
+
+      // Fallback 2: Jika dokumen Firestore masih belum ada
+      if (!docSnap.exists) {
+        // Periksa apakah akun ini akun yang sudah lama terdaftar di Firebase Auth
+        // (contoh: akun terdaftar di Authentication console seperti hapsarimalika@gmail.com)
+        final createdAt = user.metadata.creationTime;
+        final isPreExistingAccount = createdAt != null &&
+            DateTime.now().difference(createdAt).inMinutes > 1;
+
+        if (isPreExistingAccount) {
+          // Auto-heal: Akun sah terdaftar di Firebase Auth, otomatis buatkan/pulihkan profil Firestore
+          await _saveUserToFirestore(
+            uid: user.uid,
+            name: user.displayName ?? (email.isNotEmpty ? email.split('@').first : 'Guru'),
+            email: email,
+            photoUrl: user.photoURL,
+            provider: 'google',
+            isVerified: true,
+          );
+          docSnap = await docRef.get();
+        } else {
+          // Pengguna benar-benar baru pertama kali menekan login tanpa registrasi
+          // Sesuai aturan dosen: wajib mendaftar melalui halaman register terlebih dahulu
+          try {
+            await user.delete();
+          } catch (_) {
+            await _auth.signOut();
+          }
+          await _googleSignIn.signOut();
+          throw UserNotFoundException(email);
+        }
+      }
+
+      // Wajib verifikasi email jika belum diverifikasi
+      if (!user.emailVerified) {
+        await _auth.signOut();
+        await _googleSignIn.signOut();
+        throw EmailNotVerifiedException(email);
+      }
+
+      await docRef.update({
+        'lastLoginAt': FieldValue.serverTimestamp(),
+        'isVerified': true,
+      });
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
@@ -155,6 +380,20 @@ class AuthService {
       throw _handleAuthException(e);
     } catch (e) {
       throw 'Gagal memperbarui nama: $e';
+    }
+  }
+
+  // ── Update Asal Sekolah ───────────────────────────────────────────────────
+  Future<void> updateSchool(String newSchool) async {
+    final user = _auth.currentUser;
+    if (user == null) throw 'Pengguna tidak ditemukan.';
+    try {
+      await _firestore.collection('users').doc(user.uid).set({
+        'school': newSchool.trim(),
+        'asalSekolah': newSchool.trim(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      throw 'Gagal memperbarui asal sekolah: $e';
     }
   }
 
@@ -238,16 +477,21 @@ class AuthService {
     required String uid,
     required String name,
     required String email,
+    String? school,
     required String? photoUrl,
     required String provider,
+    bool isVerified = false,
   }) async {
     await _firestore.collection('users').doc(uid).set({
       'uid': uid,
       'name': name,
       'email': email,
+      'school': school,
+      'asalSekolah': school,
       'photoUrl': photoUrl,
       'provider': provider,
       'role': 'teacher',
+      'isVerified': isVerified,
       'createdAt': FieldValue.serverTimestamp(),
       'lastLoginAt': FieldValue.serverTimestamp(),
     });
@@ -277,4 +521,21 @@ class AuthService {
         return 'Terjadi kesalahan: ${e.message}';
     }
   }
+}
+
+class EmailNotVerifiedException implements Exception {
+  final String email;
+  const EmailNotVerifiedException(this.email);
+
+  @override
+  String toString() => 'Email $email belum diverifikasi. Silakan periksa kotak masuk atau spam email Anda.';
+}
+
+class UserNotFoundException implements Exception {
+  final String email;
+  const UserNotFoundException(this.email);
+
+  @override
+  String toString() =>
+      'Akun dengan email $email belum terdaftar di database Scorify. Silakan lakukan pendaftaran dan verifikasi email terlebih dahulu.';
 }

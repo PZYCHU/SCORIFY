@@ -7,6 +7,8 @@ class SaranInkonsistensi {
   final int j;
   final double nilaiSaatIni;
   final int nilaiSaran;
+  final double nilaiMatriksSaran;
+  final bool lebihPentingA;
   final double deviasi;
   final double crSetelahGanti;
 
@@ -15,6 +17,8 @@ class SaranInkonsistensi {
     required this.j,
     required this.nilaiSaatIni,
     required this.nilaiSaran,
+    required this.nilaiMatriksSaran,
+    required this.lebihPentingA,
     required this.deviasi,
     required this.crSetelahGanti,
   });
@@ -43,8 +47,13 @@ class HasilAHP {
 class HasilSAW {
   final List<Murid> muridTerurut;
   final Map<String, double> skorMap;
+  final Map<String, Map<String, double>>? rMatrix;
 
-  const HasilSAW({required this.muridTerurut, required this.skorMap});
+  const HasilSAW({
+    required this.muridTerurut,
+    required this.skorMap,
+    this.rMatrix,
+  });
 }
 
 class KalkulasiService {
@@ -140,16 +149,35 @@ class KalkulasiService {
         if (wJ <= 0) continue;
 
         final rasioIdeal = wI / wJ;
-        final saatySaran = rasioIdeal >= 1
-            ? rasioIdeal.round().clamp(1, 9)
-            : 1;
+        int saatySaran = 1;
+        double nilaiMatriksSaran = 1.0;
+        bool lebihPentingA = true;
+
+        if (rasioIdeal >= 1.0) {
+          int s = rasioIdeal.round().clamp(1, 9);
+          if (s > 1 && s.isEven) {
+            s = (rasioIdeal - s >= 0) ? (s + 1).clamp(1, 9) : (s - 1).clamp(1, 9);
+          }
+          saatySaran = s;
+          nilaiMatriksSaran = saatySaran.toDouble();
+          lebihPentingA = true;
+        } else {
+          final kebalikan = wJ / wI;
+          int s = kebalikan.round().clamp(1, 9);
+          if (s > 1 && s.isEven) {
+            s = (kebalikan - s >= 0) ? (s + 1).clamp(1, 9) : (s - 1).clamp(1, 9);
+          }
+          saatySaran = s;
+          nilaiMatriksSaran = 1.0 / saatySaran;
+          lebihPentingA = false;
+        }
 
         final valSaatIni = matriks[i][j];
-        if (saatySaran != valSaatIni.round()) {
+        if ((valSaatIni - nilaiMatriksSaran).abs() > 0.05) {
           final matriksTest = matriks
               .map((row) => List<double>.from(row))
               .toList();
-          setNilaiMatriks(matriksTest, i, j, saatySaran.toDouble());
+          setNilaiMatriks(matriksTest, i, j, nilaiMatriksSaran);
           final testHasil = _hitungAHPInternal(matriksTest);
 
           final deviasi = (valSaatIni - rasioIdeal).abs();
@@ -159,6 +187,8 @@ class KalkulasiService {
               j: j,
               nilaiSaatIni: valSaatIni,
               nilaiSaran: saatySaran,
+              nilaiMatriksSaran: nilaiMatriksSaran,
+              lebihPentingA: lebihPentingA,
               deviasi: deviasi,
               crSetelahGanti: testHasil.cr,
             ),
@@ -193,48 +223,191 @@ class KalkulasiService {
       return HasilSAW(muridTerurut: muridList, skorMap: {});
     }
 
-    // 1. Hitung nilai ringkasan per murid per kriteria
-    final nilaiPerKriteria = <String, List<double>>{};
+    // Matriks normalisasi r_ij: [muridId][kriteriaId] -> r_ij
+    final rMatrix = <String, Map<String, double>>{};
+
     for (final k in kriteria) {
-      nilaiPerKriteria[k.id] = muridList
-          .map((m) => _nilaiRingkasan(m, k))
-          .toList();
-    }
+      final isCost = k.arah == ArahKriteria.cost ||
+          k.nama.toLowerCase().contains('langgar') ||
+          k.nama.toLowerCase().contains('disiplin');
 
-    // 2. Min/max per kriteria
-    final maxNilai = <String, double>{};
-    final minNilai = <String, double>{};
-    for (final k in kriteria) {
-      final vals = nilaiPerKriteria[k.id]!;
-      maxNilai[k.id] = vals.reduce(max);
-      minNilai[k.id] = vals.reduce(min);
-    }
+      final isCounter = k.jenis == JenisKriteria.byProcess &&
+          (k.inputType == InputType.counter ||
+              k.nama.toLowerCase().contains('aktif') ||
+              isCost);
 
-    // 3. Normalisasi SAW & hitung skor
-    final skorMap = <String, double>{};
-    for (int idx = 0; idx < muridList.length; idx++) {
-      final murid = muridList[idx];
-      double skor = 0;
+      if (isCounter) {
+        // 🔵 Model 2: Counter / Keaktifan / Pelanggaran (2 indikator: Nilai Poin Agregasi dan Frekuensi)
+        final poinList = <double>[];
+        final frekList = <double>[];
 
-      for (final k in kriteria) {
-        final xij = nilaiPerKriteria[k.id]![idx];
-        final maxV = maxNilai[k.id]!;
-        final minV = minNilai[k.id]!;
-
-        double rij;
-        if (maxV == minV) {
-          // Semua murid punya nilai sama → tidak ada pembeda, semua dapat 1
-          rij = 1.0;
-        } else if (k.arah == ArahKriteria.benefit) {
-          rij = maxV == 0 ? 0 : xij / maxV;
-        } else {
-          // cost: semakin kecil semakin baik
-          rij = xij == 0 ? 1.0 : minV / xij;
+        for (final m in muridList) {
+          final entries = m.getNilaiByKriteria(k.id);
+          final frek = entries.where((n) => n.nilai > 0).length.toDouble();
+          double poin = 0.0;
+          if (entries.isNotEmpty) {
+            if (k.aggregationRule == AggregationRule.average) {
+              final active = entries.where((n) => n.nilai > 0).toList();
+              poin = active.isEmpty
+                  ? 0.0
+                  : active.fold(0.0, (sum, n) => sum + n.nilai) / active.length;
+            } else if (k.aggregationRule == AggregationRule.min) {
+              final active = entries.where((n) => n.nilai > 0).toList();
+              poin = active.isEmpty
+                  ? 0.0
+                  : active.map((n) => n.nilai).reduce(min);
+            } else {
+              poin = entries.map((n) => n.nilai).reduce(max);
+            }
+          }
+          poinList.add(poin);
+          frekList.add(frek);
         }
 
+        final maxP = poinList.reduce(max);
+        final minP = poinList.reduce(min);
+        final maxF = frekList.reduce(max);
+        final minF = frekList.reduce(min);
+
+        for (int i = 0; i < muridList.length; i++) {
+          final mId = muridList[i].id;
+          final p = poinList[i];
+          final f = frekList[i];
+
+          double rP;
+          double rF;
+
+          if (isCost) {
+            // Sifat COST (Pelanggaran / Deduksi): Semakin kecil poin & frekuensi, semakin tinggi skornya (bebas deduksi)
+            rP = (maxP == minP) ? 1.0 : (maxP - p) / (maxP - minP);
+            rF = (maxF == minF) ? 1.0 : (maxF - f) / (maxF - minF);
+          } else {
+            // Sifat BENEFIT: Semakin besar poin & frekuensi keaktifan, semakin tinggi skornya
+            rP = maxP == 0 ? 0.0 : (maxP == minP ? 1.0 : p / maxP);
+            rF = maxF == 0 ? 0.0 : (maxF == minF ? 1.0 : f / maxF);
+          }
+
+          final rij = ((rP + rF) / 2.0).clamp(0.0, 1.0);
+          rMatrix.putIfAbsent(mId, () => {})[k.id] = rij;
+        }
+      } else if (k.jenis == JenisKriteria.byProduct) {
+        // 🔴 Model 3: Kriteria Hasil / Product (Nilai Hasil + Penalti Attempt/Remedial)
+        final scoreList = <double>[];
+        final attemptList = <double>[];
+
+        for (final m in muridList) {
+          final entries = m.getNilaiByKriteria(k.id);
+          if (entries.isEmpty) {
+            scoreList.add(0.0);
+            attemptList.add(1.0);
+          } else {
+            // Kelompokkan nilai per sesi (hanya sesi yang valid, abaikan null jika ada sesi)
+            final Map<String, List<Nilai>> perSesi = {};
+            for (final n in entries) {
+              if (n.sesiId != null && n.sesiId!.isNotEmpty) {
+                perSesi.putIfAbsent(n.sesiId!, () => []).add(n);
+              }
+            }
+            if (perSesi.isEmpty) {
+              for (final n in entries) {
+                perSesi.putIfAbsent(n.sesiId ?? 'default', () => []).add(n);
+              }
+            }
+
+            double sumSesiScore = 0.0;
+            double sumSesiAttempt = 0.0;
+
+            for (final sesiEntries in perSesi.values) {
+              if (k.aggregationRule == AggregationRule.average) {
+                final avgScore = sesiEntries.fold(0.0, (s, n) => s + n.nilai) /
+                    sesiEntries.length;
+                sumSesiScore += avgScore;
+              } else if (k.aggregationRule == AggregationRule.min) {
+                final minScore =
+                    sesiEntries.map((e) => e.nilai).reduce(min);
+                sumSesiScore += minScore;
+              } else {
+                // Max
+                final maxScore =
+                    sesiEntries.map((e) => e.nilai).reduce(max);
+                sumSesiScore += maxScore;
+              }
+              final maxAtt = sesiEntries.map((e) => e.attempt).reduce(max);
+              sumSesiAttempt += maxAtt.clamp(1, 99).toDouble();
+            }
+
+            final count = perSesi.length;
+            scoreList.add(count > 0 ? sumSesiScore / count : 0.0);
+            attemptList.add(count > 0 ? sumSesiAttempt / count : 1.0);
+          }
+        }
+
+        final maxScore = scoreList.reduce(max);
+        final minScore = scoreList.reduce(min);
+        final minAttempt = attemptList.reduce(min);
+        final maxAttempt = attemptList.reduce(max);
+
+        for (int i = 0; i < muridList.length; i++) {
+          final mId = muridList[i].id;
+          final s = scoreList[i];
+          final a = attemptList[i];
+
+          // 1. Poin Nilai Hasil: BENEFIT (r_ij = x / max)
+          double rScore;
+          if (maxScore == minScore) {
+            rScore = 1.0;
+          } else if (!isCost) {
+            rScore = maxScore == 0 ? 0.0 : s / maxScore;
+          } else {
+            rScore = (maxScore == minScore) ? 1.0 : (maxScore - s) / (maxScore - minScore);
+          }
+
+          // 2. Jumlah Attempt / Percobaan (Otomatis COST: min(x) / x)
+          double rAttempt = 1.0;
+          if (maxAttempt == minAttempt) {
+            rAttempt = 1.0;
+          } else {
+            // COST: Semakin sedikit percobaan untuk selesai, semakin bagus (r_ij = min / x)
+            rAttempt = a == 0 ? 1.0 : (minAttempt / a).clamp(0.0, 1.0);
+          }
+
+          // Nilai normalisasi preferensi kriteria hasil gabungan (r_score * r_attempt)
+          final rij = (rScore * rAttempt).clamp(0.0, 1.0);
+          rMatrix.putIfAbsent(mId, () => {})[k.id] = rij;
+        }
+      } else {
+        // 🟢 Model 1: Presensi / By Process Standar
+        final valList = muridList.map((m) => _nilaiRingkasan(m, k)).toList();
+        final maxV = valList.reduce(max);
+        final minV = valList.reduce(min);
+
+        for (int i = 0; i < muridList.length; i++) {
+          final mId = muridList[i].id;
+          final x = valList[i];
+
+          double rij;
+          if (maxV == minV) {
+            rij = 1.0;
+          } else if (!isCost) {
+            rij = maxV == 0 ? 0.0 : x / maxV;
+          } else {
+            // COST: Linear min-max (semakin kecil x semakin tinggi preferensi nilainya)
+            rij = (maxV - x) / (maxV - minV);
+          }
+
+          rMatrix.putIfAbsent(mId, () => {})[k.id] = rij.clamp(0.0, 1.0);
+        }
+      }
+    }
+
+    // 3. Hitung preferensi akhir SAW: V_i = sum(w_j * r_ij)
+    final skorMap = <String, double>{};
+    for (final murid in muridList) {
+      double skor = 0;
+      for (final k in kriteria) {
+        final rij = rMatrix[murid.id]?[k.id] ?? 0.0;
         skor += k.bobot * rij;
       }
-
       skorMap[murid.id] = double.parse((skor * 100).toStringAsFixed(2));
     }
 
@@ -246,44 +419,82 @@ class KalkulasiService {
       (a, b) => (b.skorFinal ?? 0).compareTo(a.skorFinal ?? 0),
     );
 
-    return HasilSAW(muridTerurut: muridDenganSkor, skorMap: skorMap);
+    return HasilSAW(
+      muridTerurut: muridDenganSkor,
+      skorMap: skorMap,
+      rMatrix: rMatrix,
+    );
   }
 
   /// Hitung nilai ringkasan satu murid untuk satu kriteria:
-  /// - performa & derived: rata-rata semua nilai
-  /// - hasil (per sesi): rata-rata nilai terbaik per sesi
+  /// - byProduct: nilai per sesi sesuai aggregationRule (max/average/min), dirata-ratakan
+  /// - byProcess (keaktifan): sesuai aggregationRule (max/average/min)
+  /// - byProcess (attendance): SUM catatan kehadiran
+  /// - byProcess (number / default): rata-rata / aturan agregasi
   static double _nilaiRingkasan(Murid murid, Kriteria k) {
-    // Derived dihitung dari frekuensi ngulang, bukan dari nilaiList langsung
-    if (k.jenis == JenisKriteria.derived) {
-      return murid.getFrekuensiNgulang(k.targetKriteriaIds).toDouble();
-    }
-
     final semuaNilai = murid.getNilaiByKriteria(k.id);
     if (semuaNilai.isEmpty) return 0;
 
-    if (k.jenis == JenisKriteria.hasil && k.perSesi) {
-      // Ambil nilai terbaik (attempt tertinggi) per sesi, lalu rata-rata antar sesi
-      final Map<String, double> bestPerSesi = {};
-      for (final n in semuaNilai) {
-        final key = n.sesiId ?? 'no_sesi';
-        if (!bestPerSesi.containsKey(key) || n.nilai > bestPerSesi[key]!) {
-          bestPerSesi[key] = n.nilai;
-        }
+    final isKeaktifan = k.jenis == JenisKriteria.byProcess &&
+        (k.inputType == InputType.counter ||
+            k.nama.toLowerCase().contains('aktif'));
+
+    if (isKeaktifan) {
+      if (k.aggregationRule == AggregationRule.average) {
+        final active = semuaNilai.where((n) => n.nilai > 0).toList();
+        return active.isEmpty
+            ? 0.0
+            : active.fold(0.0, (sum, n) => sum + n.nilai) / active.length;
+      } else if (k.aggregationRule == AggregationRule.min) {
+        final active = semuaNilai.where((n) => n.nilai > 0).toList();
+        return active.isEmpty
+            ? 0.0
+            : active.map((n) => n.nilai).reduce(min);
+      } else {
+        return semuaNilai.map((n) => n.nilai).reduce(max);
       }
-      if (bestPerSesi.isEmpty) return 0;
-      return bestPerSesi.values.reduce((a, b) => a + b) / bestPerSesi.length;
     }
 
-    // Counter (performa): SUM semua pertemuan
-    // Setiap entry di nilaiList = nilai di satu hari/pertemuan
-    // Makin banyak total, makin aktif siswanya
-    if (k.jenis == JenisKriteria.performa &&
-        (k.inputType == InputType.counter || k.inputType == InputType.attendance)) {
+    if (k.jenis == JenisKriteria.byProduct) {
+      final Map<String, List<Nilai>> perSesi = {};
+      for (final n in semuaNilai) {
+        if (n.sesiId != null && n.sesiId!.isNotEmpty) {
+          perSesi.putIfAbsent(n.sesiId!, () => []).add(n);
+        }
+      }
+      if (perSesi.isEmpty) {
+        for (final n in semuaNilai) {
+          perSesi.putIfAbsent(n.sesiId ?? 'default', () => []).add(n);
+        }
+      }
+      if (perSesi.isEmpty) return 0;
+
+      double totalSesi = 0.0;
+      for (final list in perSesi.values) {
+        if (k.aggregationRule == AggregationRule.average) {
+          totalSesi += list.fold(0.0, (s, n) => s + n.nilai) / list.length;
+        } else if (k.aggregationRule == AggregationRule.min) {
+          totalSesi += list.map((e) => e.nilai).reduce(min);
+        } else {
+          totalSesi += list.map((e) => e.nilai).reduce(max);
+        }
+      }
+      return totalSesi / perSesi.length;
+    }
+
+    // byProcess (attendance): SUM semua catatan kehadiran
+    if (k.jenis == JenisKriteria.byProcess &&
+        k.inputType == InputType.attendance) {
       return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai);
     }
 
-    // Toggle, number (performa/hasil non-sesi): rata-rata semua pertemuan
-    return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai) / semuaNilai.length;
+    // Default: evaluasi sesuai aturan agregasi
+    if (k.aggregationRule == AggregationRule.average) {
+      return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai) / semuaNilai.length;
+    } else if (k.aggregationRule == AggregationRule.min) {
+      return semuaNilai.map((n) => n.nilai).reduce(min);
+    }
+    return semuaNilai.map((n) => n.nilai).reduce(max);
   }
 
   // ─── Skala AHP ────────────────────────────────────────────────────────────

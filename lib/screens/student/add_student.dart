@@ -159,7 +159,7 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
                             child: Text(
                               isEdit ? 'Ubah Informasi Siswa' : 'Identitas Siswa Baru',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 13,
+                                fontSize: 15,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textSecondary,
                               ),
@@ -168,17 +168,19 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
                           const SizedBox(height: 24),
 
                           // ── NIS ───────────────────────────────────────
-                          Row(
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 8,
+                            runSpacing: 4,
                             children: [
                               Text(
                                 'NIS (Nomor Induk Siswa)',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13,
+                                  fontSize: 15.5,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.textPrimary,
                                 ),
                               ),
-                              const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
@@ -186,9 +188,9 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  'Opsional',
+                                  'Opsional (Maks. 10 digit)',
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 10,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.textSecondary,
                                   ),
@@ -200,29 +202,32 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
                           TextFormField(
                             controller: _nisCtrl,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(10),
+                            ],
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14,
+                              fontSize: 16.5,
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
                             ),
                             decoration: InputDecoration(
                               hintText: 'Masukkan nomor induk (contoh: 21081)',
                               hintStyle: GoogleFonts.plusJakartaSans(
-                                fontSize: 13,
+                                fontSize: 15.5,
                                 color: AppColors.textHint,
                                 fontWeight: FontWeight.normal,
                               ),
                               prefixIcon: const Icon(
                                 Icons.badge_outlined,
                                 color: AppColors.textSecondary,
-                                size: 20,
+                                size: 22,
                               ),
                               filled: true,
                               fillColor: const Color(0xFFF8FAF9),
                               contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
+                                horizontal: 18,
+                                vertical: 16,
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -249,7 +254,7 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
                               Text(
                                 'Nama Lengkap Siswa',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13,
+                                  fontSize: 15.5,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.textPrimary,
                                 ),
@@ -269,27 +274,27 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
                             controller: _namaCtrl,
                             textCapitalization: TextCapitalization.words,
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14,
+                              fontSize: 16.5,
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
                             ),
                             decoration: InputDecoration(
                               hintText: 'Masukkan nama lengkap siswa',
                               hintStyle: GoogleFonts.plusJakartaSans(
-                                fontSize: 13,
+                                fontSize: 15.5,
                                 color: AppColors.textHint,
                                 fontWeight: FontWeight.normal,
                               ),
                               prefixIcon: const Icon(
                                 Icons.person_outline_rounded,
                                 color: AppColors.textSecondary,
-                                size: 20,
+                                size: 22,
                               ),
                               filled: true,
                               fillColor: const Color(0xFFF8FAF9),
                               contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
+                                horizontal: 18,
+                                vertical: 16,
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -334,7 +339,7 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
                                     'Nilai siswa dapat diinput nanti sewaktu KBM berlangsung, input kolektif, atau melalui sesi tugas di kelas.',
                                     style: GoogleFonts.plusJakartaSans(
                                       color: const Color(0xFF15803D),
-                                      fontSize: 12,
+                                      fontSize: 14,
                                       height: 1.4,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -382,7 +387,7 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
                                   Text(
                                     isEdit ? 'Simpan Perubahan' : 'Tambah Siswa',
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 15,
+                                      fontSize: 17,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 0.2,
                                     ),
@@ -471,7 +476,7 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
                         Text(
                           title,
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 20,
+                            fontSize: 22,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
                             letterSpacing: -0.3,
@@ -481,7 +486,7 @@ class _TambahMuridScreenState extends State<TambahMuridScreen> {
                         Text(
                           'Kelas ${widget.kelas.nama}',
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12.5,
+                            fontSize: 14.5,
                             fontWeight: FontWeight.w500,
                             color: Colors.white.withValues(alpha: 0.75),
                           ),

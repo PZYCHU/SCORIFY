@@ -1,20 +1,73 @@
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 enum JenisKriteria {
-  performa, // diinput saat KBM (counter/poin tambahan, nilai angka)
-  hasil,    // diinput setelah koreksi, punya sesi (nilai tugas, UTS, UAS)
-  derived,  // otomatis dihitung sistem (frekuensi ngulang = count attempt > 1)
+  byProcess, // diinput saat proses KBM berlangsung (Presensi, Keaktifan)
+  byProduct; // diinput di akhir unit pembelajaran (Tugas, UTS, UAS)
+
+  String get label => switch (this) {
+    JenisKriteria.byProcess => 'Proses KBM',
+    JenisKriteria.byProduct => 'Hasil / Produk',
+  };
+}
+
+enum AggregationRule {
+  max,      // Nilai Tertinggi
+  average,  // Rata-rata Nilai
+  min;      // Nilai Terendah
+
+  String get label => switch (this) {
+    AggregationRule.max => 'Nilai Tertinggi (Max)',
+    AggregationRule.average => 'Rata-rata (Average)',
+    AggregationRule.min => 'Nilai Terendah (Min)',
+  };
 }
 
 enum InputType {
   counter,    // poin tambahan / akumulasi (+), cocok untuk keaktifan
-  attendance, // presensi / kehadiran harian (dibatasi maks 100)
+  attendance, // presensi / kehadiran (dibatasi maks 100)
   number,     // input angka manual, cocok untuk nilai tugas / ujian
 }
 
 enum ArahKriteria {
-  benefit, // semakin besar semakin baik
-  cost,    // semakin besar semakin buruk
+  benefit, // semakin besar semakin baik (Menguntungkan)
+  cost;    // semakin besar semakin buruk (Merugikan)
+
+  String get label => switch (this) {
+    ArahKriteria.benefit => 'Menguntungkan (Benefit)',
+    ArahKriteria.cost => 'Merugikan (Cost)',
+  };
+}
+
+// ─── Sub-Kriteria (Skala / Opsi Nilai Terstandar) ──────────────────────────────
+
+class SubKriteria {
+  final String id;
+  String nama;
+  double nilai;
+
+  SubKriteria({
+    required this.id,
+    required this.nama,
+    required this.nilai,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'nama': nama,
+    'nilai': nilai,
+  };
+
+  factory SubKriteria.fromJson(Map<String, dynamic> json) => SubKriteria(
+    id: json['id']?.toString() ?? '',
+    nama: json['nama']?.toString() ?? '',
+    nilai: (json['nilai'] as num?)?.toDouble() ?? 0.0,
+  );
+
+  SubKriteria copyWith({String? id, String? nama, double? nilai}) => SubKriteria(
+    id: id ?? this.id,
+    nama: nama ?? this.nama,
+    nilai: nilai ?? this.nilai,
+  );
 }
 
 // ─── Kriteria ─────────────────────────────────────────────────────────────────
@@ -23,11 +76,33 @@ class Kriteria {
   final String id;
   String nama;
   JenisKriteria jenis;
-  InputType? inputType; // null jika derived (tidak perlu input)
+  InputType? inputType; // null jika tidak membutuhkan input type khusus
   ArahKriteria arah;
   double bobot; // hasil AHP, 0.0 sebelum dihitung
-  bool perSesi; // true jika butuh sesi (hanya jenis: hasil)
-  List<String> targetKriteriaIds; // ID kriteria hasil yang dipantau (hanya jenis: derived)
+  bool perSesi; // true jika kriteria memiliki penilaian berulang / per sesi
+  bool isPenaltiPercobaan; // true jika iterasi/percobaan dihitung sebagai Cost (penalti)
+  AggregationRule aggregationRule; // aturan agregasi attempt (max / average / min)
+  List<SubKriteria>? subKriteria; // opsi pilihan nilai diskrit (cth: Hadir=100, Izin=75)
+  List<String> targetKriteriaIds; // backward-compatibility
+
+  bool get isPenilaianBerulang => perSesi;
+  set isPenilaianBerulang(bool val) => perSesi = val;
+
+  bool get hasSubKriteria => subKriteria != null && subKriteria!.isNotEmpty;
+
+  static List<SubKriteria> get defaultPresensiSubKriteria => [
+    SubKriteria(id: 'hadir', nama: 'Hadir', nilai: 100),
+    SubKriteria(id: 'izin', nama: 'Izin', nilai: 75),
+    SubKriteria(id: 'sakit', nama: 'Sakit', nilai: 50),
+    SubKriteria(id: 'alpha', nama: 'Alpha', nilai: 0),
+  ];
+
+  static List<SubKriteria> get defaultLikertSubKriteria => [
+    SubKriteria(id: 'sb', nama: 'Sangat Baik', nilai: 100),
+    SubKriteria(id: 'b', nama: 'Baik', nilai: 80),
+    SubKriteria(id: 'c', nama: 'Cukup', nilai: 60),
+    SubKriteria(id: 'k', nama: 'Kurang', nilai: 40),
+  ];
 
   Kriteria({
     required this.id,
@@ -36,9 +111,13 @@ class Kriteria {
     this.inputType,
     this.arah = ArahKriteria.benefit,
     this.bobot = 0.0,
-    this.perSesi = false,
+    bool perSesi = false,
+    bool? isPenilaianBerulang,
+    this.isPenaltiPercobaan = false,
+    this.aggregationRule = AggregationRule.max,
+    this.subKriteria,
     this.targetKriteriaIds = const [],
-  });
+  }) : perSesi = isPenilaianBerulang ?? perSesi;
 
   Kriteria copyWith({
     String? nama,
@@ -47,6 +126,10 @@ class Kriteria {
     ArahKriteria? arah,
     double? bobot,
     bool? perSesi,
+    bool? isPenilaianBerulang,
+    bool? isPenaltiPercobaan,
+    AggregationRule? aggregationRule,
+    List<SubKriteria>? subKriteria,
     List<String>? targetKriteriaIds,
   }) {
     return Kriteria(
@@ -56,7 +139,10 @@ class Kriteria {
       inputType: inputType ?? this.inputType,
       arah: arah ?? this.arah,
       bobot: bobot ?? this.bobot,
-      perSesi: perSesi ?? this.perSesi,
+      perSesi: isPenilaianBerulang ?? perSesi ?? this.perSesi,
+      isPenaltiPercobaan: isPenaltiPercobaan ?? this.isPenaltiPercobaan,
+      aggregationRule: aggregationRule ?? this.aggregationRule,
+      subKriteria: subKriteria ?? this.subKriteria,
       targetKriteriaIds: targetKriteriaIds ?? this.targetKriteriaIds,
     );
   }
@@ -64,34 +150,85 @@ class Kriteria {
   Map<String, dynamic> toJson() => {
     'id': id,
     'nama': nama,
-    'jenis': jenis.name,
+    'jenis': jenis == JenisKriteria.byProcess ? 'by_process' : 'by_product',
     'inputType': inputType?.name,
     'arah': arah.name,
     'bobot': bobot,
     'perSesi': perSesi,
+    'is_penilaian_berulang': perSesi,
+    'is_penalti_percobaan': isPenaltiPercobaan,
+    'aggregation_rule': aggregationRule.name,
+    'sub_kriteria_config': {
+      'aggregation_rule': aggregationRule.name,
+      'options': subKriteria?.map((s) => s.toJson()).toList(),
+    },
+    if (subKriteria != null)
+      'sub_kriteria': subKriteria!.map((s) => s.toJson()).toList(),
     'targetKriteriaIds': targetKriteriaIds,
   };
 
-  factory Kriteria.fromJson(Map<String, dynamic> json) => Kriteria(
-    id: json['id'],
-    nama: json['nama'],
-    jenis: JenisKriteria.values.firstWhere((e) => e.name == json['jenis']),
-    inputType: json['inputType'] != null
-        ? InputType.values.firstWhere(
-            (e) => e.name == json['inputType'],
-            orElse: () => InputType.number,
-          )
-        : null,
-    arah: ArahKriteria.values.firstWhere(
-      (e) => e.name == (json['arah'] ?? 'benefit'),
-    ),
-    bobot: (json['bobot'] as num).toDouble(),
-    perSesi: json['perSesi'] ?? false,
-    targetKriteriaIds: (json['targetKriteriaIds'] as List<dynamic>?)
-            ?.map((e) => e.toString())
-            .toList() ??
-        const [],
-  );
+  factory Kriteria.fromJson(Map<String, dynamic> json) {
+    JenisKriteria parseJenis(dynamic val) {
+      final str = val?.toString().toLowerCase();
+      if (str == 'by_process' || str == 'byprocess' || str == 'performa') {
+        return JenisKriteria.byProcess;
+      }
+      return JenisKriteria.byProduct;
+    }
+
+    AggregationRule parseAggregationRule(dynamic val) {
+      final str = val?.toString().toLowerCase();
+      if (str == 'average' || str == 'avg') {
+        return AggregationRule.average;
+      }
+      if (str == 'min' || str == 'minimum') {
+        return AggregationRule.min;
+      }
+      return AggregationRule.max;
+    }
+
+    final parsedJenis = parseJenis(json['jenis']);
+
+    final subConfig = json['sub_kriteria_config'];
+    final rawSubList = json['sub_kriteria'] ??
+        (subConfig is Map<String, dynamic> ? subConfig['options'] : null);
+
+    final rawAgg = json['aggregation_rule'] ??
+        json['aggregationRule'] ??
+        (subConfig is Map<String, dynamic> ? subConfig['aggregation_rule'] : null);
+
+    return Kriteria(
+      id: json['id'],
+      nama: json['nama'],
+      jenis: parsedJenis,
+      inputType: json['inputType'] != null
+          ? InputType.values.firstWhere(
+              (e) => e.name == json['inputType'],
+              orElse: () => InputType.number,
+            )
+          : (parsedJenis == JenisKriteria.byProcess ? InputType.number : null),
+      arah: ArahKriteria.values.firstWhere(
+        (e) => e.name == (json['arah'] ?? 'benefit'),
+        orElse: () => ArahKriteria.benefit,
+      ),
+      bobot: (json['bobot'] as num?)?.toDouble() ?? 0.0,
+      perSesi: json['is_penilaian_berulang'] ??
+          json['isPenilaianBerulang'] ??
+          json['perSesi'] ??
+          (parsedJenis == JenisKriteria.byProduct),
+      isPenaltiPercobaan: json['is_penalti_percobaan'] ??
+          json['isPenaltiPercobaan'] ??
+          (parsedJenis == JenisKriteria.byProduct && (json['is_penilaian_berulang'] ?? json['perSesi'] ?? true)),
+      aggregationRule: parseAggregationRule(rawAgg),
+      subKriteria: (rawSubList as List<dynamic>?)
+          ?.map((e) => SubKriteria.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      targetKriteriaIds: (json['targetKriteriaIds'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+    );
+  }
 }
 
 // ─── Sesi ─────────────────────────────────────────────────────────────────────
@@ -150,24 +287,46 @@ class Nilai {
     required this.tanggal,
   });
 
+  Nilai copyWith({
+    String? id,
+    String? siswaId,
+    String? kriteriaId,
+    String? sesiId,
+    double? nilai,
+    int? attempt,
+    DateTime? tanggal,
+  }) {
+    return Nilai(
+      id: id ?? this.id,
+      siswaId: siswaId ?? this.siswaId,
+      kriteriaId: kriteriaId ?? this.kriteriaId,
+      sesiId: sesiId ?? this.sesiId,
+      nilai: nilai ?? this.nilai,
+      attempt: attempt ?? this.attempt,
+      tanggal: tanggal ?? this.tanggal,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     'id': id,
-    'siswaId': siswaId,
-    'kriteriaId': kriteriaId,
-    'sesiId': sesiId,
-    'nilai': nilai,
+    'siswa_id': siswaId,
+    'kriteria_id': kriteriaId,
+    'sesi_id': sesiId,
+    'score': nilai,
     'attempt': attempt,
     'tanggal': tanggal.toIso8601String(),
   };
 
   factory Nilai.fromJson(Map<String, dynamic> json) => Nilai(
-    id: json['id'],
-    siswaId: json['siswaId'],
-    kriteriaId: json['kriteriaId'],
-    sesiId: json['sesiId'],
-    nilai: (json['nilai'] as num).toDouble(),
+    id: json['id'] ?? '',
+    siswaId: json['siswa_id'] ?? json['siswaId'] ?? '',
+    kriteriaId: json['kriteria_id'] ?? json['kriteriaId'] ?? '',
+    sesiId: json['sesi_id'] ?? json['sesiId'],
+    nilai: ((json['score'] ?? json['nilai']) as num?)?.toDouble() ?? 0.0,
     attempt: json['attempt'] ?? 1,
-    tanggal: DateTime.parse(json['tanggal']),
+    tanggal: json['tanggal'] != null
+        ? DateTime.tryParse(json['tanggal']) ?? DateTime.now()
+        : DateTime.now(),
   );
 }
 
@@ -326,7 +485,7 @@ class Kelas {
     'kriteria': kriteria.map((k) => k.toJson()).toList(),
     'muridList': muridList.map((m) => m.toJson()).toList(),
     'sesiList': sesiList.map((s) => s.toJson()).toList(),
-    'sudahKalkulasi': sudahKalkulasi,
+    'sudah_kalkulasi': sudahKalkulasi,
     'matriks_ahp': matriksAHP.expand((row) => row).toList(),
     'matriks_n': matriksAHP.isNotEmpty ? matriksAHP.length : 0,
     if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
@@ -374,7 +533,7 @@ class Kelas {
       sesiList: (json['sesiList'] as List? ?? [])
           .map((s) => Sesi.fromJson(s))
           .toList(),
-      sudahKalkulasi: json['sudahKalkulasi'] ?? false,
+      sudahKalkulasi: json['sudah_kalkulasi'] ?? json['sudahKalkulasi'] ?? false,
       matriksAHP: matriks,
       createdAt: createdAt,
     );

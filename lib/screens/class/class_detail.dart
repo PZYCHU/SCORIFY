@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -45,48 +44,35 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
           );
         }
 
-        return DefaultTabController(
-          length: 2,
-          child: Scaffold(
-            backgroundColor: const Color(0xFFF3F5F1),
-            body: Column(
-              children: [
-                _buildHeader(context, kelas, provider),
-                if (kelas.kriteria.any((k) => k.bobot == 0.0))
-                  _buildAhpWarningBanner(context, kelas),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      // Tab 1: Daftar Murid
-                      Column(
-                        children: [
-                          Expanded(
-                            child: kelas.muridList.isEmpty
-                                ? RefreshIndicator(
-                                    onRefresh: () => provider.refresh(),
-                                    child: _buildEmptyMuridState(
-                                      context,
-                                      kelas,
-                                    ),
-                                  )
-                                : RefreshIndicator(
-                                    onRefresh: () => provider.refresh(),
-                                    child: _buildMuridList(context, kelas),
-                                  ),
-                          ),
-                          _buildBottomBar(context, kelas, provider),
-                        ],
-                      ),
-                      // Tab 2: Tugas & Penilaian Sesi
-                      InputNilaiHasilScreen(
-                        kelasId: widget.kelasId,
-                        isEmbedded: true,
-                      ),
-                    ],
-                  ),
+        return Scaffold(
+          backgroundColor: const Color(0xFFF3F5F1),
+          body: Column(
+            children: [
+              _buildHeader(context, kelas, provider),
+              if (kelas.kriteria.any((k) => k.bobot == 0.0))
+                _buildAhpWarningBanner(context, kelas),
+              Expanded(
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: kelas.muridList.isEmpty
+                          ? RefreshIndicator(
+                              onRefresh: () => provider.refresh(),
+                              child: _buildEmptyMuridState(
+                                context,
+                                kelas,
+                              ),
+                            )
+                          : RefreshIndicator(
+                              onRefresh: () => provider.refresh(),
+                              child: _buildMuridList(context, kelas),
+                            ),
+                    ),
+                    _buildBottomBar(context, kelas, provider),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -270,45 +256,6 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ImportSiswaScreen(
-                        kelasId: widget.kelasId,
-                        kelas: kelas,
-                      ),
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: BorderSide(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      width: 1.2,
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
-                  icon: const Icon(
-                    Icons.upload_file_rounded,
-                    size: 18,
-                    color: AppColors.accent,
-                  ),
-                  label: Text(
-                    'Import dari File Excel / CSV',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -317,10 +264,6 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
   }
 
   Widget _buildHeader(BuildContext context, Kelas kelas, AppProvider provider) {
-    final totalSesi = kelas.kriteria
-        .where((k) => k.jenis == JenisKriteria.hasil)
-        .fold<int>(0, (sum, k) => sum + kelas.getSesiByKriteria(k.id).length);
-
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -408,7 +351,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                               kelas.nama.toUpperCase(),
                               style: GoogleFonts.plusJakartaSans(
                                 color: Colors.white,
-                                fontSize: 16.5,
+                                fontSize: 19,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.6,
                               ),
@@ -425,7 +368,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                                   Text(
                                     '${kelas.muridList.length} Siswa',
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 11.5,
+                                      fontSize: 13.5,
                                       color: Colors.white.withValues(
                                         alpha: 0.88,
                                       ),
@@ -434,12 +377,12 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 5,
+                                      horizontal: 6,
                                     ),
                                     child: Text(
                                       '•',
                                       style: TextStyle(
-                                        fontSize: 11,
+                                        fontSize: 13,
                                         color: Colors.white.withValues(
                                           alpha: 0.45,
                                         ),
@@ -449,7 +392,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                                   Text(
                                     '${kelas.kriteria.length} Kriteria',
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 11.5,
+                                      fontSize: 13.5,
                                       color: Colors.white.withValues(
                                         alpha: 0.88,
                                       ),
@@ -458,12 +401,12 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 5,
+                                      horizontal: 6,
                                     ),
                                     child: Text(
                                       '•',
                                       style: TextStyle(
-                                        fontSize: 11,
+                                        fontSize: 13,
                                         color: Colors.white.withValues(
                                           alpha: 0.45,
                                         ),
@@ -472,8 +415,8 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                                   ),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 6.5,
-                                      vertical: 2,
+                                      horizontal: 8,
+                                      vertical: 2.5,
                                     ),
                                     decoration: BoxDecoration(
                                       color: kelas.sudahKalkulasi
@@ -502,18 +445,18 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                                           kelas.sudahKalkulasi
                                               ? Icons.check_circle_rounded
                                               : Icons.pending_rounded,
-                                          size: 10.5,
+                                          size: 12,
                                           color: kelas.sudahKalkulasi
                                               ? const Color(0xFF34D399)
                                               : const Color(0xFFFCD34D),
                                         ),
-                                        const SizedBox(width: 3.5),
+                                        const SizedBox(width: 4),
                                         Text(
                                           kelas.sudahKalkulasi
                                               ? 'Sudah Dihitung'
                                               : 'Belum Dihitung',
                                           style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 10,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.w700,
                                             color: kelas.sudahKalkulasi
                                                 ? const Color(0xFF34D399)
@@ -626,81 +569,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-
-                  // Tab Bar dengan modern styling & count badges
-                  TabBar(
-                    indicatorColor: const Color(0xFF34D399),
-                    indicatorWeight: 3.5,
-                    indicatorSize: TabBarIndicatorSize.label,
-                    dividerColor: Colors.transparent,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: Colors.white60,
-                    labelStyle: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                    ),
-                    unselectedLabelStyle: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                    tabs: [
-                      Tab(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('Daftar Murid'),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                '${kelas.muridList.length}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Tab(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('Tugas & Sesi'),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.22),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                '$totalSesi',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -750,30 +619,29 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                 ),
                 child: TextField(
                   controller: _searchCtrl,
-                  onChanged: (val) =>
-                      setState(() => _searchQuery = val.trim()),
+                  onChanged: (val) => setState(() => _searchQuery = val.trim()),
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
+                    fontSize: 15.5,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Cari nama siswa atau NIS...',
                     hintStyle: GoogleFonts.plusJakartaSans(
-                      fontSize: 12.5,
+                      fontSize: 14.5,
                       color: AppColors.textHint,
                       fontWeight: FontWeight.w500,
                     ),
                     prefixIcon: const Icon(
                       Icons.search_rounded,
-                      size: 20,
+                      size: 22,
                       color: Color(0xFF163842),
                     ),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
                             icon: const Icon(
                               Icons.close_rounded,
-                              size: 18,
+                              size: 20,
                               color: AppColors.textSecondary,
                             ),
                             onPressed: () {
@@ -789,8 +657,8 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                     focusedBorder: InputBorder.none,
                     filled: false,
                     contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
+                      horizontal: 16,
+                      vertical: 11,
                     ),
                   ),
                 ),
@@ -807,7 +675,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                       borderRadius: BorderRadius.circular(14),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          vertical: 9.5,
+                          vertical: 10.5,
                           horizontal: 12,
                         ),
                         decoration: BoxDecoration(
@@ -828,14 +696,14 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                           children: [
                             const Icon(
                               Icons.person_add_rounded,
-                              size: 16,
+                              size: 18,
                               color: Colors.white,
                             ),
                             const SizedBox(width: 6),
                             Text(
                               'Tambah Siswa',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),
@@ -854,7 +722,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                       borderRadius: BorderRadius.circular(14),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          vertical: 9.5,
+                          vertical: 10.5,
                           horizontal: 12,
                         ),
                         decoration: BoxDecoration(
@@ -872,14 +740,14 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                           children: [
                             const Icon(
                               Icons.checklist_rtl_rounded,
-                              size: 16,
+                              size: 18,
                               color: Color(0xFF059669),
                             ),
                             const SizedBox(width: 6),
                             Text(
                               'Nilai Sekaligus',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFF065F46),
                               ),
@@ -931,6 +799,14 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                             murid,
                             kriteria,
                           ),
+                      onTapProductSesi: (kriteria, sesiId) =>
+                          _showQuickInputKriteriaDialog(
+                            context,
+                            kelas,
+                            murid,
+                            kriteria,
+                            initialSesiId: sesiId,
+                          ),
                     );
                   },
                 ),
@@ -938,7 +814,6 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
       ],
     );
   }
-
 
   Widget _buildBottomBar(
     BuildContext context,
@@ -994,14 +869,14 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                   ),
                   icon: const Icon(
                     Icons.balance,
-                    size: 16,
+                    size: 18,
                     color: Colors.white,
                   ),
                   label: Text(
-                    bobotBelumDiisi ? 'Isi Bobot AHP' : 'Edit Bobot AHP',
+                    bobotBelumDiisi ? 'Isi Bobot & Parameter' : 'Konfigurasi Parameter Penilaian',
                     style: GoogleFonts.plusJakartaSans(
                       fontWeight: FontWeight.w700,
-                      fontSize: 13,
+                      fontSize: 15,
                       color: Colors.white,
                     ),
                   ),
@@ -1033,14 +908,14 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                         ),
                         icon: const Icon(
                           Icons.bar_chart_rounded,
-                          size: 16,
+                          size: 18,
                           color: Colors.white,
                         ),
                         label: Text(
                           'Lihat Hasil',
                           style: GoogleFonts.plusJakartaSans(
                             fontWeight: FontWeight.w700,
-                            fontSize: 13,
+                            fontSize: 15,
                             color: Colors.white,
                           ),
                         ),
@@ -1052,7 +927,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                         onPressed: (kelas.muridList.isEmpty || bobotBelumDiisi)
                             ? null
                             : () =>
-                                _jalankanKalkulasi(context, provider, kelas),
+                                  _jalankanKalkulasi(context, provider, kelas),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF10B981),
                           foregroundColor: Colors.white,
@@ -1069,12 +944,12 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                             borderRadius: BorderRadius.circular(24),
                           ),
                         ),
-                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                        icon: const Icon(Icons.refresh_rounded, size: 18),
                         label: Text(
                           'Hitung Ulang',
                           style: GoogleFonts.plusJakartaSans(
                             fontWeight: FontWeight.w800,
-                            fontSize: 13,
+                            fontSize: 15,
                           ),
                         ),
                       ),
@@ -1104,12 +979,12 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                         borderRadius: BorderRadius.circular(24),
                       ),
                     ),
-                    icon: const Icon(Icons.calculate_outlined, size: 18),
+                    icon: const Icon(Icons.calculate_outlined, size: 20),
                     label: Text(
                       'Hitung Nilai Akhir',
                       style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w800,
-                        fontSize: 13.5,
+                        fontSize: 15.5,
                       ),
                     ),
                   ),
@@ -1177,7 +1052,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                e.key, // nama murid
+                                e.key,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 13,
@@ -1209,10 +1084,9 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
           ],
         ),
       );
-      return; // batalkan kalkulasi
+      return;
     }
 
-    // ─ Semua data lengkap — jalankan kalkulasi ─
     if (!context.mounted) return;
     showDialog(
       context: context,
@@ -1310,12 +1184,12 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
     String? defaultKriteriaId,
   }) {
     final kriteriaHasil = kelas.kriteria
-        .where((k) => k.jenis == JenisKriteria.hasil)
+        .where((k) => k.jenis == JenisKriteria.byProduct)
         .toList();
     if (kriteriaHasil.isEmpty) {
       AppFeedback.showWarning(
         context,
-        'Kelas ini belum memiliki kriteria dengan jenis hasil/tugas',
+        'Kelas ini belum memiliki kriteria jenis By Product (Tugas/Ujian)',
       );
       return;
     }
@@ -1449,9 +1323,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFFF8FAF9),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: const Color(0xFFE2E8F0),
-                            ),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<String>(
@@ -1518,11 +1390,15 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE2E8F0),
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE2E8F0),
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -1594,7 +1470,9 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                           ),
                         ),
                       ),
-                      SizedBox(height: MediaQuery.of(sheetCtx).padding.bottom + 6),
+                      SizedBox(
+                        height: MediaQuery.of(sheetCtx).padding.bottom + 6,
+                      ),
                     ],
                   ),
                 ),
@@ -1612,9 +1490,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
       return;
     }
 
-    final actionableKriteria = kelas.kriteria
-        .where((k) => k.jenis != JenisKriteria.derived)
-        .toList();
+    final actionableKriteria = kelas.kriteria;
 
     if (actionableKriteria.isEmpty) {
       AppFeedback.showWarning(
@@ -1641,64 +1517,212 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
     );
   }
 
-  void _showQuickInputKriteriaDialog(
+  void _showQuickInputProductDialog(
     BuildContext context,
     Kelas kelas,
     Murid murid,
-    Kriteria kriteria,
-  ) {
-    if (kriteria.jenis == JenisKriteria.hasil) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => InputNilaiHasilScreen(kelasId: kelas.id),
+    Kriteria kriteria, {
+    String? initialSesiId,
+  }) {
+    final sesiList = kelas.getSesiByKriteria(kriteria.id);
+
+    if (sesiList.isEmpty) {
+      final namaSesiCtrl = TextEditingController(text: '${kriteria.nama} 1');
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        barrierColor: Colors.black.withValues(alpha: 0.5),
+        builder: (sheetCtx) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.add_task_rounded,
+                        color: Color(0xFF2563EB),
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Buat Sesi / Sub-Kriteria Baru',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Kriteria: ${kriteria.nama}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      onPressed: () => Navigator.pop(sheetCtx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded,
+                          size: 18, color: Color(0xFF3B82F6)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Kriteria "${kriteria.nama}" belum memiliki sesi/tugas. Tambahkan sesi pertama untuk mulai memberi nilai.',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Nama Sesi / Sub-Kriteria',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: namaSesiCtrl,
+                  decoration: InputDecoration(
+                    hintText: 'Contoh: ${kriteria.nama} 1, Ulangan Harian 1',
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAF9),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () async {
+                      final nama = namaSesiCtrl.text.trim();
+                      if (nama.isEmpty) return;
+                      Navigator.pop(sheetCtx);
+                      final provider = context.read<AppProvider>();
+                      await provider.tambahSesi(kelas.id, kriteria.id, nama);
+                      if (context.mounted) {
+                        AppFeedback.showSuccess(
+                          context,
+                          'Sesi "$nama" berhasil dibuat!',
+                        );
+                        final kBaru = provider.getKelas(kelas.id);
+                        final mBaru = kBaru?.muridList
+                            .firstWhere((m) => m.id == murid.id, orElse: () => murid);
+                        if (kBaru != null && mBaru != null) {
+                          _showQuickInputProductDialog(
+                              context, kBaru, mBaru, kriteria);
+                        }
+                      }
+                    },
+                    child: Text(
+                      'Buat Sesi & Lanjut Input Nilai',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
       return;
     }
 
-    if (kriteria.jenis == JenisKriteria.derived) {
-      AppFeedback.showInfo(
-        context,
-        'Kriteria ini dihitung otomatis dari riwayat remedial.',
-      );
-      return;
-    }
+    String selectedSesiId = (initialSesiId != null &&
+            sesiList.any((s) => s.id == initialSesiId))
+        ? initialSesiId
+        : sesiList.first.id;
+    bool isKoreksi = false;
+    final ctrl = TextEditingController();
 
-    final existingList = murid.getNilaiByKriteria(kriteria.id);
-    final today = DateTime.now();
-    final todayStr = '${today.year}-${today.month}-${today.day}';
-    final nilaiHariIni = existingList.where((n) {
-      final nStr = '${n.tanggal.year}-${n.tanggal.month}-${n.tanggal.day}';
-      return nStr == todayStr;
-    }).toList();
+    void updateControllerForSesi(String sId, bool koreksi, StateSetter setSheetState) {
+      final existing = murid.nilaiList
+          .where((n) => n.kriteriaId == kriteria.id && n.sesiId == sId)
+          .toList()
+        ..sort((a, b) => b.attempt.compareTo(a.attempt));
 
-    final isCounter = kriteria.inputType == InputType.counter;
-
-    double currentVal = 0;
-    if (isCounter) {
-      currentVal = existingList.fold(0.0, (sum, n) => sum + n.nilai);
-    } else {
-      if (nilaiHariIni.isNotEmpty) {
-        currentVal = nilaiHariIni.first.nilai;
-      } else if (existingList.isNotEmpty) {
-        existingList.sort((a, b) => b.tanggal.compareTo(a.tanggal));
-        currentVal = existingList.first.nilai;
+      if (koreksi && existing.isNotEmpty) {
+        final last = existing.first.nilai;
+        ctrl.text = last % 1 == 0 ? '${last.toInt()}' : '$last';
+      } else {
+        ctrl.clear();
       }
     }
-
-    final todayVal = nilaiHariIni.isNotEmpty ? nilaiHariIni.first.nilai : 0.0;
-    final nameLower = kriteria.nama.toLowerCase();
-    final isAttendance =
-        kriteria.inputType == InputType.attendance ||
-        nameLower.contains('hadir') ||
-        nameLower.contains('kehadiran') ||
-        nameLower.contains('absen') ||
-        nameLower.contains('absensi') ||
-        nameLower.contains('presensi') ||
-        nameLower.contains('attendance');
-
-    final ctrl = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -1707,11 +1731,640 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.5),
       builder: (sheetCtx) => StatefulBuilder(
         builder: (sheetCtx, setSheetState) {
-          final sudahDiisiHariIni = isAttendance && nilaiHariIni.isNotEmpty;
-          final prevDate = sudahDiisiHariIni ? nilaiHariIni.first.tanggal : null;
-          final jam = prevDate != null ? prevDate.hour.toString().padLeft(2, '0') : '';
-          final mnt = prevDate != null ? prevDate.minute.toString().padLeft(2, '0') : '';
+          final existing = murid.nilaiList
+              .where((n) => n.kriteriaId == kriteria.id && n.sesiId == selectedSesiId)
+              .toList()
+            ..sort((a, b) => b.attempt.compareTo(a.attempt));
 
+          final hasHistory = existing.isNotEmpty;
+          final lastAttempt = hasHistory ? existing.first.attempt : 0;
+          final lastScore = hasHistory ? existing.first.nilai : null;
+          final nextAttempt = lastAttempt + 1;
+
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
+            ),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Handle Bar
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCBD5E1),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+
+                    // Student Header
+                    Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            murid.nama.isNotEmpty ? murid.nama[0].toUpperCase() : '?',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                murid.nama,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'NIS: ${murid.nis ?? '-'} • Kelas ${kelas.nama}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => Navigator.pop(sheetCtx),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF1F5F9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              size: 18,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // Kriteria Highlight Card
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAF9),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.assignment_turned_in_rounded,
+                              color: Color(0xFF2563EB),
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  kriteria.nama,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 16.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                Text(
+                                  'Kriteria Hasil (Tugas, Quiz, Ujian)',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // Combobox Sesi / Sub-Kriteria Selector
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Pilih Sesi / Sub-Kriteria:',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () {
+                            Navigator.pop(sheetCtx);
+                            _showTambahTugasDialog(
+                              context,
+                              kelas,
+                              defaultKriteriaId: kriteria.id,
+                            );
+                          },
+                          child: Text(
+                            '+ Tambah Baru',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAF9),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedSesiId,
+                          isExpanded: true,
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: AppColors.textSecondary,
+                          ),
+                          items: sesiList.map((s) {
+                            return DropdownMenuItem(
+                              value: s.id,
+                              child: Text(
+                                s.nama,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setSheetState(() {
+                                selectedSesiId = val;
+                                isKoreksi = false;
+                                updateControllerForSesi(val, false, setSheetState);
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Status Nilai & Attempt
+                    if (hasHistory)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFBBF7D0),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.check_circle_rounded,
+                              size: 20,
+                              color: Color(0xFF059669),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Nilai Saat Ini: ${lastScore! % 1 == 0 ? lastScore.toInt() : lastScore} (Percobaan ke-$lastAttempt)',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF065F46),
+                                    ),
+                                  ),
+                                  Text(
+                                    existing.length > 1
+                                        ? 'Total riwayat attempt: ${existing.length} kali'
+                                        : 'Nilai dari percobaan pertama.',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 12,
+                                      color: const Color(0xFF047857),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, top: 2, bottom: 4),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.info_outline_rounded,
+                              size: 14,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Belum ada nilai yang dicatat untuk sesi ini.',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Pilihan Mode (Koreksi vs Attempt Baru / Remedial) jika sudah ada nilai
+                    if (hasHistory) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                setSheetState(() {
+                                 isKoreksi = false;
+                                  ctrl.clear();
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 10),
+                                decoration: BoxDecoration(
+                                  color: !isKoreksi ? const Color(0xFFEFF6FF) : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: !isKoreksi ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                                    width: !isKoreksi ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'Remedial / Retake',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: !isKoreksi ? const Color(0xFF2563EB) : AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Attempt #$nextAttempt',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 12,
+                                        color: !isKoreksi ? const Color(0xFF1D4ED8) : AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                setSheetState(() {
+                                  isKoreksi = true;
+                                  final val = lastScore!;
+                                  ctrl.text = val % 1 == 0 ? '${val.toInt()}' : '$val';
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 10),
+                                decoration: BoxDecoration(
+                                  color: isKoreksi ? const Color(0xFFEFF6FF) : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isKoreksi ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                                    width: isKoreksi ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'Koreksi Nilai',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: isKoreksi ? const Color(0xFF2563EB) : AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Ubah Attempt #$lastAttempt',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 12,
+                                        color: isKoreksi ? const Color(0xFF1D4ED8) : AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 8),
+
+                    // Input Field Nilai
+                    TextField(
+                      controller: ctrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 18.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: isKoreksi
+                            ? 'Koreksi Nilai Percobaan ke-$lastAttempt (0–100)'
+                            : (hasHistory
+                                ? 'Nilai Percobaan ke-$nextAttempt / Remedial (0–100)'
+                                : 'Masukkan Nilai (0–100)'),
+                        labelStyle: GoogleFonts.plusJakartaSans(
+                          fontSize: 15,
+                          color: AppColors.textSecondary,
+                        ),
+                        hintText: 'Misal: 85',
+                        hintStyle: GoogleFonts.plusJakartaSans(
+                          fontSize: 15,
+                          color: AppColors.textHint,
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAF9),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: AppColors.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 16,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // Tombol Simpan
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: () async {
+                          final text = ctrl.text.trim().replaceAll(',', '.');
+                          final val = double.tryParse(text);
+                          if (val == null || val < 0 || val > 100) {
+                            AppFeedback.showError(
+                              context,
+                              'Masukkan nilai yang valid antara 0 sampai 100',
+                            );
+                            return;
+                          }
+
+                          if (!sheetCtx.mounted) return;
+                          Navigator.pop(sheetCtx);
+
+                          final provider = context.read<AppProvider>();
+                          await provider.inputNilaiHasil(
+                            kelasId: kelas.id,
+                            muridId: murid.id,
+                            kriteriaId: kriteria.id,
+                            sesiId: selectedSesiId,
+                            nilai: val,
+                            isKoreksi: isKoreksi,
+                          );
+
+                          if (context.mounted) {
+                            final sesiNama = sesiList
+                                .firstWhere((s) => s.id == selectedSesiId,
+                                    orElse: () => sesiList.first)
+                                .nama;
+                            final valStr = val % 1 == 0 ? '${val.toInt()}' : '$val';
+                            if (isKoreksi) {
+                              AppFeedback.showSuccess(
+                                context,
+                                'Nilai $sesiNama untuk ${murid.nama} berhasil dikoreksi menjadi $valStr',
+                              );
+                            } else if (hasHistory) {
+                              AppFeedback.showSuccess(
+                                context,
+                                'Percobaan ke-$nextAttempt (Remedial) untuk ${murid.nama} pada $sesiNama berhasil dicatat: $valStr',
+                              );
+                            } else {
+                              AppFeedback.showSuccess(
+                                context,
+                                'Nilai $sesiNama untuk ${murid.nama} berhasil disimpan: $valStr',
+                              );
+                            }
+                          }
+                        },
+                        child: Text(
+                          isKoreksi
+                              ? 'Simpan Perubahan Nilai'
+                              : (hasHistory
+                                  ? 'Simpan Nilai Attempt #$nextAttempt'
+                                  : 'Simpan Nilai'),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Link ke Tabel Rekap Lengkap
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () {
+                          Navigator.pop(sheetCtx);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => InputNilaiHasilScreen(kelasId: kelas.id),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.grid_view_rounded, size: 16),
+                        label: Text(
+                          'Buka Tabel Rekap Nilai Seluruh Kelas',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showQuickInputKriteriaDialog(
+    BuildContext context,
+    Kelas kelas,
+    Murid murid,
+    Kriteria kriteria, {
+    String? initialSesiId,
+  }) {
+    if (kriteria.jenis == JenisKriteria.byProduct) {
+      _showQuickInputProductDialog(
+        context,
+        kelas,
+        murid,
+        kriteria,
+        initialSesiId: initialSesiId,
+      );
+      return;
+    }
+
+    final existingList = murid.getNilaiByKriteria(kriteria.id);
+    double currentVal = 0;
+    if (existingList.isNotEmpty) {
+      existingList.sort((a, b) => b.tanggal.compareTo(a.tanggal));
+      currentVal = existingList.first.nilai;
+    }
+
+    final isCounter = kriteria.inputType == InputType.counter ||
+        kriteria.nama.toLowerCase().contains('aktif');
+
+    final double totalPoin = isCounter
+        ? existingList.fold(0.0, (s, n) => s + n.nilai)
+        : currentVal;
+    final int frekuensiAktif = isCounter
+        ? existingList.where((n) => n.nilai > 0).length
+        : 0;
+    final double? latestPoin = (isCounter && existingList.isNotEmpty)
+        ? existingList.first.nilai
+        : null;
+
+    final isAttendance =
+        kriteria.inputType == InputType.attendance ||
+        kriteria.nama.toLowerCase().contains('hadir') ||
+        kriteria.nama.toLowerCase().contains('presensi') ||
+        kriteria.nama.toLowerCase().contains('absen');
+
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month}-${today.day}';
+    final nilaiHariIni = existingList.where((n) {
+      final nStr = '${n.tanggal.year}-${n.tanggal.month}-${n.tanggal.day}';
+      return nStr == todayStr;
+    }).toList();
+
+    final sudahDiisiHariIni = isAttendance && nilaiHariIni.isNotEmpty;
+    final prevDate = sudahDiisiHariIni ? nilaiHariIni.first.tanggal : null;
+    final jam = prevDate != null
+        ? prevDate.hour.toString().padLeft(2, '0')
+        : '';
+    final mnt = prevDate != null
+        ? prevDate.minute.toString().padLeft(2, '0')
+        : '';
+
+    final ctrl = TextEditingController(
+      text: isCounter
+          ? ''
+          : (sudahDiisiHariIni
+              ? (nilaiHariIni.first.nilai % 1 == 0
+                    ? '${nilaiHariIni.first.nilai.toInt()}'
+                    : '${nilaiHariIni.first.nilai}')
+              : (currentVal > 0
+                    ? (currentVal % 1 == 0
+                          ? '${currentVal.toInt()}'
+                          : '$currentVal')
+                    : '')),
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.5),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheetState) {
           return Padding(
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
@@ -1739,7 +2392,6 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                     ),
                   ),
 
-                  // Header: Info Siswa & Close Button
                   Row(
                     children: [
                       Container(
@@ -1751,7 +2403,9 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          murid.nama.isNotEmpty ? murid.nama[0].toUpperCase() : '?',
+                          murid.nama.isNotEmpty
+                              ? murid.nama[0].toUpperCase()
+                              : '?',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -1767,7 +2421,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                             Text(
                               murid.nama,
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 16.5,
+                                fontSize: 18.5,
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.textPrimary,
                               ),
@@ -1778,7 +2432,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                             Text(
                               'NIS: ${murid.nis ?? '-'} • Kelas ${kelas.nama}',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
+                                fontSize: 14,
                                 color: AppColors.textSecondary,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -1809,7 +2463,10 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
 
                   // Kriteria Highlight Card
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8FAF9),
                       borderRadius: BorderRadius.circular(16),
@@ -1818,23 +2475,29 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                     child: Row(
                       children: [
                         Container(
-                          width: 40,
-                          height: 40,
+                          width: 42,
+                          height: 42,
                           decoration: BoxDecoration(
                             color: isAttendance
                                 ? const Color(0xFFECFDF5)
                                 : (isCounter
-                                    ? const Color(0xFFFFFBEB)
+                                    ? const Color(0xFFEFF6FF)
                                     : AppColors.primary.withValues(alpha: 0.1)),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
                             isAttendance
                                 ? Icons.how_to_reg_rounded
-                                : (isCounter ? Icons.bolt_rounded : Icons.star_rounded),
+                                : (isCounter
+                                    ? (kriteria.nama.toLowerCase().contains('aktif')
+                                        ? Icons.pan_tool_rounded
+                                        : Icons.stars_rounded)
+                                    : Icons.assignment_rounded),
                             color: isAttendance
                                 ? const Color(0xFF059669)
-                                : (isCounter ? const Color(0xFFD97706) : AppColors.primary),
+                                : (isCounter
+                                    ? const Color(0xFF2563EB)
+                                    : AppColors.primary),
                             size: 22,
                           ),
                         ),
@@ -1846,7 +2509,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                               Text(
                                 kriteria.nama,
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 14.5,
+                                  fontSize: 17,
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.textPrimary,
                                 ),
@@ -1856,10 +2519,12 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                                 isAttendance
                                     ? 'Presensi / Kehadiran Harian'
                                     : (isCounter
-                                        ? 'Poin Tambahan (Akumulatif)'
-                                        : 'Nilai Angka Rutin (0 - 100)'),
+                                        ? (kriteria.nama.toLowerCase().contains('aktif')
+                                            ? 'Nilai Kumulatif & Keaktifan'
+                                            : 'Nilai Kumulatif & Catatan Proses')
+                                        : 'Nilai Sekali Catat'),
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11.5,
+                                  fontSize: 13.5,
                                   color: AppColors.textSecondary,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -1868,7 +2533,10 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(10),
@@ -1878,23 +2546,29 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                isCounter ? 'Total Poin' : 'Nilai Saat Ini',
+                                isCounter ? 'Total Skor' : 'Nilai Saat Ini',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 10,
+                                  fontSize: 12,
                                   color: AppColors.textSecondary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                               Text(
                                 isCounter
-                                    ? '${currentVal.toInt()} pt'
+                                    ? (frekuensiAktif > 0
+                                          ? (totalPoin % 1 == 0
+                                                ? '${totalPoin.toInt()}'
+                                                : totalPoin.toStringAsFixed(1))
+                                          : '0')
                                     : (currentVal % 1 == 0
-                                        ? '${currentVal.toInt()}'
-                                        : '$currentVal'),
+                                          ? '${currentVal.toInt()}'
+                                          : '$currentVal'),
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 14,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.w800,
-                                  color: AppColors.primary,
+                                  color: isCounter
+                                      ? const Color(0xFF2563EB)
+                                      : AppColors.primary,
                                 ),
                               ),
                             ],
@@ -1904,11 +2578,61 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                     ),
                   ),
 
-                  // Status Presensi Hari Ini (khusus Presensi/Kehadiran)
-                  if (isAttendance) ...[
+                  // Detail Iterasi & Skor Terakhir (Khusus Keaktifan / Multi-entry)
+                  if (isCounter) ...[
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF16A34A).withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              kriteria.nama.toLowerCase().contains('aktif')
+                                  ? Icons.front_hand_rounded
+                                  : Icons.fact_check_rounded,
+                              size: 15,
+                              color: const Color(0xFF16A34A),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              (kriteria.nama.toLowerCase().contains('aktif')
+                                      ? 'Sudah $frekuensiAktif kali aktif di kelas'
+                                      : 'Sudah $frekuensiAktif kali catatan ${kriteria.nama}') +
+                                  (latestPoin != null
+                                      ? ' • Nilai Terakhir: ${latestPoin % 1 == 0 ? latestPoin.toInt() : latestPoin}'
+                                      : ''),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF15803D),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Label / Banner Status Presensi Hari Ini (Khusus Kriteria Kehadiran)
+                  if (isAttendance) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: sudahDiisiHariIni
                             ? const Color(0xFFECFDF5)
@@ -1938,10 +2662,10 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                               children: [
                                 Text(
                                   sudahDiisiHariIni
-                                      ? 'Presensi Hari Ini: Tercatat ($jam:$mnt WIB • ${nilaiHariIni.first.nilai.toInt()} poin)'
+                                      ? 'Presensi Hari Ini: Tercatat ($jam:$mnt WIB • Nilai: ${nilaiHariIni.first.nilai % 1 == 0 ? nilaiHariIni.first.nilai.toInt() : nilaiHariIni.first.nilai})'
                                       : 'Presensi Hari Ini: Belum Tercatat',
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12.5,
+                                    fontSize: 14.5,
                                     fontWeight: FontWeight.w700,
                                     color: sudahDiisiHariIni
                                         ? const Color(0xFF047857)
@@ -1953,7 +2677,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                                   Text(
                                     'Pilih status di bawah jika ingin mengubah data hari ini.',
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 11,
+                                      fontSize: 13,
                                       color: const Color(0xFF065F46),
                                     ),
                                   ),
@@ -1964,13 +2688,12 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                         ],
                       ),
                     ),
-                  ],
-
-                  const SizedBox(height: 14),
-
-                  if (isAttendance) ...[
+                    const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(12),
@@ -1986,9 +2709,11 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Masukkan angka nilai kehadiran sesuai standar Anda (misal persentase 0–100 atau akumulasi kehadiran).',
+                              kriteria.hasSubKriteria
+                                  ? 'Pilih salah satu status di bawah ini untuk mencatat presensi.'
+                                  : 'Masukkan angka nilai kehadiran sesuai standar Anda (misal persentase 0–100 atau akumulasi kehadiran).',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11.5,
+                                fontSize: 13.5,
                                 color: AppColors.textSecondary,
                                 height: 1.35,
                               ),
@@ -1997,142 +2722,129 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                         ],
                       ),
                     ),
-                  ] else ...[
-                    // Quick Presets
-                    Text(
-                      'Pilihan Cepat / Preset:',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (isCounter)
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [1, 2, 5, 10].map((val) {
-                        final isSel = ctrl.text == val.toString();
-                        return InkWell(
-                          onTap: () => setSheetState(() => ctrl.text = val.toString()),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: isSel
-                                  ? AppColors.primary
-                                  : const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isSel ? AppColors.primary : const Color(0xFFE2E8F0),
-                              ),
-                            ),
-                            child: Text(
-                              '+$val Poin',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: isSel ? Colors.white : AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    )
-                  else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [100, 95, 90, 85, 80, 75, 70].map((val) {
-                        final isSel = ctrl.text == val.toString();
-                        return InkWell(
-                          onTap: () => setSheetState(() => ctrl.text = val.toString()),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: isSel ? AppColors.primary : const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isSel ? AppColors.primary : const Color(0xFFE2E8F0),
-                              ),
-                            ),
-                            child: Text(
-                              '$val',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: isSel ? Colors.white : AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
                   ],
 
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
 
-                  // Input Textfield
-                  TextField(
-                    controller: ctrl,
-                    autofocus: !sudahDiisiHariIni && ctrl.text.isEmpty,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                      signed: true,
-                    ),
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
-                    ),
-                    onChanged: (_) => setSheetState(() {}),
-                    decoration: InputDecoration(
-                      hintText: isCounter
-                          ? 'Ketik poin tambahan (cth: 1, 5)'
-                          : (isAttendance
-                              ? 'Nilai kehadiran (misal: 100, 85, dll)'
-                              : 'Ketik nilai (0 - 100)'),
-                      hintStyle: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.normal,
-                        color: AppColors.textHint,
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF8FAF9),
-                      prefixIcon: Icon(
-                        isCounter ? Icons.add_circle_outline_rounded : Icons.numbers_rounded,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                      suffixIcon: ctrl.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear_rounded, size: 18),
-                              onPressed: () => setSheetState(() => ctrl.clear()),
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
+                  if (kriteria.hasSubKriteria) ...[
+                    Center(
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        alignment: WrapAlignment.center,
+                        children: kriteria.subKriteria!.map((sub) {
+                          final valStr = sub.nilai % 1 == 0
+                              ? sub.nilai.toInt().toString()
+                              : sub.nilai.toString();
+                          final isSelected = ctrl.text == valStr;
+                          return ChoiceChip(
+                            label: Text(
+                              '${sub.nama} ($valStr)',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.w700,
+                                color: isSelected
+                                    ? Colors.white
+                                    : AppColors.textPrimary,
+                              ),
+                            ),
+                            selected: isSelected,
+                            selectedColor: AppColors.primary,
+                            backgroundColor: const Color(0xFFF1F5F9),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : const Color(0xFFE2E8F0),
+                                width: isSelected ? 1.5 : 1.0,
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                            onSelected: (selected) {
+                              if (selected) {
+                                setSheetState(() {
+                                  ctrl.text = valStr;
+                                });
+                              }
+                            },
+                          );
+                        }).toList(),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 14),
+                  ],
 
-                  const SizedBox(height: 18),
+                  // Input Textfield hanya ditampilkan JIKA TIDAK ADA sub-kriteria (Skema Angka Bulat)
+                  if (!kriteria.hasSubKriteria) ...[
+                    TextField(
+                      controller: ctrl,
+                      autofocus: isCounter || (!sudahDiisiHariIni && ctrl.text.isEmpty),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                      onChanged: (_) => setSheetState(() {}),
+                      decoration: InputDecoration(
+                        hintText: isCounter
+                            ? 'Skor keaktifan (misal: 80, 85, 90)'
+                            : (isAttendance
+                                ? 'Nilai kehadiran (misal: 100, 85, dll)'
+                                : 'Ketik skor angka bulat (0 - 100)'),
+                        hintStyle: GoogleFonts.plusJakartaSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.normal,
+                          color: AppColors.textHint,
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAF9),
+                        prefixIcon: Icon(
+                          isAttendance
+                              ? Icons.tag_rounded
+                              : (isCounter
+                                  ? Icons.front_hand_rounded
+                                  : Icons.numbers_rounded),
+                          color: isCounter ? const Color(0xFF2563EB) : AppColors.primary,
+                          size: 20,
+                        ),
+                        suffixIcon: ctrl.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 18),
+                                onPressed: () =>
+                                    setSheetState(() => ctrl.clear()),
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: isCounter ? const Color(0xFF2563EB) : AppColors.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                  ],
 
                   // Tombol Simpan
                   SizedBox(
@@ -2140,7 +2852,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                     height: 50,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: isCounter ? const Color(0xFF2563EB) : AppColors.primary,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -2150,10 +2862,12 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                       onPressed: () async {
                         final text = ctrl.text.trim().replaceAll(',', '.');
                         final val = double.tryParse(text);
-                        if (val == null) {
+                        if (val == null || val <= 0 || val > 100) {
                           AppFeedback.showError(
                             context,
-                            'Masukkan angka nilai yang valid',
+                            kriteria.hasSubKriteria
+                                ? 'Silakan pilih salah satu opsi kategori di atas'
+                                : 'Masukkan nilai angka bulat yang valid antara 0 - 100',
                           );
                           return;
                         }
@@ -2161,38 +2875,56 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                         if (!sheetCtx.mounted) return;
                         Navigator.pop(sheetCtx);
 
-                        final rawVal = isCounter ? (todayVal + val) : val;
-                        final totalResult = isCounter ? (currentVal + val) : val;
-                        // Cap / Batasi maksimal 100 poin hanya untuk kriteria presensi/kehadiran
-                        final finalVal = isAttendance
-                            ? math.min(100.0, math.max(0.0, rawVal))
-                            : rawVal;
-
                         final provider = context.read<AppProvider>();
-                        await provider.inputNilaiPerforma(
-                          kelasId: kelas.id,
-                          muridId: murid.id,
-                          kriteriaId: kriteria.id,
-                          nilai: finalVal,
-                          tanggal: DateTime.now(),
-                        );
+                        if (isCounter) {
+                          await provider.tambahNilaiKeaktifan(
+                            kelasId: kelas.id,
+                            muridId: murid.id,
+                            kriteriaId: kriteria.id,
+                            poin: val,
+                          );
+                          if (context.mounted) {
+                            final newCount = frekuensiAktif + 1;
+                            final labelKriteria = kriteria.nama.toLowerCase().contains('aktif')
+                                ? 'keaktifan'
+                                : kriteria.nama;
+                            final valStr = val % 1 == 0 ? '${val.toInt()}' : '$val';
+                            AppFeedback.showSuccess(
+                              context,
+                              'Nilai $labelKriteria ($valStr) untuk ${murid.nama} berhasil dicatat (Total: $newCount kali aktif)',
+                            );
+                          }
+                        } else {
+                          await provider.inputNilaiPerforma(
+                            kelasId: kelas.id,
+                            muridId: murid.id,
+                            kriteriaId: kriteria.id,
+                            nilai: val,
+                            tanggal: DateTime.now(),
+                          );
 
-                        if (context.mounted) {
-                          final capInfo = isAttendance && rawVal > 100.0
-                              ? ' (Dibatasi maks 100)'
-                              : '';
-                          final msg = isCounter
-                              ? 'Poin ${kriteria.nama} (+${val % 1 == 0 ? val.toInt() : val}) ditambahkan. Total: ${totalResult % 1 == 0 ? totalResult.toInt() : totalResult}$capInfo'
-                              : 'Nilai ${kriteria.nama} untuk ${murid.nama} tersimpan: ${finalVal % 1 == 0 ? finalVal.toInt() : finalVal}$capInfo';
-                          AppFeedback.showSuccess(context, msg);
+                          if (context.mounted) {
+                            AppFeedback.showSuccess(
+                              context,
+                              isAttendance
+                                  ? (sudahDiisiHariIni
+                                        ? 'Presensi ${murid.nama} diperbarui: ${val % 1 == 0 ? val.toInt() : val}'
+                                        : 'Presensi ${murid.nama} tersimpan: ${val % 1 == 0 ? val.toInt() : val}')
+                                  : 'Nilai ${kriteria.nama} untuk ${murid.nama} tersimpan: ${val % 1 == 0 ? val.toInt() : val}',
+                            );
+                          }
                         }
                       },
                       child: Text(
                         isCounter
-                            ? 'Tambahkan Poin'
-                            : (sudahDiisiHariIni ? 'Perbarui Nilai Presensi' : 'Simpan Nilai'),
+                            ? 'Simpan Nilai Keaktifan (Catatan ke-${frekuensiAktif + 1})'
+                            : (isAttendance
+                                  ? (sudahDiisiHariIni
+                                        ? 'Perbarui Nilai Presensi'
+                                        : 'Simpan Nilai Presensi')
+                                  : 'Simpan Nilai'),
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 15,
+                          fontSize: 16.5,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.3,
                         ),
@@ -2297,7 +3029,7 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
               _buildAddStudentOptionCard(
                 icon: Icons.table_chart_rounded,
                 iconColor: const Color(0xFF107C41),
-                title: 'Import dari Excel (.xlsx)',
+                title: 'Import Excel (.xlsx)',
                 subtitle: 'Unggah file spreadsheet template daftar siswa',
                 badgeText: 'Cepat & Massal',
                 badgeColor: const Color(0xFFE8F5E9),
@@ -2357,7 +3089,10 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    runSpacing: 4,
                     children: [
                       Text(
                         title,
@@ -2367,11 +3102,15 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color: badgeColor ?? AppColors.primary.withValues(alpha: 0.1),
+                          color:
+                              badgeColor ??
+                              AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -2397,7 +3136,11 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400, size: 22),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.grey.shade400,
+              size: 22,
+            ),
           ],
         ),
       ),
@@ -2405,24 +3148,32 @@ class _DetailKelasScreenState extends State<DetailKelasScreen> {
   }
 }
 
-// ─── Murid Card ───────────────────────────────────────────────────────────────
-
-class _MuridCard extends StatelessWidget {
+class _MuridCard extends StatefulWidget {
   final Murid murid;
   final Kelas kelas;
   final int? rank;
   final VoidCallback onTapNilai;
   final ValueChanged<Kriteria> onTapKriteria;
+  final void Function(Kriteria, String sesiId)? onTapProductSesi;
 
   const _MuridCard({
     required this.murid,
     required this.kelas,
     required this.onTapNilai,
     required this.onTapKriteria,
+    this.onTapProductSesi,
     this.rank,
   });
 
+  @override
+  State<_MuridCard> createState() => _MuridCardState();
+}
+
+class _MuridCardState extends State<_MuridCard> {
+  bool _isExpanded = false;
+
   BoxDecoration get _rankDecoration {
+    final rank = widget.rank;
     if (rank == 1) {
       return const BoxDecoration(
         gradient: LinearGradient(
@@ -2483,9 +3234,11 @@ class _MuridCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Filter kriteria agar hanya kriteria Performa harian & Derived yang tampil di chip murid.
-    final displayKriteria = kelas.kriteria
-        .where((k) => k.jenis != JenisKriteria.hasil)
+    final kriteriaProses = widget.kelas.kriteria
+        .where((k) => k.jenis == JenisKriteria.byProcess)
+        .toList();
+    final kriteriaProduk = widget.kelas.kriteria
+        .where((k) => k.jenis == JenisKriteria.byProduct)
         .toList();
 
     return Container(
@@ -2493,10 +3246,18 @@ class _MuridCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceWhite,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _isExpanded
+              ? AppColors.primary.withValues(alpha: 0.3)
+              : const Color(0xFFE2E8F0).withValues(alpha: 0.7),
+          width: _isExpanded ? 1.2 : 0.8,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 14,
+            color: _isExpanded
+                ? AppColors.primary.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.04),
+            blurRadius: _isExpanded ? 16 : 10,
             offset: const Offset(0, 4),
           ),
         ],
@@ -2505,7 +3266,11 @@ class _MuridCard extends StatelessWidget {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
-          onTap: onTapNilai,
+          onTap: () {
+            setState(() {
+              _isExpanded = !_isExpanded;
+            });
+          },
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
@@ -2515,18 +3280,18 @@ class _MuridCard extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    if (rank != null) ...[
+                    if (widget.rank != null) ...[
                       Container(
                         width: 30,
                         height: 30,
                         decoration: _rankDecoration,
                         child: Center(
                           child: Text(
-                            '$rank',
+                            '${widget.rank}',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w800,
-                              color: (rank != null && rank! <= 3)
+                              color: (widget.rank != null && widget.rank! <= 3)
                                   ? Colors.white
                                   : const Color(0xFF475569),
                             ),
@@ -2539,7 +3304,7 @@ class _MuridCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (murid.nis != null && murid.nis!.isNotEmpty)
+                          if (widget.murid.nis != null && widget.murid.nis!.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 3),
                               child: Container(
@@ -2552,9 +3317,9 @@ class _MuridCard extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  'NIS ${murid.nis}',
+                                  'NIS ${widget.murid.nis}',
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 10.5,
+                                    fontSize: 12.5,
                                     fontWeight: FontWeight.w700,
                                     color: const Color(0xFF64748B),
                                   ),
@@ -2562,9 +3327,9 @@ class _MuridCard extends StatelessWidget {
                               ),
                             ),
                           Text(
-                            murid.nama,
+                            widget.murid.nama,
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 15.5,
+                              fontSize: 18,
                               fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
                             ),
@@ -2576,11 +3341,29 @@ class _MuridCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
 
-                    // Badge Skor Final jika sudah dihitung
-                    if (murid.skorFinal != null)
-                      _SkorBadge(skor: murid.skorFinal!),
+                    // Tombol Chevron Expand/Collapse (Indikator Swipe Down / Buka)
+                    Container(
+                      margin: const EdgeInsets.only(left: 4),
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: _isExpanded
+                            ? AppColors.primary.withValues(alpha: 0.1)
+                            : const Color(0xFFF1F5F9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: AnimatedRotation(
+                        turns: _isExpanded ? 0.5 : 0.0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 20,
+                          color: _isExpanded
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
 
-                    // Tombol menu titik tiga selalu disediakan agar guru bisa edit/hapus siswa
                     PopupMenuButton<String>(
                       icon: const Icon(
                         Icons.more_vert_rounded,
@@ -2598,9 +3381,9 @@ class _MuridCard extends StatelessWidget {
                             context,
                             MaterialPageRoute(
                               builder: (_) => TambahMuridScreen(
-                                kelasId: kelas.id,
-                                kelas: kelas,
-                                existingMurid: murid,
+                                kelasId: widget.kelas.id,
+                                kelas: widget.kelas,
+                                existingMurid: widget.murid,
                               ),
                             ),
                           );
@@ -2640,27 +3423,284 @@ class _MuridCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (displayKriteria.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 30,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: displayKriteria.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(width: 6),
-                      itemBuilder: (ctx, idx) {
-                        final k = displayKriteria[idx];
-                        final nilaiStr = _formatNilaiKriteria(k, murid);
-                        return _InteractiveKriteriaTag(
-                          nama: k.nama,
-                          nilaiStr: nilaiStr,
-                          onTap: () => onTapKriteria(k),
-                        );
-                      },
-                    ),
+
+                // Bagian yang Tersembunyi (Muncul saat card di-tap / swipe down)
+                AnimatedCrossFade(
+                  firstChild: const SizedBox.shrink(),
+                  secondChild: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 12),
+                      const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                      const SizedBox(height: 10),
+                      // ── Seksi 1: Nilai Proses (KBM Harian) ──
+                      if (kriteriaProses.isNotEmpty) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Nilai Proses (KBM Harian)',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF1D4ED8),
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                            Text(
+                              'Tap untuk ubah cepat',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: kriteriaProses.map((k) {
+                            final nilaiStr = _formatNilaiKriteria(k, widget.murid);
+                            return _InteractiveKriteriaTag(
+                              nama: k.nama,
+                              nilaiStr: nilaiStr,
+                              onTap: () => widget.onTapKriteria(k),
+                            );
+                          }).toList(),
+                        ),
+                        if (kriteriaProduk.isNotEmpty) const SizedBox(height: 14),
+                      ],
+
+                      // ── Seksi 2: Daftar Tugas & Ujian (By Product) - Sketsa Dosen ──
+                      if (kriteriaProduk.isNotEmpty) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Daftar Tugas & Ujian',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF15803D),
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                            Text(
+                              'Tap kotak untuk edit / remidi',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ...kriteriaProduk.expand((k) {
+                          final sesiList = widget.kelas.getSesiByKriteria(k.id);
+                          if (sesiList.isEmpty) {
+                            return [
+                              InkWell(
+                                onTap: () => widget.onTapKriteria(k),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          '${k.nama} (Belum ada sesi/tugas)',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                                      const Icon(Icons.add_circle_outline_rounded,
+                                          size: 16, color: AppColors.primary),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Tambah Sesi',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ];
+                          }
+                          return sesiList.map((sesi) {
+                            final nList = widget.murid.nilaiList
+                                .where((n) => n.kriteriaId == k.id && n.sesiId == sesi.id)
+                                .toList()
+                              ..sort((a, b) => b.attempt.compareTo(a.attempt));
+                            final hasScore = nList.isNotEmpty;
+                            final lastScore = hasScore ? nList.first.nilai : null;
+                            final attempt = hasScore ? nList.first.attempt : 0;
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 7),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: hasScore ? const Color(0xFFF8FAF9) : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: hasScore ? const Color(0xFFCBD5E1) : const Color(0xFFE2E8F0),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          sesi.nama,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                        Text(
+                                          k.nama,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11,
+                                            color: AppColors.textSecondary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Kotak Nilai & Attempt persis sketsa notebook: [ 80 | 2x ]
+                                  InkWell(
+                                    onTap: () => widget.onTapProductSesi != null
+                                        ? widget.onTapProductSesi!(k, sesi.id)
+                                        : widget.onTapKriteria(k),
+                                    borderRadius: BorderRadius.circular(9),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(9),
+                                        border: Border.all(
+                                          color: hasScore ? const Color(0xFF16A34A) : const Color(0xFFCBD5E1),
+                                          width: 1.2,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.03),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            hasScore
+                                                ? '${lastScore! % 1 == 0 ? lastScore.toInt() : lastScore}'
+                                                : '-',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w800,
+                                              color: hasScore ? const Color(0xFF15803D) : AppColors.textHint,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            width: 1,
+                                            height: 16,
+                                            color: const Color(0xFFCBD5E1),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            hasScore ? '${attempt}x' : 'Input',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: hasScore
+                                                  ? (attempt > 1 ? const Color(0xFFD97706) : const Color(0xFF64748B))
+                                                  : AppColors.primary,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Icon(
+                                            Icons.edit_rounded,
+                                            size: 13,
+                                            color: hasScore ? const Color(0xFF94A3B8) : AppColors.primary,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          });
+                        }),
+                      ],
+                      if (kriteriaProses.isEmpty && kriteriaProduk.isEmpty)
+                        Text(
+                          'Belum ada kriteria di kelas ini.',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13.5,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: widget.onTapNilai,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 9),
+                            side: BorderSide(
+                              color: AppColors.primary.withValues(alpha: 0.3),
+                            ),
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.05),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.edit_note_rounded,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
+                          label: Text(
+                            'Input / Ubah Nilai Lengkap Siswa Ini',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                  crossFadeState: _isExpanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  duration: const Duration(milliseconds: 200),
+                ),
               ],
             ),
           ),
@@ -2670,28 +3710,55 @@ class _MuridCard extends StatelessWidget {
   }
 
   String _formatNilaiKriteria(Kriteria k, Murid murid) {
-    if (k.jenis == JenisKriteria.derived) {
-      final freq = murid.getFrekuensiNgulang(
-        k.targetKriteriaIds.isNotEmpty ? k.targetKriteriaIds : null,
-      );
-      return '$freq';
-    }
-
     final list = murid.getNilaiByKriteria(k.id);
     if (list.isEmpty) return '-';
 
-    if (k.jenis == JenisKriteria.hasil) {
-      // Nilai rata-rata / terakhir sesi
-      list.sort((a, b) => b.tanggal.compareTo(a.tanggal));
-      final val = list.first.nilai;
-      return val % 1 == 0 ? val.toInt().toString() : val.toString();
+    if (k.jenis == JenisKriteria.byProduct) {
+      final Map<String, List<Nilai>> perSesi = {};
+      for (final n in list) {
+        final key = n.sesiId ?? 'no_sesi';
+        perSesi.putIfAbsent(key, () => []).add(n);
+      }
+      if (perSesi.isEmpty) return '-';
+
+      double totalSesi = 0.0;
+      for (final sList in perSesi.values) {
+        if (k.aggregationRule == AggregationRule.average) {
+          totalSesi += sList.fold(0.0, (s, n) => s + n.nilai) / sList.length;
+        } else if (k.aggregationRule == AggregationRule.min) {
+          totalSesi +=
+              sList.map((e) => e.nilai).reduce((a, b) => a < b ? a : b);
+        } else {
+          totalSesi +=
+              sList.map((e) => e.nilai).reduce((a, b) => a > b ? a : b);
+        }
+      }
+      final val = totalSesi / perSesi.length;
+      return val % 1 == 0 ? val.toInt().toString() : val.toStringAsFixed(1);
     } else {
-      if (k.inputType == InputType.counter) {
-        // Counter / Akumulasi Poin: tampilkan total dari semua tanggal
-        final total = list.fold(0.0, (sum, n) => sum + n.nilai);
-        return total % 1 == 0 ? total.toInt().toString() : total.toString();
+      final isCounter = k.inputType == InputType.counter ||
+          k.nama.toLowerCase().contains('aktif');
+      if (isCounter) {
+        double poinAgregasi = 0.0;
+        final count = list.where((n) => n.nilai > 0).length;
+        if (k.aggregationRule == AggregationRule.average) {
+          final active = list.where((n) => n.nilai > 0).toList();
+          poinAgregasi = active.isEmpty
+              ? 0.0
+              : active.fold(0.0, (sum, n) => sum + n.nilai) / active.length;
+        } else if (k.aggregationRule == AggregationRule.min) {
+          final active = list.where((n) => n.nilai > 0).toList();
+          poinAgregasi = active.isEmpty
+              ? 0.0
+              : active.map((n) => n.nilai).reduce((a, b) => a < b ? a : b);
+        } else {
+          poinAgregasi = list.map((n) => n.nilai).reduce((a, b) => a > b ? a : b);
+        }
+        final poinStr = poinAgregasi % 1 == 0
+            ? poinAgregasi.toInt().toString()
+            : poinAgregasi.toStringAsFixed(1);
+        return count > 0 ? '$poinStr (${count}x)' : poinStr;
       } else {
-        // Performa non-counter (misal nilai harian): ambil nilai hari ini atau terakhir
         final today = DateTime.now();
         final todayStr = '${today.year}-${today.month}-${today.day}';
         final nilaiHariIni = list.where((n) {
@@ -2712,10 +3779,10 @@ class _MuridCard extends StatelessWidget {
       context,
       title: 'Hapus Murid',
       content:
-          'Yakin ingin menghapus murid ini?\nData ${murid.nama} akan dihapus secara permanen.',
+          'Yakin ingin menghapus murid ini?\nData ${widget.murid.nama} akan dihapus secara permanen.',
     );
     if (confirm && context.mounted) {
-      await context.read<AppProvider>().hapusMurid(kelas.id, murid.id);
+      await context.read<AppProvider>().hapusMurid(widget.kelas.id, widget.murid.id);
     }
   }
 }
@@ -2741,7 +3808,7 @@ class _InteractiveKriteriaTag extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
           color: isFilled ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(10),
@@ -2758,7 +3825,7 @@ class _InteractiveKriteriaTag extends StatelessWidget {
             Text(
               nama,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 11.5,
+                fontSize: 13.5,
                 fontWeight: isFilled ? FontWeight.w700 : FontWeight.w500,
                 color: isFilled
                     ? const Color(0xFF166534)
@@ -2767,7 +3834,7 @@ class _InteractiveKriteriaTag extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
               decoration: BoxDecoration(
                 color: isFilled
                     ? const Color(0xFF16A34A)
@@ -2777,7 +3844,7 @@ class _InteractiveKriteriaTag extends StatelessWidget {
               child: Text(
                 nilaiStr,
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10.5,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                 ),
@@ -2785,56 +3852,6 @@ class _InteractiveKriteriaTag extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _SkorBadge extends StatelessWidget {
-  final double skor;
-  const _SkorBadge({required this.skor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0D252B), Color(0xFF1B4B5A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.25),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'SKOR FINAL',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 8.5,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-              color: Colors.white70,
-            ),
-          ),
-          const SizedBox(height: 1),
-          Text(
-            skor.toStringAsFixed(2),
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -2859,6 +3876,7 @@ class _InputKolektifSheet extends StatefulWidget {
 
 class _InputKolektifSheetState extends State<_InputKolektifSheet> {
   late String _selectedKriteriaId;
+  late String _selectedDropdownKey;
   late TextEditingController _nilaiCtrl;
   late TextEditingController _searchCtrl;
   String? _selectedSesiId;
@@ -2866,20 +3884,56 @@ class _InputKolektifSheetState extends State<_InputKolektifSheet> {
   late Set<String> _selectedMuridIds;
   bool _isSaving = false;
 
+  List<({String key, String kriteriaId, String? sesiId, String label})> _getDropdownOptions() {
+    final list = <({String key, String kriteriaId, String? sesiId, String label})>[];
+    for (final k in widget.actionableKriteria) {
+      if (k.jenis == JenisKriteria.byProduct) {
+        final sesis = widget.kelas.getSesiByKriteria(k.id);
+        if (sesis.isEmpty) {
+          list.add((
+            key: '${k.id}::none',
+            kriteriaId: k.id,
+            sesiId: null,
+            label: '${k.nama} (Belum ada sesi/tugas)',
+          ));
+        } else {
+          for (final s in sesis) {
+            list.add((
+              key: '${k.id}::${s.id}',
+              kriteriaId: k.id,
+              sesiId: s.id,
+              label: '${k.nama}: ${s.nama}',
+            ));
+          }
+        }
+      } else {
+        list.add((
+          key: k.id,
+          kriteriaId: k.id,
+          sesiId: null,
+          label: '${k.nama} (Harian)',
+        ));
+      }
+    }
+    return list;
+  }
+
   @override
   void initState() {
     super.initState();
-    _selectedKriteriaId = widget.actionableKriteria.first.id;
     _nilaiCtrl = TextEditingController(text: '100');
     _searchCtrl = TextEditingController();
     _selectedMuridIds = widget.kelas.muridList.map((m) => m.id).toSet();
 
-    final firstK = widget.actionableKriteria.first;
-    if (firstK.jenis == JenisKriteria.hasil) {
-      final sesis = widget.kelas.getSesiByKriteria(firstK.id);
-      if (sesis.isNotEmpty) {
-        _selectedSesiId = sesis.first.id;
-      }
+    final options = _getDropdownOptions();
+    if (options.isNotEmpty) {
+      final firstOpt = options.first;
+      _selectedDropdownKey = firstOpt.key;
+      _selectedKriteriaId = firstOpt.kriteriaId;
+      _selectedSesiId = firstOpt.sesiId;
+    } else {
+      _selectedDropdownKey = widget.actionableKriteria.first.id;
+      _selectedKriteriaId = widget.actionableKriteria.first.id;
     }
   }
 
@@ -2921,7 +3975,7 @@ class _InputKolektifSheetState extends State<_InputKolektifSheet> {
     final selectedKriteria = widget.actionableKriteria.firstWhere(
       (k) => k.id == _selectedKriteriaId,
     );
-    final isHasil = selectedKriteria.jenis == JenisKriteria.hasil;
+    final isHasil = selectedKriteria.jenis == JenisKriteria.byProduct;
 
     if (isHasil && _selectedSesiId == null) {
       AppFeedback.showWarning(
@@ -2986,16 +4040,34 @@ class _InputKolektifSheetState extends State<_InputKolektifSheet> {
       kelasId: widget.kelas.id,
       kriteriaId: _selectedKriteriaId,
       nilai: parsed,
-      sesiId: isHasil ? _selectedSesiId : null,
+      sesiId: _selectedSesiId,
       targetMuridIds: _selectedMuridIds.toList(),
       hanyaYangKosong: false,
     );
 
     if (mounted) {
       Navigator.pop(context);
+      final sesiName = _selectedSesiId != null
+          ? widget.kelas.sesiList
+              .firstWhere(
+                (s) => s.id == _selectedSesiId,
+                orElse: () => Sesi(
+                  id: '',
+                  kriteriaId: '',
+                  nama: '',
+                  urutan: 0,
+                  tanggal: DateTime.now(),
+                ),
+              )
+              .nama
+          : '';
+      final labelTarget = sesiName.isNotEmpty
+          ? '${selectedKriteria.nama} ($sesiName)'
+          : selectedKriteria.nama;
+
       AppFeedback.showSuccess(
         context,
-        'Berhasil memberi nilai sekaligus ke ${_selectedMuridIds.length} siswa untuk kriteria "${selectedKriteria.nama}"',
+        'Berhasil memberi nilai sekaligus ke ${_selectedMuridIds.length} siswa untuk "$labelTarget"',
       );
     }
   }
@@ -3005,10 +4077,6 @@ class _InputKolektifSheetState extends State<_InputKolektifSheet> {
     final selectedKriteria = widget.actionableKriteria.firstWhere(
       (k) => k.id == _selectedKriteriaId,
     );
-    final isHasil = selectedKriteria.jenis == JenisKriteria.hasil;
-    final sesis = isHasil
-        ? widget.kelas.getSesiByKriteria(selectedKriteria.id)
-        : <Sesi>[];
 
     final filteredMuridList = widget.kelas.muridList.where((m) {
       if (_searchQuery.trim().isEmpty) return true;
@@ -3138,22 +4206,18 @@ class _InputKolektifSheetState extends State<_InputKolektifSheet> {
                             ),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
-                                value: _selectedKriteriaId,
+                                value: _selectedDropdownKey,
                                 isExpanded: true,
                                 icon: const Icon(
                                   Icons.keyboard_arrow_down_rounded,
                                   color: AppColors.textSecondary,
                                   size: 20,
                                 ),
-                                items: widget.actionableKriteria.map((k) {
-                                  final jenisLabel =
-                                      k.jenis == JenisKriteria.hasil
-                                      ? ' (Tugas/Tes)'
-                                      : ' (Harian)';
+                                items: _getDropdownOptions().map((opt) {
                                   return DropdownMenuItem(
-                                    value: k.id,
+                                    value: opt.key,
                                     child: Text(
-                                      '${k.nama}$jenisLabel',
+                                      opt.label,
                                       style: const TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
@@ -3165,19 +4229,15 @@ class _InputKolektifSheetState extends State<_InputKolektifSheet> {
                                 }).toList(),
                                 onChanged: (val) {
                                   if (val != null) {
+                                    final options = _getDropdownOptions();
+                                    final opt = options.firstWhere(
+                                      (o) => o.key == val,
+                                      orElse: () => options.first,
+                                    );
                                     setState(() {
-                                      _selectedKriteriaId = val;
-                                      final newK = widget.actionableKriteria
-                                          .firstWhere((k) => k.id == val);
-                                      if (newK.jenis == JenisKriteria.hasil) {
-                                        final newSesis = widget.kelas
-                                            .getSesiByKriteria(newK.id);
-                                        _selectedSesiId = newSesis.isNotEmpty
-                                            ? newSesis.first.id
-                                            : null;
-                                      } else {
-                                        _selectedSesiId = null;
-                                      }
+                                      _selectedDropdownKey = val;
+                                      _selectedKriteriaId = opt.kriteriaId;
+                                      _selectedSesiId = opt.sesiId;
                                     });
                                   }
                                 },
@@ -3195,7 +4255,7 @@ class _InputKolektifSheetState extends State<_InputKolektifSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Nilai (Poin)',
+                            'Nilai',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -3262,85 +4322,37 @@ class _InputKolektifSheetState extends State<_InputKolektifSheet> {
                   ],
                 ),
 
-                if (isHasil) ...[
+                // Rubrik opsi poin cepat (Hanya untuk kriteria By Process yang memiliki rubrik)
+                if (selectedKriteria.hasSubKriteria && selectedKriteria.jenis == JenisKriteria.byProcess) ...[
                   const SizedBox(height: 10),
-                  if (sesis.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.warningBg,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.warningBorder),
-                      ),
-                      child: Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'Belum ada sesi tugas untuk kriteria ini.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.warningDark,
-                              ),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              widget.onShowTambahTugas(selectedKriteria.id);
-                            },
-                            child: const Text(
-                              '+ Buat Sesi',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    Container(
-                      height: 44,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceWhite,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppColors.border.withValues(alpha: 0.8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: selectedKriteria.subKriteria!.map((sub) {
+                      final valStr = sub.nilai % 1 == 0
+                          ? sub.nilai.toInt().toString()
+                          : sub.nilai.toString();
+                      final isSelected = _nilaiCtrl.text == valStr;
+                      return ChoiceChip(
+                        label: Text('${sub.nama} ($valStr)'),
+                        selected: isSelected,
+                        selectedColor: AppColors.primary,
+                        labelStyle: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              isSelected ? Colors.white : AppColors.textPrimary,
                         ),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedSesiId ?? sesis.first.id,
-                          isExpanded: true,
-                          icon: const Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: AppColors.textSecondary,
-                            size: 20,
-                          ),
-                          items: sesis.map((s) {
-                            return DropdownMenuItem(
-                              value: s.id,
-                              child: Text(
-                                'Sesi: ${s.nama}',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() => _selectedSesiId = val);
-                            }
-                          },
-                        ),
-                      ),
-                    ),
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _nilaiCtrl.text = valStr;
+                            });
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
                 ],
               ],
             ),
@@ -3469,7 +4481,8 @@ class _InputKolektifSheetState extends State<_InputKolektifSheet> {
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                     itemCount: filteredMuridList.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
                     itemBuilder: (ctx, i) {
                       final murid = filteredMuridList[i];
                       final isSelected = _selectedMuridIds.contains(murid.id);
@@ -3518,7 +4531,9 @@ class _InputKolektifSheetState extends State<_InputKolektifSheet> {
                                 height: 34,
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? AppColors.primary.withValues(alpha: 0.15)
+                                      ? AppColors.primary.withValues(
+                                          alpha: 0.15,
+                                        )
                                       : Colors.grey.shade200,
                                   shape: BoxShape.circle,
                                 ),

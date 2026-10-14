@@ -6,6 +6,7 @@ import '../../models/models.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_widgets.dart';
+import '../tutorial_screen.dart';
 
 /// Buka bottom sheet penilaian KBM untuk satu murid
 void showInputNilaiSheet(
@@ -37,10 +38,301 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
   late Map<String, double> _nilaiMap;
   late AppProvider _provider;
 
-  // Kriteria performa saja (bukan hasil & bukan derived)
+  // Kriteria By Process (Presensi, Keaktifan)
   List<Kriteria> get _kriteriaPerforma => widget.kelas.kriteria
-      .where((k) => k.jenis == JenisKriteria.performa)
+      .where((k) => k.jenis == JenisKriteria.byProcess)
       .toList();
+
+  // Kriteria By Product (Tugas, Ujian)
+  List<Kriteria> get _kriteriaHasil => widget.kelas.kriteria
+      .where((k) => k.jenis == JenisKriteria.byProduct)
+      .toList();
+
+  void _showDialogInputNilaiHasil(
+    Kriteria k,
+    Sesi sesi,
+    List<Nilai> existing,
+  ) {
+    final hasHistory = existing.isNotEmpty;
+    final lastAttempt = hasHistory ? existing.first.attempt : 0;
+    final lastScore = hasHistory ? existing.first.nilai : null;
+    final nextAttempt = lastAttempt + 1;
+    bool isKoreksi = false;
+
+    final ctrl = TextEditingController(
+      text: hasHistory
+          ? (lastScore! % 1 == 0 ? '${lastScore.toInt()}' : '$lastScore')
+          : '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            backgroundColor: Colors.white,
+            title: Row(
+              children: [
+                const Icon(Icons.assignment_turned_in_rounded, color: Color(0xFF2563EB), size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${k.nama} - ${sesi.nama}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Siswa: ${widget.murid.nama}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (hasHistory) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ChoiceChip(
+                            label: Text('Koreksi #$lastAttempt'),
+                            selected: isKoreksi,
+                            selectedColor: const Color(0xFFEFF6FF),
+                            labelStyle: GoogleFonts.plusJakartaSans(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: isKoreksi ? const Color(0xFF2563EB) : AppColors.textSecondary,
+                            ),
+                            onSelected: (val) {
+                              setDialogState(() {
+                                isKoreksi = true;
+                                ctrl.text = lastScore! % 1 == 0 ? '${lastScore.toInt()}' : '$lastScore';
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ChoiceChip(
+                            label: Text('Remedi #$nextAttempt'),
+                            selected: !isKoreksi,
+                            selectedColor: const Color(0xFFFEF3C7),
+                            labelStyle: GoogleFonts.plusJakartaSans(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: !isKoreksi ? const Color(0xFFB45309) : AppColors.textSecondary,
+                            ),
+                            onSelected: (val) {
+                              setDialogState(() {
+                                isKoreksi = false;
+                                ctrl.clear();
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  TextField(
+                    controller: ctrl,
+                    autofocus: true,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w800),
+                    decoration: InputDecoration(
+                      labelText: isKoreksi
+                          ? 'Koreksi Nilai (0–100)'
+                          : (hasHistory
+                              ? 'Nilai Remedial Attempt #$nextAttempt (0–100)'
+                              : 'Nilai Tugas (0–100)'),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  final text = ctrl.text.trim().replaceAll(',', '.');
+                  final val = double.tryParse(text);
+                  if (val == null || val < 0 || val > 100) {
+                    AppFeedback.showError(context, 'Masukkan nilai antara 0 - 100');
+                    return;
+                  }
+                  Navigator.pop(ctx);
+                  await _provider.inputNilaiHasil(
+                    kelasId: widget.kelas.id,
+                    muridId: widget.murid.id,
+                    kriteriaId: k.id,
+                    sesiId: sesi.id,
+                    nilai: val,
+                    isKoreksi: isKoreksi,
+                  );
+                  if (!mounted) return;
+                  setState(() {});
+                    AppFeedback.showSuccess(
+                      context,
+                      'Nilai ${sesi.nama} untuk ${widget.murid.nama} tersimpan: ${val % 1 == 0 ? val.toInt() : val}',
+                    );
+                },
+                child: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildProductKriteriaItem(Kriteria k) {
+    final sesiList = widget.kelas.getSesiByKriteria(k.id);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  k.nama,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Tugas / Ujian',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF2563EB),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (sesiList.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(
+                'Belum ada sesi tugas dibuat untuk kriteria ini.',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12.5,
+                  color: AppColors.textSecondary,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            )
+          else
+            ...sesiList.map((sesi) {
+              final existing = widget.murid.nilaiList
+                  .where((n) => n.kriteriaId == k.id && n.sesiId == sesi.id)
+                  .toList()
+                ..sort((a, b) => b.attempt.compareTo(a.attempt));
+
+              final hasScore = existing.isNotEmpty;
+              final lastScore = hasScore ? existing.first.nilai : null;
+              final attempt = hasScore ? existing.first.attempt : 0;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: hasScore ? const Color(0xFFCBD5E1) : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            sesi.nama,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            hasScore
+                                ? 'Nilai: ${lastScore! % 1 == 0 ? lastScore.toInt() : lastScore} (Attempt #$attempt)'
+                                : 'Belum ada nilai',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: hasScore ? FontWeight.w700 : FontWeight.w500,
+                              color: hasScore ? const Color(0xFF16A34A) : AppColors.textHint,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: hasScore ? const Color(0xFFF1F5F9) : AppColors.primary,
+                        foregroundColor: hasScore ? AppColors.textPrimary : Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () => _showDialogInputNilaiHasil(k, sesi, existing),
+                      child: Text(
+                        hasScore ? 'Ubah / Remedi' : 'Input Nilai',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -63,9 +355,10 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
         return nStr == todayStr;
       }).toList();
 
-      if (k.inputType == InputType.counter) {
-        _nilaiMap[k.id] =
-            nilaiHariIni.isNotEmpty ? nilaiHariIni.first.nilai : 0;
+      final isCounter = k.inputType == InputType.counter ||
+          k.nama.toLowerCase().contains('aktif');
+      if (isCounter) {
+        _nilaiMap[k.id] = existing.fold(0.0, (s, n) => s + n.nilai);
       } else {
         if (nilaiHariIni.isNotEmpty) {
           _nilaiMap[k.id] = nilaiHariIni.first.nilai;
@@ -224,9 +517,64 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
 
             const Divider(height: 20, thickness: 1, color: Color(0xFFF1F5F9)),
 
-            // List kriteria
+            // Panduan Pengisian Nilai
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline_rounded, color: Color(0xFF16A34A), size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Gunakan Nilai Puluhan (0-100)',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF16A34A)),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Input nilai berdasarkan skala 0-100. Contoh:\n100 = Sempurna/Sangat Bagus\n80 = Bagus\n75 = Cukup\nHindari menginput angka satuan (seperti 1, 5, 10).',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFF14532D), height: 1.3),
+                          ),
+                          const SizedBox(height: 8),
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const TutorialScreen(initialCategoryIndex: 2),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              'Pelajari Kriteria Penilaian Lebih Lanjut',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF16A34A),
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),            // List kriteria
             Expanded(
-              child: _kriteriaPerforma.isEmpty
+              child: (_kriteriaPerforma.isEmpty && _kriteriaHasil.isEmpty)
                   ? Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -235,7 +583,7 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
                               size: 44, color: Colors.grey.shade400),
                           const SizedBox(height: 10),
                           Text(
-                            'Tidak ada kriteria performa\ndi kelas ini',
+                            'Tidak ada kriteria penilaian\ndi kelas ini',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.plusJakartaSans(
                               color: AppColors.textSecondary,
@@ -249,9 +597,72 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
                   : ListView(
                       controller: controller,
                       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-                      children: _kriteriaPerforma
-                          .map((k) => _buildKriteriaItem(k))
-                          .toList(),
+                      children: [
+                        if (_kriteriaPerforma.isNotEmpty) ...[
+                          if (_kriteriaHasil.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10, top: 4),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                          color: const Color(0xFFBFDBFE)),
+                                    ),
+                                    child: Text(
+                                      'NILAI PROSES (KBM HARIAN)',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF1D4ED8),
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ..._kriteriaPerforma
+                              .map((k) => _buildKriteriaItem(k)),
+                        ],
+                        if (_kriteriaHasil.isNotEmpty) ...[
+                          Padding(
+                            padding: EdgeInsets.only(
+                              bottom: 10,
+                              top: _kriteriaPerforma.isNotEmpty ? 12 : 4,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF0FDF4),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: const Color(0xFFBBF7D0)),
+                                  ),
+                                  child: Text(
+                                    'NILAI PRODUK (TUGAS / UJIAN)',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF15803D),
+                                      letterSpacing: 0.5,
+                                ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ..._kriteriaHasil
+                              .map((k) => _buildProductKriteriaItem(k)),
+                        ],
+                      ],
                     ),
             ),
 
@@ -328,13 +739,32 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
   Widget _buildInputWidget(Kriteria k) {
     final nilai = _nilaiMap[k.id] ?? 0;
 
+    if (k.hasSubKriteria) {
+      return _SubKriteriaSelectorWidget(
+        kriteria: k,
+        currentNilai: nilai,
+        onSaveNilai: (nilaiBaru) async {
+          await _simpanKriteria(k.id, nilaiBaru);
+        },
+      );
+    }
+
     switch (k.inputType) {
       case InputType.counter:
         return _AccumulatorWidget(
           currentTotal: nilai,
           onSavePoin: (poinBaru) async {
-            final newTotal = nilai + poinBaru;
-            await _simpanKriteria(k.id, newTotal);
+            await _provider.tambahNilaiKeaktifan(
+              kelasId: widget.kelas.id,
+              muridId: widget.murid.id,
+              kriteriaId: k.id,
+              poin: poinBaru,
+            );
+            if (mounted) {
+              setState(() {
+                _nilaiMap[k.id] = (_nilaiMap[k.id] ?? 0) + poinBaru;
+              });
+            }
           },
         );
 
@@ -342,7 +772,9 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
         return _AttendanceWidget(
           currentNilai: nilai,
           onSaveNilai: (nilaiBaru) async {
-            await _simpanKriteria(k.id, nilaiBaru);
+            // Batasi nilai maksimum 100 untuk presensi
+            final finalNilai = nilaiBaru > 100 ? 100.0 : nilaiBaru;
+            await _simpanKriteria(k.id, finalNilai);
           },
         );
 
@@ -361,9 +793,9 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
 
   Widget _inputTypeChip(InputType? t) {
     final label = switch (t) {
-      InputType.counter => 'Poin Tambahan (+)',
-      InputType.attendance => 'Presensi / Kehadiran',
-      InputType.number => 'Nilai Angka',
+      InputType.counter => 'Nilai Kumulatif (+)',
+      InputType.attendance => 'Presensi Harian',
+      InputType.number => 'Nilai Sekali Catat',
       null => 'Penilaian',
     };
     return Container(
@@ -383,6 +815,200 @@ class _InputNilaiSheetState extends State<InputNilaiSheet> {
           fontWeight: FontWeight.w700,
         ),
       ),
+    );
+  }
+}
+
+// ─── Sub-Kriteria Selector Widget ─────────────────────────────────────────────
+
+class _SubKriteriaSelectorWidget extends StatefulWidget {
+  final Kriteria kriteria;
+  final double currentNilai;
+  final Future<void> Function(double nilai) onSaveNilai;
+
+  const _SubKriteriaSelectorWidget({
+    required this.kriteria,
+    required this.currentNilai,
+    required this.onSaveNilai,
+  });
+
+  @override
+  State<_SubKriteriaSelectorWidget> createState() =>
+      _SubKriteriaSelectorWidgetState();
+}
+
+class _SubKriteriaSelectorWidgetState extends State<_SubKriteriaSelectorWidget> {
+  double? _selectedNilai;
+  bool _isSaving = false;
+  bool _showSuccess = false;
+  Timer? _successTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.currentNilai > 0) {
+      _selectedNilai = widget.currentNilai;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _SubKriteriaSelectorWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentNilai != widget.currentNilai) {
+      _selectedNilai = widget.currentNilai > 0 ? widget.currentNilai : null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _successTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _pilihOpsi(double nilai) async {
+    setState(() {
+      _selectedNilai = nilai;
+      _isSaving = true;
+    });
+    try {
+      await widget.onSaveNilai(nilai);
+      if (!mounted) return;
+      setState(() {
+        _showSuccess = true;
+        _isSaving = false;
+      });
+      _successTimer?.cancel();
+      _successTimer = Timer(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _showSuccess = false);
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final subList = widget.kriteria.subKriteria ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: subList.map((sub) {
+            final isSelected = _selectedNilai == sub.nilai;
+            final valStr = sub.nilai % 1 == 0
+                ? sub.nilai.toInt().toString()
+                : sub.nilai.toString();
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _isSaving ? null : () => _pilihOpsi(sub.nilai),
+                borderRadius: BorderRadius.circular(12),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.primary : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.primary
+                          : const Color(0xFFCBD5E1),
+                      width: isSelected ? 1.5 : 1,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.25),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isSelected
+                            ? Icons.check_circle_rounded
+                            : Icons.radio_button_unchecked_rounded,
+                        size: 16,
+                        color:
+                            isSelected ? Colors.white : AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        sub.nama,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color:
+                              isSelected ? Colors.white : AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '($valStr)',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          color: isSelected
+                              ? Colors.white.withValues(alpha: 0.85)
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        if (_isSaving) ...[
+          const SizedBox(height: 8),
+          const Row(
+            children: [
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 8),
+              Text(
+                'Menyimpan...',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ] else if (_showSuccess) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(
+                Icons.check_circle_rounded,
+                color: Color(0xFF059669),
+                size: 14,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Nilai berhasil disimpan!',
+                style: GoogleFonts.plusJakartaSans(
+                  color: const Color(0xFF059669),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }
@@ -470,7 +1096,7 @@ class _AttendanceWidgetState extends State<_AttendanceWidget> {
                   fontSize: 14,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Nilai kehadiran (misal 0–100 atau poin)',
+                  hintText: 'Ketik nilai kehadiran (cth: 100)',
                   hintStyle: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     color: AppColors.textHint,
@@ -608,35 +1234,6 @@ class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Preset Poin Cepat
-        Wrap(
-          spacing: 7,
-          runSpacing: 6,
-          children: [1, 2, 5, 10].map((val) {
-            return InkWell(
-              onTap: () => _kirimPoin(val.toDouble()),
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Text(
-                  '+$val Poin',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFFD97706),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 8),
-
         // Tampilkan total poin terakumulasi
         if (total > 0)
           Container(
@@ -653,7 +1250,7 @@ class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
                 const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFFD97706)),
                 const SizedBox(width: 4),
                 Text(
-                  'Total poin hari ini: ${total.toStringAsFixed(0)}',
+                  'Total nilai terakumulasi: ${total.toStringAsFixed(0)}',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -677,7 +1274,7 @@ class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
                   fontSize: 14,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Tambah poin custom (cth: 5)',
+                  hintText: 'Tambah nilai (cth: 80)',
                   hintStyle: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     color: AppColors.textHint,
@@ -743,7 +1340,7 @@ class _AccumulatorWidgetState extends State<_AccumulatorWidget> {
                   color: Color(0xFF059669), size: 14),
               const SizedBox(width: 4),
               Text(
-                'Poin berhasil ditambahkan!',
+                'Nilai berhasil ditambahkan!',
                 style: GoogleFonts.plusJakartaSans(
                   color: const Color(0xFF059669),
                   fontSize: 12,
@@ -827,37 +1424,6 @@ class _NumberWidgetState extends State<_NumberWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Quick presets
-        Wrap(
-          spacing: 7,
-          runSpacing: 6,
-          children: [100, 90, 85, 80, 75].map((val) {
-            final isSel = _ctrl.text == val.toString();
-            return InkWell(
-              onTap: () => _simpan(val.toDouble()),
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: isSel ? AppColors.primary : Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isSel ? AppColors.primary : const Color(0xFFE2E8F0),
-                  ),
-                ),
-                child: Text(
-                  '$val',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                    color: isSel ? Colors.white : AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
@@ -872,7 +1438,7 @@ class _NumberWidgetState extends State<_NumberWidget> {
                   fontSize: 14,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Ketik nilai (0–100)',
+                  hintText: 'Ketik nilai puluhan (cth: 75, 80)',
                   hintStyle: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     color: AppColors.textHint,

@@ -58,9 +58,11 @@ class _LoginScreenState extends State<LoginScreen>
   Future<void> _signInWithEmail() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
+    final email = _emailController.text.trim();
+    FocusScope.of(context).unfocus();
     try {
       final credential = await _authService.signInWithEmail(
-        _emailController.text.trim(),
+        email,
         _passwordController.text,
       );
       if (mounted) {
@@ -70,11 +72,409 @@ class _LoginScreenState extends State<LoginScreen>
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       }
+    } on EmailNotVerifiedException catch (e) {
+      if (mounted) {
+        FocusScope.of(context).unfocus();
+        _showEmailNotVerifiedDialog(e.email);
+      }
+    } on UserNotFoundException catch (e) {
+      if (mounted) {
+        FocusScope.of(context).unfocus();
+        _showUserNotFoundDialog(e.email);
+      }
     } catch (e) {
-      if (mounted) _showError('Error (${e.runtimeType}): ${e.toString()}');
+      if (mounted) FocusScope.of(context).unfocus();
+      final msg = e.toString().replaceAll('Exception:', '').trim();
+      if (msg.toLowerCase().contains('belum diverifikasi') ||
+          msg.toLowerCase().contains('verifikasi') ||
+          msg.toLowerCase().contains('verified')) {
+        if (mounted) _showEmailNotVerifiedDialog(email);
+      } else if (msg.toLowerCase().contains('tidak ditemukan') ||
+          msg.toLowerCase().contains('user-not-found') ||
+          msg.toLowerCase().contains('belum terdaftar')) {
+        if (mounted) _showUserNotFoundDialog(email);
+      } else {
+        if (mounted) _showErrorDialog('Gagal Masuk', msg);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showUserNotFoundDialog(String email) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFFDE68A), width: 1.5),
+              ),
+              child: const Icon(
+                Icons.person_search_rounded,
+                color: Color(0xFFD97706),
+                size: 30,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Akun Belum Terdaftar',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 21,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Kredensial akun untuk email ini belum terdaftar di database Scorify:',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 15,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                email.isNotEmpty ? email : 'Email Anda',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline_rounded, size: 20, color: Color(0xFFD97706)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Sesuai ketentuan, Anda wajib mendaftar dan memverifikasi email terlebih dahulu sebelum dapat masuk ke sistem.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13.5,
+                        color: const Color(0xFF92400E),
+                        fontWeight: FontWeight.w500,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                  ),
+                  child: Text(
+                    'Batal',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF64748B),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RegisterScreen(initialEmail: email),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Daftar & Verifikasi',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFFECACA), width: 1.5),
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                color: AppColors.danger,
+                size: 30,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14.5,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Mengerti',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEmailNotVerifiedDialog(String email) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFFDE68A), width: 1.5),
+              ),
+              child: const Icon(
+                Icons.mark_email_unread_rounded,
+                color: Color(0xFFD97706),
+                size: 30,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Email Belum Diverifikasi',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 21,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Akun Anda belum aktif karena belum memverifikasi email:\n',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 15,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                email,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Silakan buka aplikasi email Anda, periksa Inbox (atau folder Spam), lalu klik link verifikasi.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14.5,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                  ),
+                  child: Text(
+                    'Tutup',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF64748B),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    try {
+                      await _authService.resendVerificationEmail(
+                        email,
+                        _passwordController.text,
+                      );
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Tautan verifikasi baru berhasil dikirimkan ke $email. Silakan periksa inbox/spam.',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            backgroundColor: const Color(0xFF059669),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        );
+                      }
+                    } catch (err) {
+                      if (mounted) _showError('Gagal mengirim ulang email: $err');
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Kirim Ulang Email',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _signInWithGoogle() async {
@@ -88,8 +488,23 @@ class _LoginScreenState extends State<LoginScreen>
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       }
+    } on EmailNotVerifiedException catch (e) {
+      if (mounted) {
+        _showEmailNotVerifiedDialog(e.email);
+      }
+    } on UserNotFoundException catch (e) {
+      if (mounted) {
+        _showUserNotFoundDialog(e.email);
+      }
     } catch (e) {
-      if (mounted) _showError(e.toString());
+      final msg = e.toString().replaceAll('Exception:', '').trim();
+      if (msg.toLowerCase().contains('tidak ditemukan') ||
+          msg.toLowerCase().contains('user-not-found') ||
+          msg.toLowerCase().contains('belum terdaftar')) {
+        if (mounted) _showUserNotFoundDialog('');
+      } else {
+        if (mounted) _showError(msg);
+      }
     } finally {
       if (mounted) setState(() => _isGoogleLoading = false);
     }
@@ -181,7 +596,7 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'SISTEM PENILAIAN & PEMBOBOTAN AHP',
+                              'SISTEM PENILAIAN & EVALUASI SISWA',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w700,
@@ -228,7 +643,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   Text(
                                     'Sign In',
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 24,
+                                      fontSize: 28,
                                       fontWeight: FontWeight.w800,
                                       color: AppColors.textPrimary,
                                     ),
@@ -237,7 +652,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   Text(
                                     'Silakan masuk ke akun Anda',
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 13,
+                                      fontSize: 15.5,
                                       fontWeight: FontWeight.w500,
                                       color: AppColors.textSecondary,
                                     ),
@@ -247,14 +662,15 @@ class _LoginScreenState extends State<LoginScreen>
                                   // Email input (No outlines, horizontal filled area with icon)
                                   _buildTextField(
                                     controller: _emailController,
-                                    hint: 'Email ID',
+                                    hint: 'Email (cth: nama@email.com)',
                                     icon: Icons.alternate_email_rounded,
                                     keyboardType: TextInputType.emailAddress,
                                     validator: (v) {
-                                      if (v == null || v.isEmpty) {
+                                      if (v == null || v.trim().isEmpty) {
                                         return 'Email tidak boleh kosong';
                                       }
-                                      if (!v.contains('@')) {
+                                      final email = v.trim();
+                                      if (!email.contains('@') || !email.contains('.')) {
                                         return 'Format email tidak valid';
                                       }
                                       return null;
@@ -274,7 +690,7 @@ class _LoginScreenState extends State<LoginScreen>
                                             ? Icons.visibility_off_rounded
                                             : Icons.visibility_rounded,
                                         color: AppColors.primary,
-                                        size: 20,
+                                        size: 22,
                                       ),
                                       onPressed: () => setState(
                                         () => _obscurePassword = !_obscurePassword,
@@ -310,7 +726,7 @@ class _LoginScreenState extends State<LoginScreen>
                                         'Forgot Password?',
                                         style: GoogleFonts.plusJakartaSans(
                                           color: AppColors.primary,
-                                          fontSize: 12.5,
+                                          fontSize: 14.5,
                                           fontWeight: FontWeight.w700,
                                         ),
                                       ),
@@ -321,7 +737,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   // Primary Sign In Button (Floating pill, solid dark teal)
                                   Container(
                                     width: double.infinity,
-                                    height: 52,
+                                    height: 54,
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(28),
                                       boxShadow: [
@@ -359,7 +775,7 @@ class _LoginScreenState extends State<LoginScreen>
                                               style:
                                                   GoogleFonts.plusJakartaSans(
                                                 color: Colors.white,
-                                                fontSize: 15.5,
+                                                fontSize: 17.5,
                                                 fontWeight: FontWeight.w700,
                                               ),
                                             ),
@@ -385,7 +801,7 @@ class _LoginScreenState extends State<LoginScreen>
                                           'atau',
                                           style: GoogleFonts.plusJakartaSans(
                                             color: AppColors.textHint,
-                                            fontSize: 12.5,
+                                            fontSize: 14,
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
@@ -404,7 +820,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   // Secondary "Sign in with Google" (Clean elevated white card)
                                   Container(
                                     width: double.infinity,
-                                    height: 52,
+                                    height: 54,
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(28),
@@ -446,7 +862,7 @@ class _LoginScreenState extends State<LoginScreen>
                                                 style: GoogleFonts
                                                     .plusJakartaSans(
                                                   color: AppColors.textPrimary,
-                                                  fontSize: 14.5,
+                                                  fontSize: 16.5,
                                                   fontWeight: FontWeight.w700,
                                                 ),
                                               ),
@@ -467,7 +883,7 @@ class _LoginScreenState extends State<LoginScreen>
                                           "Don't have an account? ",
                                           style: GoogleFonts.plusJakartaSans(
                                             color: AppColors.textSecondary,
-                                            fontSize: 13,
+                                            fontSize: 15,
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
@@ -484,7 +900,7 @@ class _LoginScreenState extends State<LoginScreen>
                                             style:
                                                 GoogleFonts.plusJakartaSans(
                                               color: AppColors.accent, // Mint green #10B981
-                                              fontSize: 13,
+                                              fontSize: 15,
                                               fontWeight: FontWeight.w800,
                                             ),
                                           ),
@@ -537,7 +953,7 @@ class _LoginScreenState extends State<LoginScreen>
         keyboardType: keyboardType,
         validator: validator,
         style: GoogleFonts.plusJakartaSans(
-          fontSize: 14,
+          fontSize: 16.5,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
         ),
@@ -545,10 +961,10 @@ class _LoginScreenState extends State<LoginScreen>
           hintText: hint,
           hintStyle: GoogleFonts.plusJakartaSans(
             color: AppColors.textHint,
-            fontSize: 13.5,
-            fontWeight: FontWeight.w700,
+            fontSize: 15.5,
+            fontWeight: FontWeight.w600,
           ),
-          prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
+          prefixIcon: Icon(icon, color: AppColors.primary, size: 22),
           suffixIcon: suffixIcon,
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
@@ -556,9 +972,9 @@ class _LoginScreenState extends State<LoginScreen>
           errorBorder: InputBorder.none,
           focusedErrorBorder: InputBorder.none,
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+              const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           errorStyle: GoogleFonts.plusJakartaSans(
-            fontSize: 11,
+            fontSize: 13,
             color: AppColors.danger,
             fontWeight: FontWeight.w600,
           ),
@@ -659,7 +1075,7 @@ class _LoginScreenState extends State<LoginScreen>
                         Text(
                           'Lupa Kata Sandi?',
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 18,
+                            fontSize: 21,
                             fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary,
                           ),
@@ -668,7 +1084,7 @@ class _LoginScreenState extends State<LoginScreen>
                         Text(
                           'Pemulihan akses akun guru Scorify',
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
+                            fontSize: 14.5,
                             color: AppColors.textSecondary,
                             fontWeight: FontWeight.w500,
                           ),
@@ -713,7 +1129,7 @@ class _LoginScreenState extends State<LoginScreen>
                       children: [
                         const Icon(
                           Icons.mail_outline_rounded,
-                          size: 18,
+                          size: 20,
                           color: AppColors.primary,
                         ),
                         const SizedBox(width: 10),
@@ -721,7 +1137,7 @@ class _LoginScreenState extends State<LoginScreen>
                           child: Text(
                             'Masukkan alamat email terdaftar untuk menerima tautan pembuatan kata sandi baru.',
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
+                              fontSize: 14.5,
                               color: AppColors.textSecondary,
                               height: 1.4,
                             ),
@@ -740,13 +1156,13 @@ class _LoginScreenState extends State<LoginScreen>
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFFD97706)),
+                          const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFD97706)),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               'Khusus akun yang mendaftar via tombol "Login with Google": Silakan masuk menggunakan tombol Google terlebih dahulu, lalu atur kata sandi akun di menu Profil.',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
+                                fontSize: 13,
                                 color: const Color(0xFF92400E),
                                 height: 1.35,
                               ),
@@ -764,7 +1180,7 @@ class _LoginScreenState extends State<LoginScreen>
               Text(
                 'Alamat Email',
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
+                  fontSize: 15.5,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                 ),
@@ -782,7 +1198,7 @@ class _LoginScreenState extends State<LoginScreen>
 
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 52,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -808,6 +1224,7 @@ class _LoginScreenState extends State<LoginScreen>
                               'Tautan reset kata sandi telah dikirim ke $email',
                               style: GoogleFonts.plusJakartaSans(
                                 fontWeight: FontWeight.w600,
+                                fontSize: 14.5,
                                 color: Colors.white,
                               ),
                             ),
@@ -828,7 +1245,7 @@ class _LoginScreenState extends State<LoginScreen>
                     style: GoogleFonts.plusJakartaSans(
                       color: Colors.white,
                       fontWeight: FontWeight.w800,
-                      fontSize: 15,
+                      fontSize: 16.5,
                       letterSpacing: 0.2,
                     ),
                   ),

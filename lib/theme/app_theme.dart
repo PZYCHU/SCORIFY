@@ -41,34 +41,34 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.background,
       textTheme: GoogleFonts.plusJakartaSansTextTheme().copyWith(
         displayLarge: GoogleFonts.plusJakartaSans(
-          fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.textPrimary,
+          fontSize: 32, fontWeight: FontWeight.w800, color: AppColors.textPrimary,
         ),
         displayMedium: GoogleFonts.plusJakartaSans(
-          fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textPrimary,
+          fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.textPrimary,
         ),
         titleLarge: GoogleFonts.plusJakartaSans(
-          fontSize: 21, fontWeight: FontWeight.w700, color: AppColors.textPrimary,
+          fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.textPrimary,
         ),
         titleMedium: GoogleFonts.plusJakartaSans(
-          fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary,
+          fontSize: 21, fontWeight: FontWeight.w700, color: AppColors.textPrimary,
         ),
         titleSmall: GoogleFonts.plusJakartaSans(
-          fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary,
+          fontSize: 18.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary,
         ),
         bodyLarge: GoogleFonts.plusJakartaSans(
-          fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.textPrimary,
+          fontSize: 18, fontWeight: FontWeight.w500, color: AppColors.textPrimary,
         ),
         bodyMedium: GoogleFonts.plusJakartaSans(
-          fontSize: 14.5, fontWeight: FontWeight.w400, color: AppColors.textSecondary,
+          fontSize: 16.5, fontWeight: FontWeight.w400, color: AppColors.textSecondary,
         ),
         bodySmall: GoogleFonts.plusJakartaSans(
-          fontSize: 13.5, fontWeight: FontWeight.w500, color: AppColors.textSecondary,
+          fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textSecondary,
         ),
         labelLarge: GoogleFonts.plusJakartaSans(
-          fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white,
+          fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white,
         ),
         labelMedium: GoogleFonts.plusJakartaSans(
-          fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary,
+          fontSize: 15.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary,
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -77,7 +77,7 @@ class AppTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: GoogleFonts.plusJakartaSans(
-          fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary,
+          fontSize: 23, fontWeight: FontWeight.w800, color: AppColors.textPrimary,
         ),
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
@@ -89,28 +89,28 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
           textStyle: GoogleFonts.plusJakartaSans(
-            fontSize: 15, fontWeight: FontWeight.w600,
+            fontSize: 16.5, fontWeight: FontWeight.w700,
           ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surfaceWhite,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
         hintStyle: GoogleFonts.plusJakartaSans(
-          fontSize: 14, color: AppColors.textHint,
+          fontSize: 15.5, color: AppColors.textHint,
         ),
       ),
       cardTheme: CardThemeData(

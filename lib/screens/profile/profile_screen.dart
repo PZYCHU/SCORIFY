@@ -18,6 +18,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _nameController;
   bool _isSavingName = false;
 
+  // Controllers Edit Asal Sekolah
+  late TextEditingController _schoolController;
+  bool _isSavingSchool = false;
+  String? _currentSchool;
+
   // Controllers Ganti Email
   final _emailFormKey = GlobalKey<FormState>();
   final _newEmailController = TextEditingController();
@@ -48,8 +53,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     final user = _authService.currentUser;
     _nameController = TextEditingController(text: user?.displayName ?? '');
+    _schoolController = TextEditingController();
+    _loadUserProfile();
     // Reload user di background agar jika user sudah klik link verifikasi email, emailnya langsung ter-update
     _reloadUser();
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final data = await _authService.getUserProfile();
+      if (data != null && mounted) {
+        final school = (data['school'] ?? data['asalSekolah']) as String?;
+        if (school != null && school.isNotEmpty) {
+          setState(() {
+            _currentSchool = school;
+            _schoolController.text = school;
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _reloadUser() async {
@@ -62,6 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _schoolController.dispose();
     _newEmailController.dispose();
     _emailPasswordController.dispose();
     _currentPasswordController.dispose();
@@ -118,6 +141,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _showSnackBar(e.toString(), isError: true);
     } finally {
       if (mounted) setState(() => _isSavingName = false);
+    }
+  }
+
+  Future<void> _updateSchool() async {
+    final newSchool = _schoolController.text.trim();
+    if (newSchool.isEmpty) {
+      _showSnackBar('Asal sekolah tidak boleh kosong', isError: true);
+      return;
+    }
+
+    setState(() => _isSavingSchool = true);
+    try {
+      await _authService.updateSchool(newSchool);
+      setState(() {
+        _currentSchool = newSchool;
+      });
+      _showSnackBar('Asal sekolah berhasil diperbarui!');
+    } catch (e) {
+      _showSnackBar(e.toString(), isError: true);
+    } finally {
+      if (mounted) setState(() => _isSavingSchool = false);
     }
   }
 
@@ -245,7 +289,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           children: [
             // ── Avatar & Info Ringkas ──
-            _buildProfileHeader(displayName, email, photoUrl, isGoogle),
+            _buildProfileHeader(displayName, email, photoUrl, isGoogle, _currentSchool),
             const SizedBox(height: 24),
 
             // ── Bagian 1: Ubah Nama ──
@@ -313,6 +357,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 20),
 
+            // ── Bagian 2: Asal Sekolah ──
+            _buildSectionCard(
+              title: 'Asal Sekolah',
+              subtitle: 'Instansi atau sekolah tempat Anda mengajar',
+              icon: Icons.school_outlined,
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _schoolController,
+                    decoration: InputDecoration(
+                      hintText: 'Contoh: SMAN 1 Jakarta',
+                      prefixIcon: const Icon(Icons.apartment_rounded, color: AppColors.primary, size: 20),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: _isSavingSchool ? null : _updateSchool,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      icon: _isSavingSchool
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check_rounded, color: Colors.white, size: 20),
+                      label: const Text(
+                        'Simpan Asal Sekolah',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // ── Bagian 2: Ubah Email ──
             _buildSectionCard(
               title: 'Ganti Email Akun',
@@ -348,8 +457,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             validator: (v) {
                               if (v == null || v.trim().isEmpty) return 'Email baru wajib diisi';
-                              if (!v.contains('@')) return 'Format email tidak valid';
-                              if (v.trim().toLowerCase() == email.toLowerCase()) {
+                              final emailVal = v.trim();
+                              final emailRegex = RegExp(
+                                r'^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$',
+                              );
+                              if (!emailVal.contains('@')) return 'Email harus memiliki tanda @';
+                              if (!emailRegex.hasMatch(emailVal) || !emailVal.contains('.')) {
+                                return 'Format email tidak valid (cth: nama@email.com)';
+                              }
+                              final domainPart = emailVal.split('@').last;
+                              if (!domainPart.contains('.') || domainPart.split('.').last.length < 2) {
+                                return 'Domain email tidak valid (cth: .com, .id)';
+                              }
+                              if (emailVal.toLowerCase() == email.toLowerCase()) {
                                 return 'Email baru tidak boleh sama dengan email lama';
                               }
                               return null;
@@ -444,8 +564,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String displayName,
     String email,
     String? photoUrl,
-    bool isGoogle,
-  ) {
+    bool isGoogle, [
+    String? school,
+  ]) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
@@ -522,8 +643,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 6,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -547,7 +670,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              if (school != null && school.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.apartment_rounded, size: 14, color: AppColors.accent),
+                      const SizedBox(width: 5),
+                      Text(
+                        school,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
