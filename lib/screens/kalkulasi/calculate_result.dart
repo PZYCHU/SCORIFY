@@ -633,11 +633,6 @@ class _RankingCard extends StatelessWidget {
         return active.isEmpty
             ? 0.0
             : active.fold(0.0, (sum, n) => sum + n.nilai) / active.length;
-      } else if (k.aggregationRule == AggregationRule.min) {
-        final active = semuaNilai.where((n) => n.nilai > 0).toList();
-        return active.isEmpty
-            ? 0.0
-            : active.map((n) => n.nilai).reduce(min);
       } else {
         return semuaNilai.map((n) => n.nilai).reduce(max);
       }
@@ -655,8 +650,6 @@ class _RankingCard extends StatelessWidget {
       for (final list in perSesi.values) {
         if (k.aggregationRule == AggregationRule.average) {
           totalSesi += list.fold(0.0, (s, n) => s + n.nilai) / list.length;
-        } else if (k.aggregationRule == AggregationRule.min) {
-          totalSesi += list.map((e) => e.nilai).reduce(min);
         } else {
           totalSesi += list.map((e) => e.nilai).reduce(max);
         }
@@ -671,8 +664,6 @@ class _RankingCard extends StatelessWidget {
 
     if (k.aggregationRule == AggregationRule.average) {
       return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai) / semuaNilai.length;
-    } else if (k.aggregationRule == AggregationRule.min) {
-      return semuaNilai.map((n) => n.nilai).reduce(min);
     }
     return semuaNilai.map((n) => n.nilai).reduce(max);
   }
@@ -1483,8 +1474,6 @@ class _DetailMuridBottomSheet extends StatelessWidget {
       list.sort((a, b) => a.attempt.compareTo(b.attempt));
       if (k.aggregationRule == AggregationRule.average) {
         sumSesiScore += list.fold(0.0, (s, n) => s + n.nilai) / list.length;
-      } else if (k.aggregationRule == AggregationRule.min) {
-        sumSesiScore += list.map((e) => e.nilai).reduce(min);
       } else {
         sumSesiScore += list.map((e) => e.nilai).reduce(max);
       }
@@ -1609,8 +1598,6 @@ class _DetailMuridBottomSheet extends StatelessWidget {
                 resolvedNilai =
                     entries.fold(0.0, (sum, n) => sum + n.nilai) /
                     entries.length;
-              } else if (k.aggregationRule == AggregationRule.min) {
-                resolvedNilai = entries.map((e) => e.nilai).reduce(min);
               } else {
                 resolvedNilai = entries.map((e) => e.nilai).reduce(max);
               }
@@ -2010,11 +1997,6 @@ class _DetailMuridBottomSheet extends StatelessWidget {
         poinAgregasi = active.isEmpty
             ? 0.0
             : active.fold(0.0, (sum, n) => sum + n.nilai) / active.length;
-      } else if (k.aggregationRule == AggregationRule.min) {
-        final active = semuaNilai.where((n) => n.nilai > 0).toList();
-        poinAgregasi = active.isEmpty
-            ? 0.0
-            : active.map((n) => n.nilai).reduce(min);
       } else {
         poinAgregasi = semuaNilai.map((n) => n.nilai).reduce(max);
       }

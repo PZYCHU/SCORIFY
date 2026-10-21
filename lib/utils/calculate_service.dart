@@ -251,11 +251,6 @@ class KalkulasiService {
               poin = active.isEmpty
                   ? 0.0
                   : active.fold(0.0, (sum, n) => sum + n.nilai) / active.length;
-            } else if (k.aggregationRule == AggregationRule.min) {
-              final active = entries.where((n) => n.nilai > 0).toList();
-              poin = active.isEmpty
-                  ? 0.0
-                  : active.map((n) => n.nilai).reduce(min);
             } else {
               poin = entries.map((n) => n.nilai).reduce(max);
             }
@@ -322,10 +317,6 @@ class KalkulasiService {
                 final avgScore = sesiEntries.fold(0.0, (s, n) => s + n.nilai) /
                     sesiEntries.length;
                 sumSesiScore += avgScore;
-              } else if (k.aggregationRule == AggregationRule.min) {
-                final minScore =
-                    sesiEntries.map((e) => e.nilai).reduce(min);
-                sumSesiScore += minScore;
               } else {
                 // Max
                 final maxScore =
@@ -441,18 +432,11 @@ class KalkulasiService {
 
     if (isKeaktifan) {
       if (k.aggregationRule == AggregationRule.average) {
-        final active = semuaNilai.where((n) => n.nilai > 0).toList();
-        return active.isEmpty
-            ? 0.0
-            : active.fold(0.0, (sum, n) => sum + n.nilai) / active.length;
-      } else if (k.aggregationRule == AggregationRule.min) {
-        final active = semuaNilai.where((n) => n.nilai > 0).toList();
-        return active.isEmpty
-            ? 0.0
-            : active.map((n) => n.nilai).reduce(min);
-      } else {
-        return semuaNilai.map((n) => n.nilai).reduce(max);
+        final activeEntries = semuaNilai.where((n) => n.nilai > 0).toList();
+        if (activeEntries.isEmpty) return 0.0;
+        return activeEntries.fold(0.0, (sum, n) => sum + n.nilai) / activeEntries.length;
       }
+      return semuaNilai.map((n) => n.nilai).reduce(max);
     }
 
     if (k.jenis == JenisKriteria.byProduct) {
@@ -473,8 +457,6 @@ class KalkulasiService {
       for (final list in perSesi.values) {
         if (k.aggregationRule == AggregationRule.average) {
           totalSesi += list.fold(0.0, (s, n) => s + n.nilai) / list.length;
-        } else if (k.aggregationRule == AggregationRule.min) {
-          totalSesi += list.map((e) => e.nilai).reduce(min);
         } else {
           totalSesi += list.map((e) => e.nilai).reduce(max);
         }
@@ -491,8 +473,6 @@ class KalkulasiService {
     // Default: evaluasi sesuai aturan agregasi
     if (k.aggregationRule == AggregationRule.average) {
       return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai) / semuaNilai.length;
-    } else if (k.aggregationRule == AggregationRule.min) {
-      return semuaNilai.map((n) => n.nilai).reduce(min);
     }
     return semuaNilai.map((n) => n.nilai).reduce(max);
   }

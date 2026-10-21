@@ -1,24 +1,34 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:scorify/main.dart';
+import 'package:scorify/models/models.dart';
 
 void main() {
-  testWidgets('App loads successfully', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('Scorify Model Tests', () {
+    test('SubKriteria serialization and deserialization', () {
+      final sub = SubKriteria(id: 'sub_1', nama: 'Hadir', nilai: 100.0);
+      final json = sub.toJson();
+      expect(json['id'], 'sub_1');
+      expect(json['nama'], 'Hadir');
+      expect(json['nilai'], 100.0);
 
-    // Verify that the app title is displayed
-    expect(find.text('Scorify'), findsOneWidget);
+      final fromJson = SubKriteria.fromJson(json);
+      expect(fromJson.id, 'sub_1');
+      expect(fromJson.nama, 'Hadir');
+      expect(fromJson.nilai, 100.0);
+    });
 
-    // Verify that the home screen content is displayed
-    expect(find.text('Welcome to Scorify'), findsOneWidget);
-    expect(find.text('Student Evaluation using AHP + SAW'), findsOneWidget);
+    test('JenisKriteria label evaluation', () {
+      expect(JenisKriteria.byProcess.label, 'Proses KBM');
+      expect(JenisKriteria.byProduct.label, 'Hasil / Produk');
+    });
+
+    test('AggregationRule label evaluation', () {
+      expect(AggregationRule.max.label, 'Nilai Maksimum');
+      expect(AggregationRule.average.label, 'Rata-rata');
+    });
+
+    test('ArahKriteria label evaluation', () {
+      expect(ArahKriteria.benefit.label, 'Menguntungkan (Benefit)');
+      expect(ArahKriteria.cost.label, 'Merugikan (Cost)');
+    });
   });
 }

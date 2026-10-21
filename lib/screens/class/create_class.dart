@@ -658,9 +658,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
       _inputType = c.inputType == InputType.counter ? InputType.counter : InputType.number;
       _arah = c.arah;
       _isPenilaianBerulang = c.isPenilaianBerulang;
-      _aggregationRule = c.aggregationRule == AggregationRule.min
-          ? AggregationRule.max
-          : c.aggregationRule;
+      _aggregationRule = c.aggregationRule;
       _hasSubKriteria = c.hasSubKriteria;
       _subKriteriaList = c.hasSubKriteria
           ? c.subKriteria!.map((s) => s.copyWith()).toList()
@@ -810,7 +808,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                             const Icon(Icons.star_rounded, size: 18, color: Color(0xFFEAB308)),
                             const SizedBox(width: 6),
                             Text(
-                              '1. Nilai Tertinggi (Max)',
+                              '1. Nilai Maksimum (Tertinggi)',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w700,
@@ -858,7 +856,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                             const Icon(Icons.calculate_rounded, size: 18, color: Color(0xFF3B82F6)),
                             const SizedBox(width: 6),
                             Text(
-                              '2. Rata-rata (Average)',
+                              '2. Rata-rata',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w700,
@@ -1088,10 +1086,10 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
         const SizedBox(height: 8),
         _SegmentedRow<AggregationRule>(
           options: const [
-            (AggregationRule.max, 'Nilai Max'),
+            (AggregationRule.max, 'Nilai Maksimum'),
             (AggregationRule.average, 'Rata-rata'),
           ],
-          selected: _aggregationRule == AggregationRule.min ? AggregationRule.max : _aggregationRule,
+          selected: _aggregationRule,
           onChanged: (v) => setState(
             () => _aggregationRule = v ?? AggregationRule.max,
           ),
@@ -1113,11 +1111,11 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                 child: Text(
                   _aggregationRule == AggregationRule.max
                       ? (_jenis == JenisKriteria.byProcess
-                          ? 'Nilai Tertinggi (Max): Jika ada banyak catatan keaktifan/partisipasi, skor tertinggi yang diambil (cth: aktif 10x skor 30–60, nilai yang diambil 60).'
-                          : 'Nilai Tertinggi (Max): Jika ada pengulangan/remedial, skor tertinggi yang diambil. Pengurangan akibat jumlah remedial diproses otomatis di latar belakang.')
+                          ? 'Nilai Maksimum: Jika ada banyak catatan keaktifan/partisipasi, skor tertinggi yang diambil (cth: aktif 10x skor 30–60, nilai yang diambil 60).'
+                          : 'Nilai Maksimum: Jika ada pengulangan/remedial, skor tertinggi yang diambil. Pengurangan akibat jumlah remedial diproses otomatis di latar belakang.')
                       : (_jenis == JenisKriteria.byProcess
-                          ? 'Rata-rata (Average): Poin akhir dihitung dari rata-rata seluruh catatan keaktifan/partisipasi siswa.'
-                          : 'Rata-rata (Average): Nilai akhir dihitung dari rata-rata seluruh catatan percobaan siswa.'),
+                          ? 'Rata-rata: Poin akhir dihitung dari rata-rata seluruh catatan keaktifan/partisipasi siswa.'
+                          : 'Rata-rata: Nilai akhir dihitung dari rata-rata seluruh catatan percobaan siswa.'),
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 11.5,
                     color: AppColors.textSecondary,
@@ -1193,6 +1191,8 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
                         color: AppColors.primary,
+                        decoration: TextDecoration.underline,
+                        decorationColor: AppColors.primary,
                       ),
                     ),
                   ),
@@ -1276,7 +1276,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
   Widget _buildSubKriteriaProcessSection() {
     return _buildSectionCard(
       stepNumber: '5',
-      title: 'Bentuk Nilai yang Diisi',
+      title: 'Bentuk Pengisian Nilai',
       trailing: InkWell(
         onTap: () => setState(() => _showFormatHelp = !_showFormatHelp),
         borderRadius: BorderRadius.circular(20),
@@ -1298,8 +1298,8 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
         children: [
           _SegmentedRow<bool>(
             options: const [
-              (false, 'Ketik Angka (0–100)'),
-              (true, 'Pilihan Kategori Cepat'),
+              (false, 'Angka (0-100)'),
+              (true, 'Pilihan Kategori'),
             ],
             selected: _hasSubKriteria,
             onChanged: (val) {
@@ -1387,6 +1387,8 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
                             color: AppColors.primary,
+                            decoration: TextDecoration.underline,
+                            decorationColor: AppColors.primary,
                           ),
                         ),
                       ],
@@ -2304,10 +2306,10 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // (4) Cara Mencatat Nilai
+        // (4) Pencatatan Nilai per Pertemuan
         _buildSectionCard(
           stepNumber: '4',
-          title: 'Cara Mencatat Nilai',
+          title: 'Pencatatan Nilai per Pertemuan',
           trailing: InkWell(
             onTap: () => setState(() => _showFrekuensiHelp = !_showFrekuensiHelp),
             borderRadius: BorderRadius.circular(20),
@@ -2330,7 +2332,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
               _SegmentedRow<bool>(
                 options: const [
                   (false, 'Sekali per Pertemuan'),
-                  (true, 'Bisa Berkali-kali (Keaktifan)'),
+                  (true, 'Berkali-kali per Pertemuan'),
                 ],
                 selected: _isPenilaianBerulang,
                 onChanged: (v) {
@@ -2360,7 +2362,7 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
                         child: Text(
                           !_isPenilaianBerulang
                               ? 'Sekali per Pertemuan: Nilai dicatat satu kali saja pada tiap sesi pertemuan (contoh: absensi/kehadiran atau ceklis harian).'
-                              : 'Bisa Berkali-kali (Keaktifan): Guru dapat menekan tombol tambah berulang kali untuk mencatat poin keaktifan siswa selama jam pelajaran (contoh: keaktifan bertanya, menjawab pertanyaan).',
+                              : 'Berkali-kali per Pertemuan: Guru dapat mencatat nilai/poin berulang kali selama jam pelajaran (contoh: keaktifan bertanya, menjawab pertanyaan).',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             color: AppColors.textSecondary,
@@ -2415,9 +2417,8 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
         ? 'Benefit (Makin tinggi makin baik)'
         : 'Cost (Makin rendah makin baik)';
     final rekapLabel = switch (_aggregationRule) {
-      AggregationRule.max => 'Nilai Tertinggi (Max)',
-      AggregationRule.average => 'Rata-rata (Avg)',
-      AggregationRule.min => 'Nilai Tertinggi (Max)',
+      AggregationRule.max => 'Nilai Maksimum',
+      AggregationRule.average => 'Rata-rata',
     };
 
     return Container(
@@ -2450,14 +2451,14 @@ class _AddCriterionDialogState extends State<AddCriterionDialog> {
           _summaryRow('Sifat Nilai', arahLabel),
           if (_jenis == JenisKriteria.byProcess) ...[
             _summaryRow(
-              'Cara Catat',
-              _isPenilaianBerulang ? 'Bisa Berkali-kali (Keaktifan)' : 'Sekali per Pertemuan',
+              'Pencatatan Nilai',
+              _isPenilaianBerulang ? 'Berkali-kali per Pertemuan' : 'Sekali per Pertemuan',
             ),
             _summaryRow(
-              'Bentuk Nilai',
+              'Bentuk Pengisian Nilai',
               _hasSubKriteria
                   ? 'Pilihan Kategori (${_subKriteriaList.length} opsi)'
-                  : 'Ketik Angka (0–100)',
+                  : 'Angka (0-100)',
             ),
           ] else ...[
             _summaryRow(

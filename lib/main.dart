@@ -63,11 +63,26 @@ class _AuthCheckState extends State<AuthCheck> {
     _authService.authStateChanges.listen((user) {
       if (!mounted) return;
 
+      // Jika sedang dalam proses validasi login/registrasi (misal cek Firestore di signInWithGoogle),
+      // jangan langsung pindahkan halaman ke HomeScreen sebelum validasi selesai
+      // agar tidak terjadi efek "kepental" dan pop-up dialog tetap muncul.
+      if (AuthService.isAuthFlowActive && user != null) {
+        if (!_initialized) {
+          setState(() => _initialized = true);
+        }
+        return;
+      }
+
+      final isGoogle =
+          user?.providerData.any((p) => p.providerId == 'google.com') ?? false;
+      final effectiveUser =
+          (user != null && (user.emailVerified || isGoogle)) ? user : null;
+
       final oldUid = _user?.uid;
-      final newUid = user?.uid;
+      final newUid = effectiveUser?.uid;
 
       setState(() {
-        _user = user;
+        _user = effectiveUser;
         _initialized = true;
       });
 

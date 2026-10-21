@@ -6,6 +6,11 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../firebase_options.dart';
 
 class AuthService {
+  /// Bernilai true selama proses login/registrasi sedang memvalidasi akun ke Firestore,
+  /// agar AuthCheck di main.dart tidak langsung memindahkan layar ke HomeScreen
+  /// sebelum validasi selesai (mencegah efek "kepental" & hilangnya pop-up dialog).
+  static bool isAuthFlowActive = false;
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(); 
@@ -32,6 +37,7 @@ class AuthService {
     String? school,
   }) async {
     await _ensureFirebaseInitialized();
+    isAuthFlowActive = true;
     try {
       if (kDebugMode) {
         debugPrint('📝 Attempting registration for email: $email');
@@ -63,12 +69,15 @@ class AuthService {
         debugPrint('❌ Registration failed: ${e.code} - ${e.message}');
       }
       throw _handleAuthException(e);
+    } finally {
+      isAuthFlowActive = false;
     }
   }
 
   // ── Login dengan Email & Password ────────────────────────────────────────
   Future<UserCredential> signInWithEmail(String email, String password) async {
     await _ensureFirebaseInitialized();
+    isAuthFlowActive = true;
     try {
       if (kDebugMode) {
         debugPrint('🔐 Attempting login with email: $email');
@@ -92,10 +101,10 @@ class AuthService {
       }
 
       if (user != null) {
-        await _firestore.collection('users').doc(user.uid).update({
+        await _firestore.collection('users').doc(user.uid).set({
           'lastLoginAt': FieldValue.serverTimestamp(),
           'isVerified': true,
-        });
+        }, SetOptions(merge: true));
       }
 
       if (kDebugMode) {
@@ -130,6 +139,8 @@ class AuthService {
       }
 
       throw _handleAuthException(e);
+    } finally {
+      isAuthFlowActive = false;
     }
   }
 
@@ -178,33 +189,39 @@ class AuthService {
 
   // ── Kirim Ulang Email Verifikasi ──────────────────────────────────────────
   Future<void> resendVerificationEmail(String email, [String? password]) async {
-    if (password != null && password.isNotEmpty) {
-      final credential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      await credential.user?.sendEmailVerification();
-      await _auth.signOut();
-    } else {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser != null) {
-        final GoogleSignInAuthentication googleAuth =
-            await googleUser.authentication;
-        final credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
+    isAuthFlowActive = true;
+    try {
+      if (password != null && password.isNotEmpty) {
+        final credential = await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
         );
-        final userCredential = await _auth.signInWithCredential(credential);
-        await userCredential.user?.sendEmailVerification();
+        await credential.user?.sendEmailVerification();
         await _auth.signOut();
-        await _googleSignIn.signOut();
+      } else {
+        final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+        if (googleUser != null) {
+          final GoogleSignInAuthentication googleAuth =
+              await googleUser.authentication;
+          final credential = GoogleAuthProvider.credential(
+            accessToken: googleAuth.accessToken,
+            idToken: googleAuth.idToken,
+          );
+          final userCredential = await _auth.signInWithCredential(credential);
+          await userCredential.user?.sendEmailVerification();
+          await _auth.signOut();
+          await _googleSignIn.signOut();
+        }
       }
+    } finally {
+      isAuthFlowActive = false;
     }
   }
 
   // ── Register dengan Google ────────────────────────────────────────────────
   Future<String> registerWithGoogle({String? school}) async {
     await _ensureFirebaseInitialized();
+    isAuthFlowActive = true;
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) throw Exception('Pendaftaran Google dibatalkan');
@@ -246,12 +263,15 @@ class AuthService {
       return email;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
+    } finally {
+      isAuthFlowActive = false;
     }
   }
 
   // ── Login dengan Google ──────────────────────────────────────────────────
   Future<UserCredential> signInWithGoogle() async {
     await _ensureFirebaseInitialized();
+    isAuthFlowActive = true;
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) throw Exception('Login Google dibatalkan');
@@ -274,11 +294,18 @@ class AuthService {
       // Fallback 1: Cek apakah data user ada di Firestore dengan email yang cocok (misal case atau doc ID lama)
       if (!docSnap.exists && email.isNotEmpty) {
         try {
-          final q = await _firestore
+          var q = await _firestore
               .collection('users')
-              .where('email', isEqualTo: email.toLowerCase())
+              .where('email', isEqualTo: email)
               .limit(1)
               .get();
+          if (q.docs.isEmpty && email.toLowerCase() != email) {
+            q = await _firestore
+                .collection('users')
+                .where('email', isEqualTo: email.toLowerCase())
+                .limit(1)
+                .get();
+          }
           if (q.docs.isNotEmpty) {
             final oldData = q.docs.first.data();
             await docRef.set({
@@ -295,36 +322,16 @@ class AuthService {
         }
       }
 
-      // Fallback 2: Jika dokumen Firestore masih belum ada
+      // Jika dokumen Firestore tetap belum ada, berarti pengguna belum pernah mendaftar
+      // melalui halaman Register (wajib mendaftar terlebih dahulu)
       if (!docSnap.exists) {
-        // Periksa apakah akun ini akun yang sudah lama terdaftar di Firebase Auth
-        // (contoh: akun terdaftar di Authentication console seperti hapsarimalika@gmail.com)
-        final createdAt = user.metadata.creationTime;
-        final isPreExistingAccount = createdAt != null &&
-            DateTime.now().difference(createdAt).inMinutes > 1;
-
-        if (isPreExistingAccount) {
-          // Auto-heal: Akun sah terdaftar di Firebase Auth, otomatis buatkan/pulihkan profil Firestore
-          await _saveUserToFirestore(
-            uid: user.uid,
-            name: user.displayName ?? (email.isNotEmpty ? email.split('@').first : 'Guru'),
-            email: email,
-            photoUrl: user.photoURL,
-            provider: 'google',
-            isVerified: true,
-          );
-          docSnap = await docRef.get();
-        } else {
-          // Pengguna benar-benar baru pertama kali menekan login tanpa registrasi
-          // Sesuai aturan dosen: wajib mendaftar melalui halaman register terlebih dahulu
-          try {
-            await user.delete();
-          } catch (_) {
-            await _auth.signOut();
-          }
-          await _googleSignIn.signOut();
-          throw UserNotFoundException(email);
+        try {
+          await user.delete();
+        } catch (_) {
+          await _auth.signOut();
         }
+        await _googleSignIn.signOut();
+        throw UserNotFoundException(email);
       }
 
       // Wajib verifikasi email jika belum diverifikasi
@@ -334,14 +341,16 @@ class AuthService {
         throw EmailNotVerifiedException(email);
       }
 
-      await docRef.update({
+      await docRef.set({
         'lastLoginAt': FieldValue.serverTimestamp(),
         'isVerified': true,
-      });
+      }, SetOptions(merge: true));
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
+    } finally {
+      isAuthFlowActive = false;
     }
   }
 

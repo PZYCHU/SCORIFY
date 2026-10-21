@@ -715,20 +715,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 22),
-
-          // ── Feature Highlights (Pills) ──
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _buildFeaturePill(Icons.tune_rounded, 'Parameter Penilaian'),
-              _buildFeaturePill(Icons.compare_arrows_rounded, 'Perbandingan Kriteria'),
-              _buildFeaturePill(Icons.leaderboard_rounded, 'Perankingan Siswa'),
-            ],
-          ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 26),
 
           // ── CTA Button (+ Buat Kelas Sekarang) ──
           Container(
@@ -774,31 +761,38 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
+          const SizedBox(height: 16),
 
-  Widget _buildFeaturePill(IconData icon, String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-      decoration: BoxDecoration(
-        color: const Color(
-          0xFFF1F5F9,
-        ), // Pale grey soft surface selaras Pairwise
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: AppColors.primaryLight),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+          // ── Link Panduan & Tutorial Aplikasi ──
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TutorialScreen()),
+              );
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.menu_book_rounded,
+                    size: 16,
+                    color: AppColors.primaryLight,
+                  ),
+                  const SizedBox(width: 7),
+                  Text(
+                    'Lihat Panduan Lengkap & Tutorial Aplikasi',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

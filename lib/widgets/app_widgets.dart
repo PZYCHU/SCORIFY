@@ -201,9 +201,7 @@ class AggregationChip extends StatelessWidget {
         border: Border.all(color: const Color(0xFFFDE68A)),
       ),
       child: Text(
-        rule == AggregationRule.max
-            ? 'Nilai Max'
-            : (rule == AggregationRule.average ? 'Rata-rata' : 'Nilai Min'),
+        rule == AggregationRule.max ? 'Nilai Maksimum' : 'Rata-rata',
         style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,

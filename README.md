@@ -19,11 +19,10 @@
 ## 🌟 Fitur Utama
 
 ### 1. 🎯 Fleksibilitas Kategori Kriteria Penilaian
-Mendukung 3 jenis kriteria penilaian terpadu:
-* 🟢 **Kriteria Performa:** Dinilai langsung saat KBM (*on-the-spot*), mencakup **Poin Tambahan (+)** untuk keaktifan/sikap atau **Nilai Angka (0–100)** untuk unjuk kerja/praktik/presentasi.
-* 🔵 **Kriteria Hasil:** Dinilai setelah evaluasi terstruktur per sesi (Tugas, Kuis, UTS, UAS) dengan dukungan sesi jamak dan pencatatan remedial (*retake*).
-* 🟠 **Kriteria Perhitungan Remedi (*Derived Cost Criteria*):** Dihitung otomatis oleh sistem dari frekuensi pengulangan ujian (*attempt > 1*) pada kriteria tugas/ujian yang dipilih oleh guru, diperlakukan secara adil sebagai kriteria beban (*Cost*).
-* ⏱️ **Kriteria Presensi & Proteksi Jam KBM:** Format kehadiran fleksibel (persentase, akumulasi hari, atau poin kehadiran) dengan validasi waktu nyata agar absensi hanya dapat diisi pada jam KBM kelas yang sah.
+Mendukung 2 kategori kriteria penilaian utama:
+* 🟢 **Kriteria Proses KBM:** Dinilai berkala saat pembelajaran berlangsung, mendukung tipe input **Poin Tambahan / Akumulasi (+)** (keaktifan), **Presensi / Kehadiran**, dan **Input Angka Manual**. Dilengkapi metode rekap nilai akhir: **Nilai Maksimum** atau **Rata-rata**.
+* 🔵 **Kriteria Hasil / Produk:** Dinilai per sesi evaluasi (Tugas, Kuis, Ulangan, UTS, UAS) dengan dukungan rekap sesi berbasis **Nilai Maksimum** atau **Rata-rata**.
+* 🟠 **Mekanisme Remedial Terintegrasi (*Implicit Cost Penalty*):** Jumlah percobaan (*attempt*) otomatis diperhitungkan di latar belakang sistem dengan normalisasi *Cost* ($\min(x) / x$). Siswa yang tuntas pada percobaan pertama mendapat nilai penuh, tanpa perlu membuat kriteria remedial terpisah.
 
 ### 2. ⚖️ Pembobotan Kriteria dengan AHP (*Analytic Hierarchy Process*)
 * **Model Perbandingan Vertikal:** Tampilan kartu perbandingan berpasangan vertikal yang intuitif dan ramah layar ponsel tanpa tabel matriks lebar.
@@ -36,11 +35,9 @@ Mendukung 3 jenis kriteria penilaian terpadu:
 * **Agregasi Bobot AHP:** Perkalian matriks ternormalisasi dengan bobot preferensi kriteria ($W$) hasil AHP.
 * **Skor Akhir & Pemeringkatan ($V$):** Menghasilkan skor akhir terukur (0.00 – 1.00) dan mengurutkan peringkat siswa dari ranking tertinggi secara otomatis.
 
-### 4. 🤖 Asisten Scorify Cerdas (100% Offline Assistant)
-* **Konsultasi Mekanisme Kapan Saja:** Chatbot interaktif lokal yang membantu guru memahami logika SPK, rumus normalisasi, aturan remedial, uji konsistensi AHP, hingga format Excel.
-* **100% Bekerja Tanpa Internet:** Tidak bergantung pada API pihak ketiga, bebas biaya token/kuota, dan respon seketika (bebas *latency* & bebas halusinasi).
-* **Domain Guardrails:** Diprogram khusus untuk menjawab pertanyaan seputar konteks operasional Scorify.
-* **Akses Interaktif Terpadu:** Terintegrasi langsung di dalam menu Panduan & FAQ (*Tanya Bot*) untuk kemudahan konsultasi guru.
+### 4. 📖 Pusat Panduan & Tutorial Terpadu (In-App Guide & FAQ)
+* **Panduan Lengkap Alur SPK:** Edukasi interaktif dan terstruktur mengenai alur KBM, skala Saaty 1–9, konsistensi AHP ($CR \le 0.1$), kriteria menguntungkan vs merugikan, mekanisme remedial implisit, presensi kehadiran, hingga unduh/unggah template Excel.
+* **Tanya Jawab (FAQ) Terperinci:** Menyediakan jawaban atas kendala dan pertanyaan umum guru seputar teknis penilaian secara terstruktur dan mudah dipahami.
 
 ### 5. 📊 Manajemen Data & Ekspor Excel Multi-Sheet
 * **Import Data Siswa:** Unggah daftar siswa secara instan dari file Excel (`.xlsx`) lengkap dengan unduhan template 2 kolom (NIS & Nama Siswa).
@@ -148,24 +145,21 @@ scorify/
 │   ├── providers/             # State management (AppProvider)
 │   ├── screens/
 │   │   ├── ahp/               # Antarmuka pembobotan AHP vertikal & uji CR
-│   │   ├── assistant/         # Layar obrolan Asisten Scorify (Offline Chatbot)
 │   │   ├── class/             # Manajemen kelas, sesi penilaian, & input kolektif
 │   │   ├── kalkulasi/         # Tampilan matriks SAW & hasil perankingan
 │   │   ├── login_regist/      # Autentikasi guru, registrasi, & lupa kata sandi
 │   │   ├── profile/           # Profil guru, ganti email, & account linking kata sandi
 │   │   ├── student/           # Import Excel daftar murid & kartu siswa
-│   │   └── tutorial_screen.dart # Pusat panduan terpadu & FAQ interaktif
+│   │   └── tutorial_screen.dart # Pusat panduan terpadu & FAQ
 │   ├── services/
-│   │   ├── assistant_service.dart # Basis pengetahuan & keyword engine asisten offline
 │   │   ├── auth_service.dart      # Autentikasi Firebase & Account Linking
 │   │   ├── excel_service.dart     # Engine unduh template & ekspor laporan multi-sheet
-│   │   ├── firestore_service.dart # Sinkronisasi cloud data penilaian kelas
-│   │   └── spk_service.dart       # Algoritma perhitungan AHP & SAW
-│   ├── theme/                 # Tema warna (Teal, Sage, Emerald) & typography
-│   ├── utils/                 # Format tanggal, angka, dan helper pendukung
-│   ├── widgets/               # Komponen UI reusable (Card, Chip, Button, Sheet)
-│   └── main.dart              # Entry point inisialisasi aplikasi
-└── pubspec.yaml               # Konfigurasi dependensi paket & aset
+│   │   └── firestore_service.dart # Sinkronisasi cloud data penilaian kelas
+│   ├── theme/                     # Tema warna (Emerald, Slate) & typography
+│   ├── utils/                     # Algoritma perhitungan AHP & SAW (calculate_service.dart) & helper
+│   ├── widgets/                   # Komponen UI reusable (Card, Chip, Button, Sheet)
+│   └── main.dart                  # Entry point inisialisasi aplikasi
+└── pubspec.yaml                   # Konfigurasi dependensi paket & aset
 ```
 
 ---
@@ -178,5 +172,5 @@ scorify/
 ---
 
 <div align="center">
-  <sub>Dibangun dengan haha ape jir menggunakan Flutter & Firebase</sub>
+  <sub>Sistem Pendukung Keputusan Penilaian & Perankingan Siswa — Dibangun dengan Flutter & Firebase</sub>
 </div>

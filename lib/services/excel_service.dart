@@ -621,10 +621,6 @@ class ExcelService {
         poinAgregasi = activeEntries.isEmpty
             ? 0.0
             : activeEntries.fold(0.0, (sum, n) => sum + n.nilai) / activeEntries.length;
-      } else if (k.aggregationRule == AggregationRule.min) {
-        poinAgregasi = activeEntries.isEmpty
-            ? 0.0
-            : activeEntries.map((n) => n.nilai).reduce((a, b) => a < b ? a : b);
       } else {
         // Default Max / Counter Sum
         if (k.inputType == InputType.counter) {
@@ -671,11 +667,6 @@ class ExcelService {
         return active.isEmpty
             ? 0.0
             : active.fold(0.0, (sum, n) => sum + n.nilai) / active.length;
-      } else if (k.aggregationRule == AggregationRule.min) {
-        final active = semuaNilai.where((n) => n.nilai > 0).toList();
-        return active.isEmpty
-            ? 0.0
-            : active.map((n) => n.nilai).reduce((a, b) => a < b ? a : b);
       } else {
         return semuaNilai.map((n) => n.nilai).reduce((a, b) => a > b ? a : b);
       }
@@ -693,10 +684,6 @@ class ExcelService {
       for (final list in perSesi.values) {
         if (k.aggregationRule == AggregationRule.average) {
           totalSesi += list.fold(0.0, (s, n) => s + n.nilai) / list.length;
-        } else if (k.aggregationRule == AggregationRule.min) {
-          totalSesi += list
-              .map((e) => e.nilai)
-              .reduce((a, b) => a < b ? a : b);
         } else {
           totalSesi += list
               .map((e) => e.nilai)
@@ -713,8 +700,6 @@ class ExcelService {
 
     if (k.aggregationRule == AggregationRule.average) {
       return semuaNilai.fold(0.0, (sum, n) => sum + n.nilai) / semuaNilai.length;
-    } else if (k.aggregationRule == AggregationRule.min) {
-      return semuaNilai.map((n) => n.nilai).reduce((a, b) => a < b ? a : b);
     }
     return semuaNilai.map((n) => n.nilai).reduce((a, b) => a > b ? a : b);
   }

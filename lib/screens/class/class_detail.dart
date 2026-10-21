@@ -3725,9 +3725,6 @@ class _MuridCardState extends State<_MuridCard> {
       for (final sList in perSesi.values) {
         if (k.aggregationRule == AggregationRule.average) {
           totalSesi += sList.fold(0.0, (s, n) => s + n.nilai) / sList.length;
-        } else if (k.aggregationRule == AggregationRule.min) {
-          totalSesi +=
-              sList.map((e) => e.nilai).reduce((a, b) => a < b ? a : b);
         } else {
           totalSesi +=
               sList.map((e) => e.nilai).reduce((a, b) => a > b ? a : b);
@@ -3746,11 +3743,6 @@ class _MuridCardState extends State<_MuridCard> {
           poinAgregasi = active.isEmpty
               ? 0.0
               : active.fold(0.0, (sum, n) => sum + n.nilai) / active.length;
-        } else if (k.aggregationRule == AggregationRule.min) {
-          final active = list.where((n) => n.nilai > 0).toList();
-          poinAgregasi = active.isEmpty
-              ? 0.0
-              : active.map((n) => n.nilai).reduce((a, b) => a < b ? a : b);
         } else {
           poinAgregasi = list.map((n) => n.nilai).reduce((a, b) => a > b ? a : b);
         }

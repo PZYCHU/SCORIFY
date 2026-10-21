@@ -11,14 +11,12 @@ enum JenisKriteria {
 }
 
 enum AggregationRule {
-  max,      // Nilai Tertinggi
-  average,  // Rata-rata Nilai
-  min;      // Nilai Terendah
+  max,      // Nilai Maksimum
+  average;  // Rata-rata Nilai
 
   String get label => switch (this) {
-    AggregationRule.max => 'Nilai Tertinggi (Max)',
-    AggregationRule.average => 'Rata-rata (Average)',
-    AggregationRule.min => 'Nilai Terendah (Min)',
+    AggregationRule.max => 'Nilai Maksimum',
+    AggregationRule.average => 'Rata-rata',
   };
 }
 
@@ -81,7 +79,7 @@ class Kriteria {
   double bobot; // hasil AHP, 0.0 sebelum dihitung
   bool perSesi; // true jika kriteria memiliki penilaian berulang / per sesi
   bool isPenaltiPercobaan; // true jika iterasi/percobaan dihitung sebagai Cost (penalti)
-  AggregationRule aggregationRule; // aturan agregasi attempt (max / average / min)
+  AggregationRule aggregationRule; // aturan agregasi (maksimum / rata-rata)
   List<SubKriteria>? subKriteria; // opsi pilihan nilai diskrit (cth: Hadir=100, Izin=75)
   List<String> targetKriteriaIds; // backward-compatibility
 
@@ -180,9 +178,6 @@ class Kriteria {
       final str = val?.toString().toLowerCase();
       if (str == 'average' || str == 'avg') {
         return AggregationRule.average;
-      }
-      if (str == 'min' || str == 'minimum') {
-        return AggregationRule.min;
       }
       return AggregationRule.max;
     }
